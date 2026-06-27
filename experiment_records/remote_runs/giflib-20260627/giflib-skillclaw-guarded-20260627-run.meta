@@ -1,0 +1,11 @@
+{
+  "case_id": "giflib-5.1.2-cve-2016-3977",
+  "run_id": "giflib-skillclaw-guarded-20260627",
+  "mode": "skillclaw-inline-guarded",
+  "model": "skillclaw-model",
+  "target_root": "/home/li/skillclaw-eval/giflib-5.1.2",
+  "start": "2026-06-27T14:43:06.578840+00:00",
+  "agent_ran": true,
+  "status": 0,
+  "end": "2026-06-27T14:43:58.272054+00:00"
+}

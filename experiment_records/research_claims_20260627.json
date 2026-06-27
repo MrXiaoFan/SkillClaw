@@ -1,37 +1,48 @@
 {
   "aggregate": {
-    "cases": 2,
-    "runs": 7,
-    "skillclaw_runs": 3,
-    "direct_runs": 4,
-    "skillclaw_positive_runs": 2,
-    "direct_positive_runs": 2,
-    "skillclaw_cve_misses_with_localization": 2,
-    "direct_cve_misses_with_localization": 1
+    "cases": 3,
+    "runs": 15,
+    "skillclaw_runs": 8,
+    "direct_runs": 7,
+    "skillclaw_positive_runs": 7,
+    "direct_positive_runs": 5,
+    "skillclaw_cve_misses_with_localization": 4,
+    "direct_cve_misses_with_localization": 3
   },
   "cases": [
     {
+      "case_id": "giflib-5.1.2-cve-2016-3977",
+      "skillclaw_best": "skillclaw-inline-guarded=10/10",
+      "direct_best": "direct-deepseek-guarded=8/10",
+      "skillclaw_low_budget": "n/a",
+      "direct_low_budget": "n/a",
+      "skillclaw_high_budget": "n/a",
+      "direct_high_budget": "n/a",
+      "selected_skills": ""
+    },
+    {
       "case_id": "libxml2-2.9.4-cve-2017-8872",
-      "skillclaw_best": "skillclaw-inline-guarded-clean-budget080=8/10",
+      "skillclaw_best": "skillclaw-inline=8/10",
       "direct_best": "direct-deepseek-guarded-clean-budget080=10/10",
       "skillclaw_low_budget": "skillclaw-inline-guarded-clean-budget035=0/10",
       "direct_low_budget": "direct-deepseek-guarded-clean-budget035=0/10",
       "skillclaw_high_budget": "skillclaw-inline-guarded-clean-budget080=8/10",
       "direct_high_budget": "direct-deepseek-guarded-clean-budget080=10/10",
-      "selected_skills": "source-parser-state-machine-oob, elf-cwe120-firmware-triage, vuln-hunting"
+      "selected_skills": "source-parser-state-machine-oob, skillclaw-proxy-introspection, skillclaw-skill-discovery"
     },
     {
       "case_id": "tcpdump-4.9.1-cve-2017-13031",
-      "skillclaw_best": "skillclaw-inline-guarded-clean-budget035=8/10",
-      "direct_best": "direct-deepseek-guarded-clean-budget080=8/10",
+      "skillclaw_best": "skillclaw-inline=8/10",
+      "direct_best": "direct-deepseek=8/10",
       "skillclaw_low_budget": "skillclaw-inline-guarded-clean-budget035=8/10",
       "direct_low_budget": "direct-deepseek-guarded-clean-budget035=0/10",
       "skillclaw_high_budget": "n/a",
       "direct_high_budget": "direct-deepseek-guarded-clean-budget080=8/10",
-      "selected_skills": "source-parser-state-machine-oob, elf-cwe120-firmware-triage, vuln-hunting"
+      "selected_skills": "skillclaw-proxy-introspection, skillclaw-claude-env, skillclaw-skill-discovery"
     }
   ],
   "observations": [
+    "giflib-5.1.2-cve-2016-3977: direct LLM also localized the vulnerability but missed exact CVE identity, so CVE calibration should be scored separately from location evidence.",
     "libxml2-2.9.4-cve-2017-8872: direct LLM outperformed SkillClaw under the high-budget setting (direct-deepseek-guarded-clean-budget080=10/10 vs skillclaw-inline-guarded-clean-budget080=8/10), which is a counterexample to any unconditional SkillClaw-improves claim.",
     "libxml2-2.9.4-cve-2017-8872: SkillClaw localized file/function/root-cause evidence but missed exact CVE identity; this suggests a CVE-calibration failure rather than a localization failure.",
     "tcpdump-4.9.1-cve-2017-13031: SkillClaw produced a stronger low-budget result (skillclaw-inline-guarded-clean-budget035=8/10 vs direct-deepseek-guarded-clean-budget035=0/10).",

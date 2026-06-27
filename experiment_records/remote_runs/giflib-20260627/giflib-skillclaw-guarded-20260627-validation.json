@@ -1,0 +1,136 @@
+{
+  "case_id": "giflib-5.1.2-cve-2016-3977",
+  "timestamp": "2026-06-27T14:43:58.277658+00:00",
+  "validator_mode": "case-level",
+  "target_root": "/home/li/skillclaw-eval/giflib-5.1.2",
+  "agent_output_path": "/home/li/skillclaw-eval/runs/giflib-20260627/giflib-skillclaw-guarded-20260627-agent.json",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "agent-output-ground-truth-match",
+      "type": "content_match",
+      "allow_failure": true,
+      "source": "agent_output",
+      "status": "passed",
+      "path": "/home/li/skillclaw-eval/runs/giflib-20260627/giflib-skillclaw-guarded-20260627-agent.json",
+      "match": "any",
+      "hit_count": 13,
+      "total_patterns": 17,
+      "patterns": [
+        {
+          "pattern": "CVE-2016-3977",
+          "hit": true
+        },
+        {
+          "pattern": "util/gif2rgb.c",
+          "hit": true
+        },
+        {
+          "pattern": "DumpScreen2RGB",
+          "hit": true
+        },
+        {
+          "pattern": "GifFile->SBackGroundColor",
+          "hit": true
+        },
+        {
+          "pattern": "ScreenBuffer[0][i]",
+          "hit": true
+        },
+        {
+          "pattern": "ColorMap->Colors[GifRow[j]]",
+          "hit": true
+        },
+        {
+          "pattern": "ColorMap->ColorCount",
+          "hit": false
+        },
+        {
+          "pattern": "gif2rgb",
+          "hit": true
+        },
+        {
+          "pattern": "initializes",
+          "hit": false
+        },
+        {
+          "pattern": "screen",
+          "hit": true
+        },
+        {
+          "pattern": "buffer",
+          "hit": true
+        },
+        {
+          "pattern": "without",
+          "hit": true
+        },
+        {
+          "pattern": "validating",
+          "hit": false
+        },
+        {
+          "pattern": "background",
+          "hit": true
+        },
+        {
+          "pattern": "within",
+          "hit": false
+        },
+        {
+          "pattern": "GifRow[j]",
+          "hit": true
+        },
+        {
+          "pattern": "ColorMap->Colors",
+          "hit": true
+        }
+      ]
+    },
+    {
+      "name": "ground-truth-source-location",
+      "type": "source_contains",
+      "allow_failure": false,
+      "file": "util/gif2rgb.c",
+      "path": "/home/li/skillclaw-eval/giflib-5.1.2/util/gif2rgb.c",
+      "exists": true,
+      "patterns": [
+        {
+          "pattern": "DumpScreen2RGB",
+          "hit": true
+        },
+        {
+          "pattern": "GifFile->SBackGroundColor",
+          "hit": true
+        },
+        {
+          "pattern": "ScreenBuffer[0][i]",
+          "hit": true
+        },
+        {
+          "pattern": "ColorMap->Colors[GifRow[j]]",
+          "hit": true
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "gif2rgb-binary-present",
+      "type": "command",
+      "allow_failure": true,
+      "command": "file util/gif2rgb && ./util/gif2rgb -h 2>&1 | head -20",
+      "cwd": "/home/li/skillclaw-eval/giflib-5.1.2",
+      "status": "passed",
+      "returncode": 0,
+      "stdout_tail": "util/gif2rgb: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=f9cb61a0476d4b2aa8c29a54c6061d7e3b554b6f, for GNU/Linux 3.2.0, with debug_info, not stripped\ngif2rgb Version 5.1, \tGershon Elber,\tJun 27 2026,   22:40:19\n(C) Copyright 1989 Gershon Elber.\nUsage: gif2rgb [-v] [-c #Colors] [-s Width Height] [-1] [-o OutFileName] [-h] GifFile\n",
+      "stderr_tail": ""
+    },
+    {
+      "name": "asan-poc-placeholder",
+      "type": "asan_command",
+      "allow_failure": false,
+      "status": "skipped",
+      "reason": "disabled"
+    }
+  ]
+}
