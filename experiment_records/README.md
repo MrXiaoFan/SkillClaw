@@ -14,6 +14,9 @@ skills are intentionally not stored here.
   automatically derived research observations from the current guarded-clean
   comparison records. These are intended as paper-claim scaffolding, not final
   statistical evidence.
+- `giflib_case_plan_20260627.md`: preparation note for the third benchmark
+  case, `giflib-5.1.2-cve-2016-3977`. The case is prepared but not yet executed
+  on the remote VM.
 - `libxml2_deepseek_vs_skillclaw_20260623.md`: focused comparison of
   SkillClaw inline skill injection and direct DeepSeek on the libxml2 2.9.4
   case.

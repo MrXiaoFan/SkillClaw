@@ -186,8 +186,10 @@ These fields should be copied into the final experiment result record.
 
 ## Current Cases
 
+- `giflib-5.1.2-cve-2016-3977.json`: lightweight heap-overflow case in
+  `gif2rgb`, used to test source-level color-map index validation reasoning.
 - `libxml2-2.9.4-cve-2017-8872.json`: main parser state-machine case.
 - `tcpdump-4.9.1-cve-2017-13031.json`: targeted IPv6 fragmentation parser case.
 
-The tcpdump case is intentionally targeted and should not be used alone to
-claim SkillClaw improves broad vulnerability discovery.
+The tcpdump and giflib cases are intentionally targeted and should not be used
+alone to claim SkillClaw improves broad vulnerability discovery.

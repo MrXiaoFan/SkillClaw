@@ -763,6 +763,7 @@ def test_smoke_validate_framework_runs_repository_cases():
     results = smoke_cases(Path("experiment_cases"))
 
     statuses = {item["case_id"]: item["status"] for item in results}
+    assert statuses["giflib-5.1.2-cve-2016-3977"] == "passed"
     assert statuses["libxml2-2.9.4-cve-2017-8872"] == "passed"
     assert statuses["tcpdump-4.9.1-cve-2017-13031"] == "passed"
 
