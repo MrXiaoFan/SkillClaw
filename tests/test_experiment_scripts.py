@@ -1,9 +1,11 @@
 import json
 import sys
 from argparse import Namespace
+from pathlib import Path
 
 from experiment_scripts.run_eval_case import extract_json_object, run_case
 from experiment_scripts.run_dynamic_case import run_validators
+from experiment_scripts.smoke_validate_framework import smoke_cases
 from experiment_scripts.score_agent_output import score_output
 from experiment_scripts.build_result_record import _select_injection, _select_injection_history, _select_validation
 from experiment_scripts.print_case_prompt import FINAL_ANSWER_GUARD, get_case_prompt
@@ -575,6 +577,14 @@ def test_run_eval_case_with_existing_agent_output(tmp_path):
     assert final["score"] == 10
     assert final["validation"]["status"] == "passed"
     assert (tmp_path / "results" / "demo-run-final.json").is_file()
+
+
+def test_smoke_validate_framework_runs_repository_cases():
+    results = smoke_cases(Path("experiment_cases"))
+
+    statuses = {item["case_id"]: item["status"] for item in results}
+    assert statuses["libxml2-2.9.4-cve-2017-8872"] == "passed"
+    assert statuses["tcpdump-4.9.1-cve-2017-13031"] == "passed"
 
 
 def test_summarize_results_writes_matrix(tmp_path):

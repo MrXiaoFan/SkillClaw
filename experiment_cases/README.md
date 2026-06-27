@@ -32,6 +32,26 @@ The workflow is intentionally minimal:
 4. Run case-level validators to attach source, binary, PoC, or ASan evidence.
 5. Extract SkillClaw server-side injection metadata from `records/conversations.jsonl`.
 
+## Local Smoke Test
+
+Before running a remote VM experiment, verify that the repository-local case
+files, bundle scripts, and validator registry still work:
+
+```bash
+python experiment_scripts/smoke_validate_framework.py
+```
+
+Expected output:
+
+```text
+libxml2-2.9.4-cve-2017-8872: passed
+tcpdump-4.9.1-cve-2017-13031: passed
+```
+
+This command does not call an LLM and does not require the real vulnerable
+source trees. It creates tiny synthetic fixtures and only checks that the
+validation framework itself is intact.
+
 ## Remote VM Usage
 
 From the target project directory on the remote VM:
