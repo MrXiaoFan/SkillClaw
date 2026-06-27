@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkillClaw vulnerability localization benchmark case",
+  "type": "object",
+  "required": ["case_id", "target", "ground_truth", "scoring"],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Stable identifier used in result records."
+    },
+    "target": {
+      "type": "object",
+      "required": ["project", "version"],
+      "properties": {
+        "project": { "type": "string" },
+        "version": { "type": "string" },
+        "source_root": {
+          "type": "string",
+          "description": "Default source root on the remote evaluation VM. Can be overridden by --root."
+        },
+        "binary": {
+          "type": "string",
+          "description": "Path to the target binary relative to source_root."
+        },
+        "build": {
+          "type": "string",
+          "description": "Human-readable build notes."
+        }
+      },
+      "additionalProperties": true
+    },
+    "ground_truth": {
+      "type": "object",
+      "required": ["files", "functions", "vulnerability_type"],
+      "properties": {
+        "cves": { "type": "array", "items": { "type": "string" } },
+        "files": { "type": "array", "items": { "type": "string" } },
+        "functions": { "type": "array", "items": { "type": "string" } },
+        "vulnerability_type": { "type": "string" },
+        "root_cause": { "type": "string" },
+        "required_evidence": { "type": "array", "items": { "type": "string" } },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "url"],
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "validators": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["content_match", "source_contains", "command", "asan_command", "bundle_script"]
+          },
+          "source": { "type": "string" },
+          "match": { "type": "string", "enum": ["any", "all"] },
+          "use_ground_truth": { "type": "boolean", "default": true },
+          "file": { "type": "string" },
+          "patterns": { "type": "array", "items": { "type": "string" } },
+          "command": { "type": "string" },
+          "expect_crash": {
+            "type": "boolean",
+            "description": "For asan_command: true means a sanitizer/crash report is expected for vulnerable builds; false means no sanitizer report is expected for fixed builds."
+          },
+          "sanitizer_markers": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "For asan_command: output markers that identify sanitizer or crash evidence."
+          },
+          "expected_stack_patterns": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "For asan_command: source files, functions, or stack substrings expected in the sanitizer report."
+          },
+          "stack_match": { "type": "string", "enum": ["any", "all"] },
+          "skill_name": { "type": "string" },
+          "bundle_root": { "type": "string" },
+          "skills_dir": { "type": "string" },
+          "script": { "type": "string" },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "enabled": { "type": "boolean", "default": true },
+          "allow_failure": { "type": "boolean", "default": false },
+          "timeout_seconds": { "type": "integer", "minimum": 1 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "required": ["max_score", "weights"],
+      "properties": {
+        "max_score": { "type": "number" },
+        "weights": {
+          "type": "object",
+          "properties": {
+            "cve": { "type": "number" },
+            "file": { "type": "number" },
+            "function": { "type": "number" },
+            "root_cause": { "type": "number" },
+            "evidence": { "type": "number" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "prompt": {
+      "type": "object",
+      "properties": {
+        "recommended_skillclaw": { "type": "string" },
+        "recommended_direct": { "type": "string" }
+      }
+    },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": true
+}
