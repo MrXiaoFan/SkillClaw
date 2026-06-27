@@ -24,6 +24,10 @@ skills are intentionally not stored here.
   This is the current lightweight bridge from validator-backed evidence to
   skill evolution policy (`promote`, `keep`, `revise`, `demote`, or
   `insufficient_evidence`).
+- `skill_revision_source_parser_state_machine_oob_20260628.md`: first manual
+  gate-driven skill revision note. It documents why
+  `source-parser-state-machine-oob` was changed to separate source localization
+  from exact CVE attribution.
 - `giflib_case_plan_20260627.md` and `giflib_eval_20260627.md`: preparation
   note and executed comparison for the third benchmark case,
   `giflib-5.1.2-cve-2016-3977`. The remote VM artifacts are archived under

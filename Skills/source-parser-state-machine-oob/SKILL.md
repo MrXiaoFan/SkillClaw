@@ -19,6 +19,7 @@ Locate real parser boundary bugs in source code by following parser state variab
 5. Required length is usually highest accessed offset plus one. For example, `cur[3]` requires at least 4 available bytes before the access.
 6. Prefer source evidence over generic binary import evidence. Use binary tools only to confirm the compiled target and reachable caller path.
 7. If the finding does not match a concrete guarded/unguarded access pattern, label it uncertain instead of presenting it as confirmed.
+8. Separate source localization from CVE identity. A correct file/function/root-cause hit is not enough to claim an exact CVE. Only report a CVE as confirmed when the task provides it, an advisory, patch diff, or version range supports it, or the evidence is explicitly tied to that CVE. Otherwise report the exact CVE identity as uncertain.
 
 ## Workflow
 
@@ -78,6 +79,20 @@ If the task references libxml2 2.9.x and an OOB read, strongly compare candidate
 - `valid.c` recursive content-model formatting
 - `dict.c` dictionary key hashing / insertion
 
+Do not conflate neighboring libxml2 CVEs. Several historical libxml2 bugs live
+in parser, validity, and dictionary code near the same release window. Keep
+source localization separate from exact CVE attribution:
+
+```json
+{
+  "localized_file": "HTMLparser.c",
+  "localized_function": "htmlParseTryOrFinish",
+  "localized_root_cause": "lookahead read can exceed the available-byte guard",
+  "cve_identity": "confirmed|candidate|unknown",
+  "cve_basis": "user-provided case label, advisory text, patch diff, or version metadata"
+}
+```
+
 ### 4. Reachability And Binary Confirmation
 
 Confirm the analyzed binary and connect source functions to compiled symbols or callers:
@@ -109,6 +124,21 @@ For each strong candidate, record:
 }
 ```
 
+### 6. CVE And Patch Calibration
+
+After source localization, run a separate calibration pass before naming a CVE:
+
+```bash
+grep -RIn "CVE-2017\|CVE-\|htmlParseTryOrFinish\|avail < 4\|in->cur\\[3\\]" . 2>/dev/null | head -100
+git log --oneline -- HTMLparser.c 2>/dev/null | head -50
+git diff <known_fixed_tag_or_patch> -- HTMLparser.c 2>/dev/null | sed -n '1,160p'
+```
+
+If no advisory, patch, or case metadata is available, phrase the result as a
+localized parser OOB candidate and explicitly state that exact CVE attribution
+needs external confirmation. This prevents a high-quality localization from
+being scored as a false CVE match.
+
 ## Exit Gate
 
 Before finalizing, answer all of these:
@@ -120,6 +150,7 @@ Before finalizing, answer all of these:
 5. Is the sufficient guard before or after the access?
 6. Is there a reachable parser entry point from the tested binary/library?
 7. Is the claim aligned with an official advisory, patch pattern, or reproducible source-level evidence?
+8. If an exact CVE is named, what evidence ties this source location to that CVE rather than to a neighboring parser bug?
 
 If any answer is missing, report the finding as a candidate, not a confirmed vulnerability.
 
@@ -128,3 +159,4 @@ If any answer is missing, report the finding as a candidate, not a confirmed vul
 - Do not invoke Claude Code local `Skill(...)`; SkillClaw skills are server-side prompt guidance.
 - Do not claim success solely because dangerous functions appear in imports.
 - Do not ignore source-level parser macros; expand or inspect them when they hide pointer arithmetic.
+
