@@ -19,6 +19,11 @@ skills are intentionally not stored here.
   server-side skills with run-level score, validation status, and feedback
   decision, and are used to inspect whether a skill is supported by current
   benchmark evidence.
+- `skill_gate_report_latest.md` and `skill_gate_report_latest.json`:
+  conservative gate decisions derived from `skill_feedback_latest.csv`.
+  This is the current lightweight bridge from validator-backed evidence to
+  skill evolution policy (`promote`, `keep`, `revise`, `demote`, or
+  `insufficient_evidence`).
 - `giflib_case_plan_20260627.md` and `giflib_eval_20260627.md`: preparation
   note and executed comparison for the third benchmark case,
   `giflib-5.1.2-cve-2016-3977`. The remote VM artifacts are archived under
@@ -69,6 +74,9 @@ skills are intentionally not stored here.
 - `experiment_scripts/summarize_skill_feedback.py` aggregates final records
   by selected skill. It is the current bridge from case-level validation to
   skill-level feedback evidence.
+- `experiment_scripts/build_skill_gate_report.py` converts skill-level
+  feedback into conservative gate decisions and revision suggestions. It does
+  not automatically publish, rewrite, or delete any skill.
 - `experiment_scripts/attach_skill_injection.py` attaches server-side
   SkillClaw injection audit rows back to final records. This is used when a
   remote Claude Code run cannot directly see the proxy's `conversations.jsonl`

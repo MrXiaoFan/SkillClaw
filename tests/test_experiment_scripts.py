@@ -10,6 +10,7 @@ from experiment_scripts.run_dynamic_case import run_validators
 from experiment_scripts.smoke_validate_framework import smoke_cases
 from experiment_scripts.score_agent_output import score_output
 from experiment_scripts.build_result_record import _select_injection, _select_injection_history, _select_validation
+from experiment_scripts.build_skill_gate_report import build_gate_report, decide_gate
 from experiment_scripts.print_case_prompt import FINAL_ANSWER_GUARD, get_case_prompt
 from experiment_scripts.skill_bundle_runner import resolve_bundle_script, run_bundle_script
 from experiment_scripts.summarize_research_claims import build_claims, write_markdown as write_claim_markdown
@@ -278,6 +279,75 @@ def test_summarize_skill_feedback_aggregates_selected_skills(tmp_path):
     assert row["mean_score"] == 0.5
     assert row["validation_passed"] == 1
     assert row["validation_failed"] == 1
+
+
+def test_skill_gate_revises_high_score_without_cve_calibration():
+    row = {
+        "skill": "source-parser-state-machine-oob",
+        "selected_count": "3",
+        "positive": "3",
+        "neutral": "0",
+        "negative": "0",
+        "mean_score": "0.8",
+        "validation_passed": "1",
+        "validation_failed": "0",
+        "cve_hits": "0",
+        "file_hits": "3",
+        "function_hits": "3",
+        "evidence_hits": "3",
+        "root_cause_hits": "3",
+    }
+
+    decision = decide_gate(row)
+
+    assert decision["gate_decision"] == "revise"
+    assert any("CVE calibration" in reason for reason in decision["reasons"])
+
+
+def test_skill_gate_demotes_infrastructure_skill():
+    row = {
+        "skill": "skillclaw-proxy-introspection",
+        "selected_count": "2",
+        "positive": "1",
+        "neutral": "1",
+        "negative": "0",
+        "mean_score": "0.8",
+    }
+
+    decision = decide_gate(row)
+
+    assert decision["gate_decision"] == "demote"
+    assert "infrastructure" in decision["reasons"][0]
+
+
+def test_build_skill_gate_report_orders_promote_before_revise():
+    rows = [
+        {
+            "skill": "needs-revision",
+            "selected_count": "3",
+            "positive": "3",
+            "mean_score": "0.8",
+            "cve_hits": "0",
+            "file_hits": "3",
+            "function_hits": "3",
+        },
+        {
+            "skill": "promotable",
+            "selected_count": "3",
+            "positive": "3",
+            "mean_score": "0.9",
+            "cve_hits": "3",
+            "file_hits": "3",
+            "function_hits": "3",
+            "evidence_hits": "3",
+            "root_cause_hits": "3",
+        },
+    ]
+
+    report = build_gate_report(rows)
+
+    assert [item["skill"] for item in report] == ["promotable", "needs-revision"]
+    assert report[0]["gate_decision"] == "promote"
 
 
 def test_print_case_prompt_selects_mode():
