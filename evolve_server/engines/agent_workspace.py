@@ -32,6 +32,34 @@ from ..core.utils import parse_skill_content
 
 logger = logging.getLogger(__name__)
 
+_TEXT_BUNDLE_SUFFIXES = {
+    ".md",
+    ".txt",
+    ".py",
+    ".sh",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+}
+
+
+def _normalize_text_bundle_newlines(bundle_files: dict[str, bytes]) -> dict[str, bytes]:
+    """Normalize text bundle newlines for stable cross-platform evolution diffs.
+
+    Windows ``Path.write_text()`` can materialize ``\r\n`` in agent workspaces.
+    Skill bundles may also contain binary payloads, so only normalize common
+    text-like files and skip data containing NUL bytes.
+    """
+    normalized: dict[str, bytes] = {}
+    for rel_path, data in bundle_files.items():
+        suffix = Path(rel_path).suffix.lower()
+        if suffix in _TEXT_BUNDLE_SUFFIXES and b"\0" not in data:
+            normalized[rel_path] = data.replace(b"\r\n", b"\n")
+        else:
+            normalized[rel_path] = data
+    return normalized
+
 
 # ---------------------------------------------------------------------------
 # Custom bootstrap templates for the evolve-only workspace
@@ -264,7 +292,7 @@ class AgentWorkspace:
             if before_sha == after_sha:
                 continue
 
-            bundle_files = read_skill_bundle(self.skills_dir / name)
+            bundle_files = _normalize_text_bundle_newlines(read_skill_bundle(self.skills_dir / name))
             if "SKILL.md" not in bundle_files:
                 logger.warning(
                     "[AgentWorkspace] changed skill '%s' is missing SKILL.md; skipping",
