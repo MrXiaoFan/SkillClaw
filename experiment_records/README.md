@@ -8,6 +8,8 @@ skills are intentionally not stored here.
 
 - `experiment_report_20260615_20260621.md`: consolidated report for completed
   SkillClaw vs direct-LLM experiments.
+- `dev_notes_20260627.md`: short engineering log for the latest preflight
+  runner work, Codeup dev synchronization, and current test-suite status.
 - `libxml2_deepseek_vs_skillclaw_20260623.md`: focused comparison of
   SkillClaw inline skill injection and direct DeepSeek on the libxml2 2.9.4
   case.
@@ -45,6 +47,8 @@ skills are intentionally not stored here.
 - `experiment_scripts/run_eval_case.py` is the current unified entry point for
   a single case. It can either call Claude Code or reuse an existing agent
   output, then writes prompt/raw/stderr/meta/score/validation/final artifacts.
+  Use `--preflight` before remote VM runs to verify the target tree, provider,
+  and SkillClaw endpoint before spending a long Claude Code session.
 
 ## Removed As Redundant
 
