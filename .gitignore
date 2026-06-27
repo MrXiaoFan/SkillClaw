@@ -29,6 +29,7 @@ uv.lock
 
 # Local SkillClaw runtime/share data
 .local-share/
+.skillclaw_backups/
 logs/
 
 # Keep experiment_records as reproducible research artifacts, but do not track
