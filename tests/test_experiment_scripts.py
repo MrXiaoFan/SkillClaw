@@ -11,6 +11,7 @@ from experiment_scripts.score_agent_output import score_output
 from experiment_scripts.build_result_record import _select_injection, _select_injection_history, _select_validation
 from experiment_scripts.print_case_prompt import FINAL_ANSWER_GUARD, get_case_prompt
 from experiment_scripts.skill_bundle_runner import resolve_bundle_script, run_bundle_script
+from experiment_scripts.summarize_research_claims import build_claims, write_markdown as write_claim_markdown
 from experiment_scripts.summarize_results import collect_rows, write_csv, write_markdown
 from experiment_validation.core import assess_skill_relevance, build_feedback
 from skillclaw.skill_manager import SkillManager
@@ -839,6 +840,53 @@ def test_summarize_results_falls_back_for_legacy_skill_relevance(tmp_path):
 
     assert rows[0]["skill_relevance"] == "legacy_has_non_infra_skill"
     assert rows[0]["relevant_skills"] == "source-parser-state-machine-oob"
+
+
+def test_summarize_research_claims_extracts_conservative_observations(tmp_path):
+    records = []
+    for name, mode, score, cve_hit in [
+        ("skill-low", "skillclaw-inline-guarded-clean-budget035", 8, False),
+        ("direct-low", "direct-deepseek-guarded-clean-budget035", 0, False),
+        ("skill-high", "skillclaw-inline-guarded-clean-budget080", 8, False),
+        ("direct-high", "direct-deepseek-guarded-clean-budget080", 10, True),
+    ]:
+        path = tmp_path / f"{name}-final.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "case_id": "demo-case",
+                    "mode": mode,
+                    "model": "demo",
+                    "score": score,
+                    "max_score": 10,
+                    "checks": {
+                        "cve": {"hit": cve_hit},
+                        "file": {"hit": score > 0},
+                        "function": {"hit": score > 0},
+                        "evidence": {"hit": score > 0},
+                        "root_cause": {"hit": score > 0},
+                    },
+                    "skill_injection": {
+                        "selected_skill_names": ["source-parser-state-machine-oob"],
+                    }
+                    if mode.startswith("skillclaw")
+                    else None,
+                }
+            ),
+            encoding="utf-8",
+        )
+        records.append(path)
+
+    claims = build_claims(collect_rows(records))
+    out_md = tmp_path / "claims.md"
+    write_claim_markdown(claims, out_md)
+    text = out_md.read_text(encoding="utf-8")
+
+    assert claims["aggregate"]["cases"] == 1
+    assert claims["aggregate"]["skillclaw_cve_misses_with_localization"] == 2
+    assert "SkillClaw produced a stronger low-budget result" in text
+    assert "direct LLM outperformed SkillClaw under the high-budget setting" in text
+    assert "CVE-calibration failure" in text
 
 
 def _write_skill(root, name, description, body="workflow"):

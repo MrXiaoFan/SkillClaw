@@ -30,6 +30,8 @@ DEFAULT_ITEMS = [
     Path("experiment_records/libxml2_guarded_clean_comparison_20260625.md"),
     Path("experiment_records/experiment_matrix_20260625.md"),
     Path("experiment_records/experiment_matrix_20260625.csv"),
+    Path("experiment_records/research_claims_20260627.md"),
+    Path("experiment_records/research_claims_20260627.json"),
     Path("experiment_records/scoring_rubric.md"),
 ]
 

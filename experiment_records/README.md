@@ -10,6 +10,10 @@ skills are intentionally not stored here.
   SkillClaw vs direct-LLM experiments.
 - `dev_notes_20260627.md`: short engineering log for the latest preflight
   runner work, Codeup dev synchronization, and current test-suite status.
+- `research_claims_20260627.md` and `research_claims_20260627.json`:
+  automatically derived research observations from the current guarded-clean
+  comparison records. These are intended as paper-claim scaffolding, not final
+  statistical evidence.
 - `libxml2_deepseek_vs_skillclaw_20260623.md`: focused comparison of
   SkillClaw inline skill injection and direct DeepSeek on the libxml2 2.9.4
   case.
@@ -49,6 +53,9 @@ skills are intentionally not stored here.
   output, then writes prompt/raw/stderr/meta/score/validation/final artifacts.
   Use `--preflight` before remote VM runs to verify the target tree, provider,
   and SkillClaw endpoint before spending a long Claude Code session.
+- `experiment_scripts/summarize_research_claims.py` derives conservative
+  paper-oriented observations from final JSON records, such as low-budget
+  steering gains, high-budget counterexamples, and CVE-calibration failures.
 
 ## Removed As Redundant
 
