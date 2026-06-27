@@ -26,3 +26,13 @@ Thumbs.db
 
 # uv
 uv.lock
+
+# Local SkillClaw runtime/share data
+.local-share/
+logs/
+
+# Keep experiment_records as reproducible research artifacts, but do not track
+# generated archive bundles or Python caches inside it.
+experiment_records/**/*.zip
+experiment_records/**/__pycache__/
+experiment_records/recent_conversations_tail_*.jsonl
