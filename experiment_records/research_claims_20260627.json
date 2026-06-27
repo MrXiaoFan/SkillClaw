@@ -18,7 +18,7 @@
       "direct_low_budget": "n/a",
       "skillclaw_high_budget": "n/a",
       "direct_high_budget": "n/a",
-      "selected_skills": ""
+      "selected_skills": "vuln-hunting, source-parser-state-machine-oob, elf-cwe120-firmware-triage"
     },
     {
       "case_id": "libxml2-2.9.4-cve-2017-8872",

@@ -3,7 +3,7 @@
   "timestamp": "2026-06-27T14:43:58.278002+00:00",
   "mode": "skillclaw-inline-guarded",
   "model": "skillclaw-model",
-  "session_id": "",
+  "session_id": "26601cab-9351-4301-a0bc-24a5a5347524",
   "score": 10.0,
   "max_score": 10.0,
   "checks": {
@@ -99,14 +99,129 @@
       "{\"predicted_cves\": [\"CVE-2016-3977\"], \"predicted_files\": [\"util/gif2rgb.c\", \"lib/dgif_lib.c\"], \"predicted_functions\": [\"GIF2RGB\", \"DumpScreen2RGB\", \"DGifGetScreenDesc\"], \"root_cause\": \"The GIF background color index (SBackGroundColor) is read from the file as an unchecked byte value in DGifGetScreenDesc (dgif_lib.c:259), written into every pixel of the screen buffer in GIF2RGB (gif2rgb.c:394-395), and then used as a direct array index into ColorMap->Colors[] in DumpScreen2RGB (gif2rgb.c:304,327) without any bounds check. If the background color index exceeds the color map size (ColorCount = 1 << BitsPerPixel, max 256), a heap-based buffer over-read occurs.\", \"evidence\": \"dgif_lib.c:259: GifFile->SBackGroundColor = Buf[1]; // raw byte, no validation. gif2rgb.c:394-395: ScreenBuffer[0][i] = GifFile->SBackGroundColor; // assigned to all pixels. gif2rgb.c:304: ColorMapEntry = &ColorMap->Colors[GifRow[j]]; // unchecked index into heap-allocated color map array. The global color map size is (1 << BitsPerPixel) where BitsPerPixel = (Buf[0] & 0x07) + 1, so a crafted GIF can specify a Background Color Index larger than the color map entry count.\", \"confidence\": \"high\"}"
     ]
   },
-  "skill_injection": null,
-  "skill_injection_history": [],
+  "skill_injection": {
+    "line_no": 1795,
+    "session_id": "26601cab-9351-4301-a0bc-24a5a5347524",
+    "turn_num": 6,
+    "timestamp": "2026-06-27 22:43:57",
+    "injection_mode": "inline",
+    "selected_skill_names": [
+      "vuln-hunting",
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage"
+    ],
+    "skill_prompt_hash": "0386817b24e2ff8a",
+    "available_skill_count": 35,
+    "skill_top_k": 3
+  },
+  "skill_injection_history": [
+    {
+      "line_no": 1790,
+      "session_id": "26601cab-9351-4301-a0bc-24a5a5347524",
+      "turn_num": 1,
+      "timestamp": "2026-06-27 22:43:12",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "vuln-hunting",
+        "source-parser-state-machine-oob",
+        "elf-cwe120-firmware-triage"
+      ],
+      "skill_prompt_hash": "0386817b24e2ff8a",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 1791,
+      "session_id": "26601cab-9351-4301-a0bc-24a5a5347524",
+      "turn_num": 2,
+      "timestamp": "2026-06-27 22:43:15",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "vuln-hunting",
+        "source-parser-state-machine-oob",
+        "elf-cwe120-firmware-triage"
+      ],
+      "skill_prompt_hash": "0386817b24e2ff8a",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 1792,
+      "session_id": "26601cab-9351-4301-a0bc-24a5a5347524",
+      "turn_num": 3,
+      "timestamp": "2026-06-27 22:43:19",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "vuln-hunting",
+        "source-parser-state-machine-oob",
+        "elf-cwe120-firmware-triage"
+      ],
+      "skill_prompt_hash": "0386817b24e2ff8a",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 1793,
+      "session_id": "26601cab-9351-4301-a0bc-24a5a5347524",
+      "turn_num": 4,
+      "timestamp": "2026-06-27 22:43:26",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "vuln-hunting",
+        "source-parser-state-machine-oob",
+        "elf-cwe120-firmware-triage"
+      ],
+      "skill_prompt_hash": "0386817b24e2ff8a",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 1794,
+      "session_id": "26601cab-9351-4301-a0bc-24a5a5347524",
+      "turn_num": 5,
+      "timestamp": "2026-06-27 22:43:37",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "vuln-hunting",
+        "source-parser-state-machine-oob",
+        "elf-cwe120-firmware-triage"
+      ],
+      "skill_prompt_hash": "0386817b24e2ff8a",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 1795,
+      "session_id": "26601cab-9351-4301-a0bc-24a5a5347524",
+      "turn_num": 6,
+      "timestamp": "2026-06-27 22:43:57",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "vuln-hunting",
+        "source-parser-state-machine-oob",
+        "elf-cwe120-firmware-triage"
+      ],
+      "skill_prompt_hash": "0386817b24e2ff8a",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    }
+  ],
   "skill_relevance": {
-    "status": "no_selected_skills",
-    "selected_skills": [],
-    "relevant_skills": [],
+    "status": "has_task_relevant_skill",
+    "selected_skills": [
+      "vuln-hunting",
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage"
+    ],
+    "relevant_skills": [
+      "source-parser-state-machine-oob"
+    ],
     "infra_skills": [],
-    "matched_terms": {}
+    "matched_terms": {
+      "source-parser-state-machine-oob": [
+        "source"
+      ]
+    }
   },
   "validation": {
     "case_id": "giflib-5.1.2-cve-2016-3977",
@@ -246,19 +361,34 @@
   },
   "feedback": {
     "decision": "positive",
-    "suggested_action": "use_as_baseline_positive",
+    "suggested_action": "keep_or_promote_skill",
     "normalized_score": 1.0,
     "validation_status": "passed",
-    "selected_skills": [],
+    "selected_skills": [
+      "vuln-hunting",
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage"
+    ],
     "skill_relevance": {
-      "status": "no_selected_skills",
-      "selected_skills": [],
-      "relevant_skills": [],
+      "status": "has_task_relevant_skill",
+      "selected_skills": [
+        "vuln-hunting",
+        "source-parser-state-machine-oob",
+        "elf-cwe120-firmware-triage"
+      ],
+      "relevant_skills": [
+        "source-parser-state-machine-oob"
+      ],
       "infra_skills": [],
-      "matched_terms": {}
+      "matched_terms": {
+        "source-parser-state-machine-oob": [
+          "source"
+        ]
+      }
     },
     "reasons": [
-      "skill_relevance=no_selected_skills",
+      "selected_skills=vuln-hunting,source-parser-state-machine-oob,elf-cwe120-firmware-triage",
+      "skill_relevance=has_task_relevant_skill",
       "score=10.0/10.0",
       "validation=passed"
     ]

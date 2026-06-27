@@ -4,6 +4,7 @@ from argparse import Namespace
 from pathlib import Path
 
 from experiment_scripts.check_experiment_env import check_case_environment, infer_claude_provider
+from experiment_scripts.attach_skill_injection import attach_injection
 from experiment_scripts.run_eval_case import extract_json_object, run_case
 from experiment_scripts.run_dynamic_case import run_validators
 from experiment_scripts.smoke_validate_framework import smoke_cases
@@ -192,6 +193,47 @@ def test_build_result_record_selects_latest_case_validation():
     result = _select_validation(rows, "demo")
 
     assert result == rows[2]
+
+
+def test_attach_skill_injection_updates_final_record_feedback():
+    case = {
+        "case_id": "demo",
+        "target": {"project": "parser", "binary": "demo"},
+        "ground_truth": {
+            "vulnerability_type": "state machine oob",
+            "root_cause": "source parser state machine out-of-bounds read",
+        },
+    }
+    final_record = {
+        "case_id": "demo",
+        "score": 8,
+        "max_score": 10,
+        "validation": {"status": "passed"},
+        "skill_injection": None,
+        "skill_relevance": {"status": "no_selected_skills"},
+    }
+    injection_rows = [
+        {"session_id": "old", "selected_skill_names": ["other"]},
+        {
+            "session_id": "target",
+            "injection_mode": "inline",
+            "selected_skill_names": ["source-parser-state-machine-oob"],
+            "available_skill_count": 35,
+        },
+    ]
+
+    updated = attach_injection(
+        final_record=final_record,
+        case=case,
+        injection_value=injection_rows,
+        session_id="target",
+    )
+
+    assert updated["session_id"] == "target"
+    assert updated["skill_injection"] == injection_rows[1]
+    assert updated["skill_injection_history"] == [injection_rows[1]]
+    assert updated["skill_relevance"]["status"] == "has_task_relevant_skill"
+    assert updated["feedback"]["selected_skills"] == ["source-parser-state-machine-oob"]
 
 
 def test_print_case_prompt_selects_mode():

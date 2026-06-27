@@ -14,9 +14,10 @@ skills are intentionally not stored here.
   automatically derived research observations from the current guarded-clean
   comparison records. These are intended as paper-claim scaffolding, not final
   statistical evidence.
-- `giflib_case_plan_20260627.md`: preparation note for the third benchmark
-  case, `giflib-5.1.2-cve-2016-3977`. The case is prepared but not yet executed
-  on the remote VM.
+- `giflib_case_plan_20260627.md` and `giflib_eval_20260627.md`: preparation
+  note and executed comparison for the third benchmark case,
+  `giflib-5.1.2-cve-2016-3977`. The remote VM artifacts are archived under
+  `remote_runs/giflib-20260627/`.
 - `libxml2_deepseek_vs_skillclaw_20260623.md`: focused comparison of
   SkillClaw inline skill injection and direct DeepSeek on the libxml2 2.9.4
   case.
@@ -59,6 +60,10 @@ skills are intentionally not stored here.
 - `experiment_scripts/summarize_research_claims.py` derives conservative
   paper-oriented observations from final JSON records, such as low-budget
   steering gains, high-budget counterexamples, and CVE-calibration failures.
+- `experiment_scripts/attach_skill_injection.py` attaches server-side
+  SkillClaw injection audit rows back to final records. This is used when a
+  remote Claude Code run cannot directly see the proxy's `conversations.jsonl`
+  but the local SkillClaw server recorded selected skill metadata.
 
 ## Removed As Redundant
 

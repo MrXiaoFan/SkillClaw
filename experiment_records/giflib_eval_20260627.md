@@ -18,12 +18,12 @@
 
 ## 实验结果
 
-SkillClaw 组运行 ID 为 `giflib-skillclaw-guarded-20260627`，模式为 `skillclaw-inline-guarded`，最终得分 `10/10`。模型正确输出 `CVE-2016-3977`，命中 `util/gif2rgb.c`、`DumpScreen2RGB`、`GifFile->SBackGroundColor`、`ScreenBuffer[0][i]` 和 `ColorMap->Colors[GifRow[j]]`，并解释了背景色索引未校验导致 color map 越界读取的根因。需要注意的是，本次记录中的 `selected_skills` 为空，因此该结果只能证明 SkillClaw 服务端环境下表现更好，不能直接证明某一个具体 skill 被显式选中并发挥作用。
+SkillClaw 组运行 ID 为 `giflib-skillclaw-guarded-20260627`，模式为 `skillclaw-inline-guarded`，最终得分 `10/10`。模型正确输出 `CVE-2016-3977`，命中 `util/gif2rgb.c`、`DumpScreen2RGB`、`GifFile->SBackGroundColor`、`ScreenBuffer[0][i]` 和 `ColorMap->Colors[GifRow[j]]`，并解释了背景色索引未校验导致 color map 越界读取的根因。后处理从 SkillClaw 服务端 `records/conversations.jsonl` 抽取到本次 session `26601cab-9351-4301-a0bc-24a5a5347524` 的 inline injection 记录，确认注入 skill 为 `vuln-hunting`、`source-parser-state-machine-oob` 和 `elf-cwe120-firmware-triage`，`skill_relevance` 被评估为 `has_task_relevant_skill`。
 
 DeepSeek 直连组运行 ID 为 `giflib-direct-guarded-20260627`，模式为 `direct-deepseek-guarded`，最终得分 `8/10`。模型同样定位到 `util/gif2rgb.c` 和 `DumpScreen2RGB`，并完整覆盖 `GifFile->SBackGroundColor`、`ScreenBuffer[0][i]`、`ColorMap->Colors[GifRow[j]]`、`ColorMap->ColorCount` 等关键证据；但 CVE 编号输出为 `CVE-2016-3177`，未命中正确的 `CVE-2016-3977`，因此扣分。
 
 ## 初步结论
 
-本 case 中，SkillClaw 组优于 Direct 组的主要原因不是源码定位能力，而是 CVE identity/calibration 更准确。Direct 组已经具备很强的源码级定位和根因分析能力，但在漏洞编号上出现近似错误。这支持一个更谨慎的论文表述：SkillClaw 不应被宣称为普遍提升漏洞定位能力，而更适合作为任务稳定化、检索增强和漏洞身份校准机制来研究；源码定位、CVE 校准、动态触发验证应拆成不同评价维度。
+本 case 中，SkillClaw 组优于 Direct 组的主要原因不是源码定位能力，而是 CVE identity/calibration 更准确。Direct 组已经具备很强的源码级定位和根因分析能力，但在漏洞编号上出现近似错误。结合注入记录看，本次 SkillClaw 确实选择了与状态机越界和漏洞狩猎相关的 task skill，但仍不能单独证明提升来自某一个 skill；更稳妥的论文表述是：SkillClaw 不应被宣称为普遍提升漏洞定位能力，而更适合作为任务稳定化、检索增强和漏洞身份校准机制来研究；源码定位、CVE 校准、skill 归因和动态触发验证应拆成不同评价维度。
 
 相关原始产物保存在 `experiment_records/remote_runs/giflib-20260627/`。跨实验汇总已更新到 `experiment_records/research_claims_20260627.md` 和 `experiment_records/research_claims_20260627.json`。
