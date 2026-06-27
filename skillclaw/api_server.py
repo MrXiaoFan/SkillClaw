@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import copy
+import hashlib
 import json
 import logging
 import os
@@ -420,6 +421,21 @@ def _resolve_skill_reference(
     }
 
 
+def _display_skill_path(path: str) -> str:
+    """Return a stable display path for skill attribution records.
+
+    Keep POSIX-style public paths intact (for remote Linux clients), but
+    canonicalize local Windows paths so tests and dashboard records do not mix
+    ``\\`` and ``/`` separators.
+    """
+    value = str(path or "").strip()
+    if not value:
+        return ""
+    if os.name == "nt" and value.startswith("/") and "\\" not in value:
+        return value
+    return os.path.realpath(value)
+
+
 def _resolve_skill_reference_by_name(
     skill_name: str,
     skill_path_map: dict[str, dict[str, str]],
@@ -439,14 +455,14 @@ def _resolve_skill_reference_by_name(
                 return {
                     "skill_id": str(skill_info.get("skill_id", "") or ""),
                     "skill_name": clean_name,
-                    "path": str(path or ""),
+                    "path": _display_skill_path(str(path or "")),
                 }
     for path, skill_info in skill_path_map.items():
         if str(skill_info.get("skill_name", "") or "").strip() == clean_name:
             return {
                 "skill_id": str(skill_info.get("skill_id", "") or ""),
                 "skill_name": clean_name,
-                "path": str(path or ""),
+                "path": _display_skill_path(str(path or "")),
             }
     return {"skill_id": "", "skill_name": clean_name, "path": ""}
 
@@ -1461,6 +1477,7 @@ class SkillClawAPIServer:
         self._session_scored_turns: dict[str, int] = {}  # session -> finalized PRM turn count
         self._session_turns: dict[str, list] = {}
         self._session_last_active: dict[str, float] = {}  # session -> unix_ts
+        self._session_inline_skill_cache: dict[str, dict[str, Any]] = {}
         self._closing_sessions: set[str] = set()  # session ids currently being closed
         self._background_tasks: set[asyncio.Task] = set()  # transient async tasks (upload, submit)
         self._responses_store: dict[str, dict[str, Any]] = {}  # response_id -> stored response/history
@@ -1496,9 +1513,12 @@ class SkillClawAPIServer:
             os.makedirs(config.record_dir, exist_ok=True)
             self._record_file = os.path.join(config.record_dir, "conversations.jsonl")
             self._prm_record_file = os.path.join(config.record_dir, "prm_scores.jsonl")
-            with open(self._record_file, "w"):
+            # Local enhancement: keep historical records across proxy restarts.
+            # Opening in write mode erased sessions and made dashboard/evaluation
+            # history disappear after a reboot.
+            with open(self._record_file, "a", encoding="utf-8"):
                 pass
-            with open(self._prm_record_file, "w"):
+            with open(self._prm_record_file, "a", encoding="utf-8"):
                 pass
 
         self.app = self._build_app()
@@ -1566,6 +1586,74 @@ class SkillClawAPIServer:
                     ],
                 }
             )
+
+        # Local enhancement: expose the server-side SkillClaw skill catalog to
+        # remote Claude Code clients that only hold the proxy API key. This is
+        # an introspection endpoint, not a Claude Code local-skill installer.
+        @app.get("/v1/skills")
+        async def list_skills(
+            request: Request,
+            authorization: Optional[str] = Header(default=None),
+            x_api_key: Optional[str] = Header(default=None, alias="x-api-key"),
+        ):
+            owner: SkillClawAPIServer = request.app.state.owner
+            auth_header = authorization or (f"Bearer {x_api_key}" if x_api_key else None)
+            await owner._check_auth(auth_header)
+            if not owner.skill_manager:
+                return JSONResponse(content={"object": "list", "data": []})
+            try:
+                owner.skill_manager.refresh_if_changed()
+            except Exception as e:
+                logger.warning("[SkillManager] failed to refresh local skills: %s", e)
+            skills = []
+            for skill in owner.skill_manager.get_all_skills():
+                skills.append(
+                    {
+                        "id": skill.get("id", ""),
+                        "name": skill.get("name", ""),
+                        "description": skill.get("description", ""),
+                        "category": skill.get("category", "general"),
+                    }
+                )
+            return JSONResponse(
+                content={
+                    "object": "list",
+                    "source": "skillclaw-server",
+                    "count": len(skills),
+                    "data": skills,
+                }
+            )
+
+        @app.get("/v1/skills/{skill_name}")
+        async def get_skill(
+            skill_name: str,
+            request: Request,
+            authorization: Optional[str] = Header(default=None),
+            x_api_key: Optional[str] = Header(default=None, alias="x-api-key"),
+        ):
+            owner: SkillClawAPIServer = request.app.state.owner
+            auth_header = authorization or (f"Bearer {x_api_key}" if x_api_key else None)
+            await owner._check_auth(auth_header)
+            if not owner.skill_manager:
+                raise HTTPException(status_code=404, detail="skill not found")
+            try:
+                owner.skill_manager.refresh_if_changed()
+            except Exception as e:
+                logger.warning("[SkillManager] failed to refresh local skills: %s", e)
+            for skill in owner.skill_manager.get_all_skills():
+                if str(skill.get("name") or "") == skill_name:
+                    return JSONResponse(
+                        content={
+                            "object": "skill",
+                            "source": "skillclaw-server",
+                            "id": skill.get("id", ""),
+                            "name": skill.get("name", ""),
+                            "description": skill.get("description", ""),
+                            "category": skill.get("category", "general"),
+                            "content": skill.get("content", ""),
+                        }
+                    )
+            raise HTTPException(status_code=404, detail="skill not found")
 
         @app.post("/v1/chat/completions")
         async def chat_completions(
@@ -2123,6 +2211,7 @@ class SkillClawAPIServer:
             if self.config.sharing_enabled:
                 self._safe_create_task(self._pull_skills_from_cloud(skip_names=modified_skill_names))
             self._session_last_active.pop(session_id, None)
+            self._session_inline_skill_cache.pop(session_id, None)
             for key, meta in list(self._tui_session_meta.items()):
                 if isinstance(meta, dict) and meta.get("session_id") == session_id:
                     self._tui_session_meta.pop(key, None)
@@ -2162,12 +2251,19 @@ class SkillClawAPIServer:
                 logger.warning("[OpenClaw] failed to write record: %s", e)
 
     def _buffer_record(
-        self, session_id: str, turn_num: int, messages: list, prompt_text: str, response_text: str, tool_calls: list
+        self,
+        session_id: str,
+        turn_num: int,
+        messages: list,
+        prompt_text: str,
+        response_text: str,
+        tool_calls: list,
+        skill_injection: Optional[dict[str, Any]] = None,
     ):
         if not self._record_file:
             return
         instruction_text = _extract_last_user_instruction(messages)
-        self._pending_records[session_id] = {
+        record = {
             "session_id": session_id,
             "turn": turn_num,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -2177,6 +2273,17 @@ class SkillClawAPIServer:
             "response_text": response_text,
             "tool_calls": tool_calls or None,
         }
+        if skill_injection:
+            # Local enhancement: persist exact server-side skill injection
+            # metadata so vulnerability-localization experiments can be
+            # audited and reproduced.
+            record["skill_injection"] = skill_injection
+            record["selected_skill_names"] = skill_injection.get("selected_skill_names", [])
+            record["injection_mode"] = skill_injection.get("injection_mode", "")
+            record["skill_top_k"] = skill_injection.get("top_k")
+            record["skill_prompt_hash"] = skill_injection.get("skill_prompt_hash", "")
+            record["available_skill_count"] = skill_injection.get("available_skill_count", 0)
+        self._pending_records[session_id] = record
 
     def _append_prm_record(self, session_id: str, turn_num: int, score: float, votes: list):
         if not self._prm_record_file:
@@ -2382,8 +2489,9 @@ class SkillClawAPIServer:
 
         # Inject skills into system message for main turns
         injected_skills: list[str] = []
+        skill_injection_meta: dict[str, Any] = {}
         if self.skill_manager and turn_type == "main":
-            messages, injected_skills = self._inject_skills(messages)
+            messages, injected_skills, skill_injection_meta = self._inject_skills(messages, session_id=session_id)
         if self._compress_system_prompt and cached_system:
             logger.info(
                 "[OpenClaw] system prompt cached len=%d",
@@ -2494,7 +2602,15 @@ class SkillClawAPIServer:
                 f"{m.get('role', '?')}: {_flatten_message_content(m.get('content', ''))}" for m in messages
             )
             response_text = content or (json.dumps(tool_calls, ensure_ascii=False) if tool_calls else "")
-            self._buffer_record(session_id, turn_num, messages, prompt_text, response_text, tool_calls)
+            self._buffer_record(
+                session_id,
+                turn_num,
+                messages,
+                prompt_text,
+                response_text,
+                tool_calls,
+                skill_injection=skill_injection_meta,
+            )
             raw_turn_kind = _classify_raw_turn_kind(protocol, content, tool_calls)
             turn_record = {
                 "turn_num": turn_num,
@@ -2510,6 +2626,12 @@ class SkillClawAPIServer:
                 "tool_observations": [],
                 "tool_errors": [],
                 "injected_skills": injected_skills,
+                "skill_injection": skill_injection_meta,
+                "selected_skill_names": skill_injection_meta.get("selected_skill_names", []),
+                "injection_mode": skill_injection_meta.get("injection_mode", ""),
+                "skill_top_k": skill_injection_meta.get("top_k"),
+                "skill_prompt_hash": skill_injection_meta.get("skill_prompt_hash", ""),
+                "available_skill_count": skill_injection_meta.get("available_skill_count", 0),
                 "prm_score": None,
             }
             self._session_turns.setdefault(session_id, []).append(turn_record)
@@ -2603,9 +2725,17 @@ class SkillClawAPIServer:
         except Exception as e:
             logger.warning("[SkillManager] failed to refresh local skills: %s", e)
 
-        skill_text = self.skill_manager.build_injection_prompt(
-            max_chars=getattr(self.config, "max_skills_prompt_chars", 30_000),
-        )
+        try:
+            skill_text = self.skill_manager.build_injection_prompt(
+                max_chars=getattr(self.config, "max_skills_prompt_chars", 30_000),
+                read_tool_name="Read",
+            )
+        except TypeError:
+            # Compatibility with lightweight test doubles and older
+            # SkillManager-like implementations.
+            skill_text = self.skill_manager.build_injection_prompt(
+                max_chars=getattr(self.config, "max_skills_prompt_chars", 30_000),
+            )
         if not skill_text:
             return []
 
@@ -3215,7 +3345,12 @@ class SkillClawAPIServer:
             )
         return result
 
-    def _inject_skills(self, messages: list[dict]) -> tuple[list[dict], list[str]]:
+    def _inject_skills(
+        self,
+        messages: list[dict],
+        *,
+        session_id: str = "",
+    ) -> tuple[list[dict], list[str], dict[str, Any]]:
         """Inject an OpenClaw-compatible skill catalog into the system message.
 
         Lists ALL eligible skills as an XML ``<available_skills>`` catalog
@@ -3223,29 +3358,115 @@ class SkillClawAPIServer:
         The model is instructed to ``read`` at most one SKILL.md when
         relevant (lazy loading), matching OpenClaw's injection behaviour.
 
-        Returns (modified_messages, listed_skill_names).
+        Returns (modified_messages, listed_skill_names, injection_metadata).
         """
         if not self.skill_manager:
-            return messages, []
+            return messages, [], {}
 
         try:
             self.skill_manager.refresh_if_changed()
         except Exception as e:
             logger.warning("[SkillManager] failed to refresh local skills: %s", e)
 
-        skill_text = self.skill_manager.build_injection_prompt(
-            max_chars=getattr(self.config, "max_skills_prompt_chars", 30_000),
-        )
-        if not skill_text:
-            return messages, []
+        max_skill_chars = getattr(self.config, "max_skills_prompt_chars", 30_000)
+        injection_mode = str(getattr(self.config, "skill_injection_mode", "catalog") or "catalog").lower()
+        top_k = int(getattr(self.config, "skill_top_k", 3) or 3)
+        stable_action = "none"
+        stable_generation = int(getattr(self.skill_manager, "generation", 0) or 0)
+        if injection_mode in {"inline", "server", "server-inline"}:
+            # Local enhancement: inline selected SKILL.md content for remote
+            # clients whose filesystem cannot read the server's skill paths.
+            cached = self._session_inline_skill_cache.get(session_id) if session_id else None
+            skill_text = ""
+            skill_names: list[str] = []
+            if (
+                cached
+                and cached.get("generation") == stable_generation
+                and isinstance(cached.get("selected_skill_names"), list)
+            ):
+                skills_by_name = {
+                    str(skill.get("name") or ""): skill
+                    for skill in self.skill_manager.get_all_skills()
+                    if isinstance(skill, dict)
+                }
+                selected = [
+                    skills_by_name[name]
+                    for name in cached.get("selected_skill_names", [])
+                    if isinstance(name, str) and name in skills_by_name
+                ]
+                if selected:
+                    skill_text = self.skill_manager.format_inline_skills_for_prompt(
+                        selected,
+                        max_chars=max_skill_chars,
+                    )
+                    skill_names = [str(skill.get("name") or "unknown_skill") for skill in selected]
+                    stable_action = "reuse"
+                else:
+                    self._session_inline_skill_cache.pop(session_id, None)
 
-        all_skills = self.skill_manager.get_all_skills()
-        skill_names = [s.get("name", "unknown_skill") for s in all_skills if isinstance(s, dict)]
-        logger.info(
-            "[SkillManager] listing %d skills in catalog: %s",
-            len(skill_names),
-            ", ".join(skill_names)[:400],
-        )
+            if not skill_text:
+                task_description = _extract_last_user_instruction(messages)
+                skill_text, skill_names = self.skill_manager.build_inline_injection_prompt(
+                    task_description,
+                    max_chars=max_skill_chars,
+                    top_k=top_k,
+                )
+                has_task_skill = any(not str(name).startswith("skillclaw-") for name in skill_names)
+                if session_id and has_task_skill:
+                    self._session_inline_skill_cache[session_id] = {
+                        "generation": stable_generation,
+                        "selected_skill_names": list(skill_names),
+                    }
+                    stable_action = "pin"
+        else:
+            try:
+                skill_text = self.skill_manager.build_injection_prompt(
+                    max_chars=max_skill_chars,
+                    read_tool_name="Read",
+                )
+            except TypeError:
+                # Compatibility with test doubles and older SkillManager-like
+                # objects that predate the read_tool_name parameter.
+                skill_text = self.skill_manager.build_injection_prompt(
+                    max_chars=max_skill_chars,
+                )
+            all_skills = self.skill_manager.get_all_skills()
+            skill_names = [s.get("name", "unknown_skill") for s in all_skills if isinstance(s, dict)]
+        if not skill_text:
+            return messages, [], {}
+
+        all_skill_count = 0
+        try:
+            all_skill_count = len(self.skill_manager.get_all_skills())
+        except Exception:
+            all_skill_count = len(skill_names)
+
+        skill_injection_meta = {
+            "enabled": True,
+            "injection_mode": injection_mode,
+            "top_k": top_k if injection_mode in {"inline", "server", "server-inline"} else None,
+            "selected_skill_names": list(skill_names),
+            "available_skill_count": all_skill_count,
+            "skill_prompt_chars": len(skill_text),
+            "skill_prompt_hash": hashlib.sha256(skill_text.encode("utf-8")).hexdigest()[:16],
+            "stable_session": bool(session_id and injection_mode in {"inline", "server", "server-inline"}),
+            "stable_action": stable_action,
+            "stable_generation": stable_generation,
+        }
+
+        if injection_mode in {"inline", "server", "server-inline"}:
+            logger.info(
+                "[SkillManager] inlining %d skill(s) stable=%s: %s",
+                len(skill_names),
+                stable_action,
+                ", ".join(skill_names)[:400],
+            )
+        else:
+            logger.info(
+                "[SkillManager] listing %d skills in catalog: %s",
+                len(skill_names),
+                ", ".join(skill_names)[:400],
+            )
 
         self.skill_manager.record_injection(skill_names)
 
@@ -3258,7 +3479,7 @@ class SkillClawAPIServer:
         else:
             messages.insert(0, {"role": "system", "content": skill_text})
 
-        return messages, skill_names
+        return messages, skill_names, skill_injection_meta
 
     # ------------------------------------------------------------------ #
     # Turn feedback finalization                                           #

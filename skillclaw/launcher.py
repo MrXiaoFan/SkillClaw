@@ -128,7 +128,9 @@ class SkillClawLauncher:
                 from .skill_hub import SkillHub
 
                 hub = SkillHub.from_config(cfg)
-                result = hub.pull_skills(cfg.skills_dir)
+                # Local enhancement: startup auto-pull must not delete local
+                # experimental skills that have not been published yet.
+                result = hub.pull_skills(cfg.skills_dir, mirror=False)
                 logger.info(
                     "[Launcher] auto-pull: %d downloaded, %d unchanged, %d deleted",
                     result["downloaded"],

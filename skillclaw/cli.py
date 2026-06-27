@@ -891,7 +891,9 @@ def skills_pull():
     cs = ConfigStore()
     cfg, hub = _require_sharing(cs)
     click.echo(f"Pulling skills from {_sharing_target(cfg)} ...")
-    result = hub.pull_skills(cfg.skills_dir)
+    # Local enhancement: keep manual pulls incremental for research branches.
+    # Full mirror pulls can erase locally generated skills before they are pushed.
+    result = hub.pull_skills(cfg.skills_dir, mirror=False)
     msg = (
         f"Done: {result['downloaded']} downloaded, "
         f"{result['skipped']} unchanged, "

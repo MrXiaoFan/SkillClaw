@@ -64,6 +64,148 @@ from .skill_bundle import list_skill_bundle_paths
 logger = logging.getLogger(__name__)
 
 _SAFE_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
+_WORD_RE = re.compile(r"[a-zA-Z0-9_]{3,}|[\u4e00-\u9fff]{2,}")
+_INLINE_QUERY_STOPWORDS = {
+    "skill",
+    "skills",
+    "skillclaw",
+    "server",
+    "side",
+    "server-side",
+    "claude",
+    "code",
+    "local",
+    "websearch",
+    "json",
+    "object",
+    "current",
+    "directory",
+    "target",
+    "program",
+    "use",
+    "using",
+    "analyze",
+    "analysis",
+    "finish",
+    "containing",
+    "output",
+}
+_VULNERABILITY_TASK_TERMS = {
+    "vulnerability",
+    "vulnerabilities",
+    "vuln",
+    "cve",
+    "cwe",
+    "overflow",
+    "overread",
+    "read",
+    "write",
+    "oob",
+    "parser",
+    "firmware",
+    "binary",
+    "binaries",
+    "elf",
+    "source",
+    "exploit",
+    "exploitation",
+    "漏洞",
+    "越界",
+    "溢出",
+    "固件",
+    "二进制",
+    "源码",
+}
+_SOURCE_PARSER_TASK_TERMS = {
+    "parser",
+    "parsing",
+    "state",
+    "machine",
+    "source",
+    "code",
+    "lookahead",
+    "bounds",
+    "bound",
+    "boundary",
+    "guard",
+    "dominance",
+    "fragment",
+    "fragmentation",
+    "header",
+    "protocol",
+    "packet",
+    "tcpdump",
+    "print",
+    "frag6",
+    "nd_tcheck",
+    "cur",
+    "end",
+    "avail",
+    "oob",
+    "overread",
+    "over",
+    "read",
+}
+_IDA_INTENT_TERMS = {
+    "ida",
+    "idalib",
+    "hexrays",
+    "hex-rays",
+    "decompiler",
+    "decompile",
+    "headless",
+    "i64",
+}
+_SSH_INTENT_TERMS = {
+    "ssh",
+    "password",
+    "passwords",
+    "credential",
+    "credentials",
+    "login",
+    "paramiko",
+    "sshpass",
+    "recon",
+    "reconnaissance",
+}
+_SKILLCLAW_META_MARKERS = (
+    "available skills",
+    "list skills",
+    "skill count",
+    "skill catalog",
+    "server-side skill count",
+    "/v1/skills",
+    "settings.json",
+    "proxy api",
+    "proxy apis",
+    "claude env",
+    "skillclaw 配置",
+    "skillclaw 服务端",
+    "技能列表",
+    "已有技能",
+    "已有的 skill",
+)
+
+
+def _looks_like_skillclaw_meta_task(text: str) -> bool:
+    lowered = str(text or "").lower()
+    return any(marker in lowered for marker in _SKILLCLAW_META_MARKERS)
+
+
+def _looks_like_source_parser_task(query_terms: set[str]) -> bool:
+    """Return True for source-level parser boundary-analysis tasks."""
+    if not query_terms:
+        return False
+    source_hits = query_terms & _SOURCE_PARSER_TASK_TERMS
+    if len(source_hits) < 2:
+        return False
+    has_parser_context = bool(
+        query_terms & {"parser", "parsing", "fragment", "fragmentation", "protocol", "packet", "tcpdump"}
+    )
+    has_boundary_context = bool(
+        query_terms & {"source", "code", "oob", "overread", "read", "bounds", "guard", "nd_tcheck"}
+    )
+    return has_parser_context and has_boundary_context
 
 # ------------------------------------------------------------------ #
 # Frontmatter parser                                                   #
@@ -520,23 +662,29 @@ class SkillManager:
         Used by the server to resolve which skill a ``read`` tool call targets.
         """
         path_map: Dict[str, Dict[str, str]] = {}
+
+        def add_path(path: str, skill: dict) -> None:
+            if path:
+                path_map[path] = {
+                    "skill_id": skill.get("id", ""),
+                    "skill_name": skill.get("name", ""),
+                }
+                normalized = os.path.realpath(path)
+                path_map[normalized] = path_map[path]
+
         for s in self.get_all_skills():
             skill_dir = os.path.dirname(str(s.get("file_path", "") or ""))
             bundle_paths = list_skill_bundle_paths(skill_dir) if skill_dir else []
             bundle_paths = bundle_paths or ["SKILL.md"]
             public_dir = os.path.dirname(self._public_skill_path(s)) if self._public_skill_path(s) else ""
             for rel_path in bundle_paths:
-                locations = []
                 if skill_dir:
-                    locations.append(os.path.realpath(os.path.join(skill_dir, rel_path)))
+                    add_path(os.path.join(skill_dir, rel_path), s)
                 if public_dir:
-                    locations.append(os.path.realpath(os.path.join(public_dir, rel_path)))
-                for fp in locations:
-                    if fp:
-                        path_map[fp] = {
-                            "skill_id": s.get("id", ""),
-                            "skill_name": s.get("name", ""),
-                        }
+                    if "/" in public_dir and "\\" not in public_dir:
+                        add_path("/".join([public_dir.rstrip("/"), rel_path.replace("\\", "/")]), s)
+                    else:
+                        add_path(os.path.join(public_dir, rel_path), s)
         return path_map
 
     def _public_skill_path(self, skill: dict) -> str:
@@ -545,6 +693,8 @@ class SkillManager:
         name = str(skill.get("name", "")).strip()
         if not name:
             return ""
+        if "/" in self._public_skill_root and "\\" not in self._public_skill_root:
+            return "/".join([self._public_skill_root.rstrip("/"), name, "SKILL.md"])
         return os.path.join(self._public_skill_root, name, "SKILL.md")
 
     @staticmethod
@@ -633,11 +783,17 @@ class SkillManager:
         return "\n".join(
             [
                 "## Skills (mandatory)",
+                "SkillClaw skills are server-side guidance, not client-local Claude Code skills.",
+                "- Do not call the client's local `Skill(...)` tool for SkillClaw skills unless the user explicitly asks for Claude Code local skills.",
                 "Before replying: scan <available_skills> <description> entries.",
+                "- If the user explicitly names a skill, select that exact skill and read its "
+                "SKILL.md at <location> before any project search or analysis.",
                 f"- If exactly one skill clearly applies: read its SKILL.md at "
                 f"<location> with `{read_tool_name}`, then follow it.",
                 "- If multiple could apply: choose the most specific one, then read/follow it.",
                 "- If none clearly apply: do not read any SKILL.md.",
+                "- Do not search the current project for SKILL.md; use the absolute <location> "
+                "from <available_skills>.",
                 "Constraints: never read more than one skill up front; only read after selecting.",
                 "- When a skill drives external API writes, assume rate limits: prefer fewer "
                 "larger writes, avoid tight one-item loops, serialize bursts when possible, "
@@ -667,6 +823,193 @@ class SkillManager:
         else:
             catalog = self.format_skills_compact(skills)
         return self.build_skills_section(catalog, read_tool_name)
+
+    def select_skills_for_inline(self, task_description: str, top_k: int = 3) -> list[dict]:
+        """Choose a small set of skills whose full contents should be injected.
+
+        Local enhancement: this path is the bridge from SkillClaw's server-side
+        skill bank to remote Claude Code clients that only connect by API key.
+
+        Exact skill-name mentions are always prioritized.  Remaining slots use
+        the configured retrieval strategy so key-only remote clients can benefit
+        from server-side skills without reading files from their filesystem.
+        """
+        all_skills = self.get_all_skills()
+        if not all_skills:
+            return []
+
+        text = str(task_description or "").lower()
+        selected: list[dict] = []
+        seen: set[str] = set()
+
+        for skill in all_skills:
+            name = str(skill.get("name") or "").strip()
+            if name and name.lower() in text:
+                selected.append(skill)
+                seen.add(name)
+
+        if len(selected) < max(1, top_k):
+            if self.retrieval_mode == "embedding":
+                candidates = self.retrieve(task_description, top_k=max(1, top_k) * 2)
+            else:
+                candidates = self._keyword_retrieve_for_inline(task_description, top_k=max(1, top_k) * 2)
+            for skill in candidates:
+                name = str(skill.get("name") or "").strip()
+                if name and name not in seen:
+                    selected.append(skill)
+                    seen.add(name)
+                if len(selected) >= max(1, top_k):
+                    break
+
+        return selected[: max(1, top_k)]
+
+    def _keyword_retrieve_for_inline(self, task_description: str, top_k: int = 6) -> list[dict]:
+        """Rank skills by lightweight lexical overlap for inline injection."""
+        task_text = str(task_description or "").lower()
+        query_terms = set(_WORD_RE.findall(task_text)) - _INLINE_QUERY_STOPWORDS
+        if not query_terms:
+            return self.retrieve(task_description, top_k=top_k)
+        is_vulnerability_task = bool(query_terms & _VULNERABILITY_TASK_TERMS)
+        is_skillclaw_meta_task = _looks_like_skillclaw_meta_task(task_text)
+        is_source_parser_task = _looks_like_source_parser_task(query_terms)
+        has_ida_intent = bool(query_terms & _IDA_INTENT_TERMS)
+        ssh_intent_hits = query_terms & _SSH_INTENT_TERMS
+
+        scored: list[tuple[float, dict]] = []
+        for skill in self.get_all_skills():
+            name = str(skill.get("name") or "")
+            # Local enhancement: remote Claude Code prompts often contain
+            # words like "SkillClaw server-side skills" as plumbing language.
+            # For vulnerability-analysis tasks, do not let SkillClaw
+            # self-inspection skills consume inline top-k slots.  A mixed
+            # prompt can mention the API proxy while still being a real target
+            # analysis task, so metadata skills are only eligible for explicit
+            # SkillClaw-management requests.
+            if name.startswith("skillclaw-") and (is_vulnerability_task or not is_skillclaw_meta_task):
+                continue
+            if is_source_parser_task and name.startswith(("ida-", "idalib-")) and not has_ida_intent:
+                continue
+            if name == "ssh-password-recon-workflow" and is_vulnerability_task and len(ssh_intent_hits) < 2:
+                continue
+            haystack = " ".join(
+                [
+                    name,
+                    str(skill.get("description") or ""),
+                    str(skill.get("category") or ""),
+                    str(skill.get("content") or "")[:2000],
+                ]
+            ).lower()
+            skill_terms = set(_WORD_RE.findall(haystack))
+            overlap = len(query_terms & skill_terms)
+            if overlap <= 0:
+                continue
+            score = overlap + self.get_effectiveness(name) * 0.25
+            # Local enhancement: prefer source-level parser boundary workflows
+            # for tasks that ask about parser/header/OOB bugs in source trees.
+            # Generic ELF/IDA triage skills are useful fallback guidance, but
+            # they should not outrank a source parser skill unless the user
+            # explicitly asks for IDA/headless/decompiler analysis.
+            if is_source_parser_task:
+                if name == "source-parser-state-machine-oob":
+                    score += 8.0
+                elif name.startswith(("ida-", "idalib-")) and not has_ida_intent:
+                    score -= 4.0
+                elif "cwe120" in name and not (query_terms & {"cwe", "cwe120", "overflow"}):
+                    score -= 1.5
+            scored.append((score, skill))
+
+        if not scored:
+            return self.retrieve(task_description, top_k=top_k)
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [skill for _, skill in scored[:top_k]]
+
+    def format_inline_skills_for_prompt(self, skills: list[dict], max_chars: int = 30_000) -> str:
+        """Build an inline skill prompt that includes SKILL.md bodies."""
+        if not skills:
+            return ""
+
+        escape = SkillManager._escape_xml
+        lines = [
+            "## Skills (server-loaded)",
+            "SkillClaw server-side skills are different from the client's local Claude Code skills.",
+            "Do not call the client's local `Skill(...)` tool for these SkillClaw skills; they are already injected as text.",
+            "If a client-local Skill tool reports 'Unknown skill', ignore that local-tool error and continue with the injected SkillClaw instructions.",
+            "If the user asks which skills are available on the SkillClaw/LLM/server side, answer from <available_server_skills>.",
+            "",
+            "<available_server_skills>",
+        ]
+        for skill in self.get_all_skills():
+            lines.append("  <skill>")
+            lines.append(f"    <name>{escape(str(skill.get('name') or ''))}</name>")
+            lines.append(f"    <description>{escape(str(skill.get('description') or ''))}</description>")
+            lines.append("  </skill>")
+        lines.extend(
+            [
+                "</available_server_skills>",
+                "",
+                "## Loaded Skill Instructions",
+            ]
+        )
+        lines.extend([
+            "The SkillClaw server has already loaded the following skill files.",
+            "Use these instructions directly; do not search for or read SKILL.md from the remote filesystem.",
+            "Do not invoke Claude Code's local Skill tool to initialize these skills.",
+            "Treat these loaded skills as the primary source of task guidance.",
+            "Do not use WebSearch or external web browsing as the first step when a loaded skill applies, unless the user explicitly asks for current/latest public information.",
+            "Begin by applying the loaded skill workflow to the user's workspace, files, firmware, binaries, logs, or target environment.",
+            "If multiple skills are present, follow the most specific applicable skill.",
+            "",
+            "<loaded_skills>",
+        ])
+        current_len = sum(len(line) + 1 for line in lines)
+        included = 0
+
+        for skill in skills:
+            name = str(skill.get("name") or "")
+            description = str(skill.get("description") or "")
+            content = str(skill.get("content") or "")
+            block_prefix = [
+                "  <skill>",
+                f"    <name>{escape(name)}</name>",
+                f"    <description>{escape(description)}</description>",
+                "    <content>",
+            ]
+            block_suffix = [
+                "    </content>",
+                "  </skill>",
+            ]
+            reserved = sum(len(line) + 1 for line in block_prefix + block_suffix) + len("</loaded_skills>\n")
+            available = max_chars - current_len - reserved
+            if available <= 200 and included:
+                break
+            if available <= 200:
+                available = max(0, available)
+            body = content
+            if len(body) > available:
+                body = body[: max(0, available)] + "\n[Skill content truncated by SkillClaw prompt budget.]"
+
+            block = block_prefix + [escape(body)] + block_suffix
+            block_len = sum(len(line) + 1 for line in block)
+            if current_len + block_len + len("</loaded_skills>\n") > max_chars and included:
+                break
+            lines.extend(block)
+            current_len += block_len
+            included += 1
+
+        lines.append("</loaded_skills>")
+        return "\n".join(lines) if included else ""
+
+    def build_inline_injection_prompt(
+        self,
+        task_description: str,
+        max_chars: int = 30_000,
+        top_k: int = 3,
+    ) -> tuple[str, list[str]]:
+        """Return server-loaded skill content and the selected skill names."""
+        selected = self.select_skills_for_inline(task_description, top_k=top_k)
+        prompt = self.format_inline_skills_for_prompt(selected, max_chars=max_chars)
+        names = [str(s.get("name") or "unknown_skill") for s in selected if isinstance(s, dict)]
+        return prompt, names
 
     def _remove_skill_from_memory(self, name: str) -> None:
         """Remove a skill from in-memory structures (not from disk)."""

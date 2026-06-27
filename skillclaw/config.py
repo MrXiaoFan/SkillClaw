@@ -31,6 +31,9 @@ class SkillClawConfig:
     use_skills: bool = False
     skills_dir: str = "memory_data/skills"
     skills_public_root: str = ""
+    # Local enhancement: catalog mode lists server skills; inline mode injects
+    # selected skill bodies for remote clients that cannot read server files.
+    skill_injection_mode: str = "catalog"
     retrieval_mode: str = "template"
     embedding_model_path: str = "Qwen/Qwen3-Embedding-0.6B"
     skill_top_k: int = 6

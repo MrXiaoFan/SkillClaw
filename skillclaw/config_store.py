@@ -368,6 +368,9 @@ class ConfigStore:
             use_skills=bool(skills.get("enabled", True)),
             skills_dir=skills_dir,
             skills_public_root=str(skills.get("public_root", "") or ""),
+            # Local enhancement: allow proxy-side inline skill injection for
+            # remote Claude Code clients that only access SkillClaw by API key.
+            skill_injection_mode=str(skills.get("injection_mode", "catalog") or "catalog").strip().lower(),
             retrieval_mode=skills.get("retrieval_mode", "template"),
             skill_top_k=int(skills.get("top_k", 6)),
             max_context_tokens=int(data.get("max_context_tokens", 20000) or 20000),
@@ -480,6 +483,7 @@ class ConfigStore:
             f"proxy.port:      {data.get('proxy', {}).get('port', 30000)}",
             f"skills.enabled:  {skills.get('enabled', True)}",
             f"skills.dir:      {effective_skills_dir}",
+            f"skills.injection_mode: {skills.get('injection_mode', 'catalog')}",
             f"prm.enabled:     {prm.get('enabled', False)}",
         ]
         sharing = data.get("sharing", {})
