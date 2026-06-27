@@ -221,6 +221,20 @@ def test_print_case_prompt_guarded_mode_appends_execution_constraints():
     assert "at most 8 tool calls" in guarded
 
 
+def test_repository_case_prompts_are_not_mojibake():
+    suspicious_fragments = ["涓", "銆", "乸", "乺", "锛", "鏄"]
+    for case_path in Path("experiment_cases").glob("*.json"):
+        if case_path.name == "schema.json":
+            continue
+        case = json.loads(case_path.read_text(encoding="utf-8-sig"))
+        prompts = case.get("prompt", {})
+        for key, prompt in prompts.items():
+            assert not any(fragment in str(prompt) for fragment in suspicious_fragments), (
+                case_path,
+                key,
+            )
+
+
 def test_skill_bundle_runner_executes_script(tmp_path):
     bundle = tmp_path / "bundle"
     script = bundle / "scripts" / "demo.py"
