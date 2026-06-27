@@ -21,10 +21,15 @@ DEFAULT_ITEMS = [
     Path("experiment_validation"),
     Path("tests/test_experiment_scripts.py"),
     Path("experiment_records/README.md"),
+    Path("experiment_records/dev_notes_20260627.md"),
     Path("experiment_records/experiment_report_20260615_20260621.md"),
     Path("experiment_records/libxml2_deepseek_vs_skillclaw_20260623.md"),
     Path("experiment_records/tcpdump_skillclaw_unified_20260623.md"),
     Path("experiment_records/tcpdump_deepseek_vs_skillclaw_20260623.md"),
+    Path("experiment_records/tcpdump_guarded_clean_comparison_20260625.md"),
+    Path("experiment_records/libxml2_guarded_clean_comparison_20260625.md"),
+    Path("experiment_records/experiment_matrix_20260625.md"),
+    Path("experiment_records/experiment_matrix_20260625.csv"),
     Path("experiment_records/scoring_rubric.md"),
 ]
 
