@@ -54,6 +54,29 @@ validation framework itself is intact.
 
 ## Remote VM Usage
 
+First check that the VM, target tree, Claude Code configuration, and SkillClaw
+proxy are consistent:
+
+```bash
+python3 experiment_scripts/check_experiment_env.py \
+  experiment_cases/libxml2-2.9.4-cve-2017-8872.json \
+  --root ~/skillclaw-eval/libxml2-2.9.4 \
+  --expected-provider skillclaw \
+  --skillclaw-url http://10.12.189.47:30000 \
+  --skillclaw-key sk-skillclaw-lab \
+  --expected-skill-count 35
+```
+
+For a direct DeepSeek baseline, switch Claude Code to the direct key first and
+run the same check with:
+
+```bash
+python3 experiment_scripts/check_experiment_env.py \
+  experiment_cases/libxml2-2.9.4-cve-2017-8872.json \
+  --root ~/skillclaw-eval/libxml2-2.9.4 \
+  --expected-provider deepseek
+```
+
 From the target project directory on the remote VM:
 
 ```bash

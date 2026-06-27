@@ -3,6 +3,7 @@ import sys
 from argparse import Namespace
 from pathlib import Path
 
+from experiment_scripts.check_experiment_env import check_case_environment, infer_claude_provider
 from experiment_scripts.run_eval_case import extract_json_object, run_case
 from experiment_scripts.run_dynamic_case import run_validators
 from experiment_scripts.smoke_validate_framework import smoke_cases
@@ -233,6 +234,80 @@ def test_repository_case_prompts_are_not_mojibake():
                 case_path,
                 key,
             )
+
+
+def test_check_experiment_env_passes_with_root_override(tmp_path):
+    root = tmp_path / "target"
+    root.mkdir()
+    (root / "demo-bin").write_text("binary\n", encoding="utf-8")
+    (root / "vuln.c").write_text("void vuln(void) {}\n", encoding="utf-8")
+    case_path = tmp_path / "case.json"
+    case_path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo",
+                "target": {"source_root": "/missing/default", "binary": "demo-bin"},
+                "ground_truth": {
+                    "files": ["vuln.c"],
+                    "functions": ["vuln"],
+                    "vulnerability_type": "demo",
+                },
+                "scoring": {"max_score": 10, "weights": {}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = check_case_environment(case_path=case_path, root_override=str(root), settings_path=None)
+
+    assert result["status"] == "passed"
+    assert all(item["status"] == "ok" for item in result["checks"])
+
+
+def test_check_experiment_env_reports_missing_ground_truth_file(tmp_path):
+    root = tmp_path / "target"
+    root.mkdir()
+    case_path = tmp_path / "case.json"
+    case_path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo",
+                "target": {"source_root": str(root)},
+                "ground_truth": {
+                    "files": ["missing.c"],
+                    "functions": ["vuln"],
+                    "vulnerability_type": "demo",
+                },
+                "scoring": {"max_score": 10, "weights": {}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = check_case_environment(case_path=case_path, settings_path=None)
+
+    assert result["status"] == "failed"
+    assert any(item["name"] == "ground_truth_file" and item["status"] == "failed" for item in result["checks"])
+
+
+def test_check_experiment_env_infers_claude_provider(tmp_path):
+    settings = tmp_path / "settings.json"
+    settings.write_text(
+        json.dumps(
+            {
+                "env": {
+                    "ANTHROPIC_BASE_URL": "http://10.12.189.47:30000",
+                    "ANTHROPIC_MODEL": "skillclaw-model",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = infer_claude_provider(settings)
+
+    assert result["status"] == "ok"
+    assert result["provider"] == "skillclaw"
 
 
 def test_skill_bundle_runner_executes_script(tmp_path):
