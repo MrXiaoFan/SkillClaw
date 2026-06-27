@@ -90,15 +90,19 @@ fixes.
 
 ## Generated Skills Snapshot
 
-The running SkillClaw deployment keeps generated skills outside this checkout:
+The collaborative `dev` branch keeps the current generated skills snapshot
+inside this checkout:
 
 ```text
-D:\Code\SkillClaw\Skills
+D:\Code\SkillClaw\SkillClaw\Skills
 ```
 
-The upload archive produced for handoff includes a `Skills/` snapshot copied
-from that sibling directory. In the current workspace it contains 35
-`SKILL.md` files, including `source-parser-state-machine-oob`.
+The historical sibling path `D:\Code\SkillClaw\Skills` may still exist on the
+original machine, but it should no longer be the primary working path. New
+SkillClaw runs and future skill updates should use the repository-local
+`Skills/` directory so that skill changes are visible in `git status` and can
+be reviewed before pushing. In the current workspace it contains 35 `SKILL.md`
+files, including `source-parser-state-machine-oob`.
 
 ## Data Included In The Upload Package
 
@@ -108,7 +112,7 @@ The upload package includes:
 - Experiment framework code.
 - Experiment case definitions.
 - Experiment records and result files.
-- Current generated skills snapshot from `../Skills`.
+- Current generated skills snapshot from repository-local `Skills/`.
 - `evolve_history.jsonl` as optional research/runtime history data.
 
 The upload package excludes:
