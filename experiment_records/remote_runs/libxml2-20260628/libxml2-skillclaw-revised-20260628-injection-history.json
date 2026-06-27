@@ -1,0 +1,325 @@
+[
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "pin",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 1,
+    "timestamp": "2026-06-28 00:31:12"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 2,
+    "timestamp": "2026-06-28 00:31:15"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 3,
+    "timestamp": "2026-06-28 00:31:22"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 4,
+    "timestamp": "2026-06-28 00:31:31"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 5,
+    "timestamp": "2026-06-28 00:31:36"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 6,
+    "timestamp": "2026-06-28 00:31:42"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 7,
+    "timestamp": "2026-06-28 00:32:06"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 8,
+    "timestamp": "2026-06-28 00:32:12"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 9,
+    "timestamp": "2026-06-28 00:32:16"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 10,
+    "timestamp": "2026-06-28 00:32:23"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 11,
+    "timestamp": "2026-06-28 00:32:58"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 12,
+    "timestamp": "2026-06-28 00:33:05"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 13,
+    "timestamp": "2026-06-28 00:33:08"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 14,
+    "timestamp": "2026-06-28 00:33:31"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 15,
+    "timestamp": "2026-06-28 00:33:46"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 16,
+    "timestamp": "2026-06-28 00:33:50"
+  },
+  {
+    "enabled": true,
+    "injection_mode": "inline",
+    "top_k": 3,
+    "selected_skill_names": [
+      "source-parser-state-machine-oob",
+      "elf-cwe120-firmware-triage",
+      "elf-cwe120-plt-analysis"
+    ],
+    "available_skill_count": 35,
+    "skill_prompt_chars": 29012,
+    "skill_prompt_hash": "b39203a00c94b17c",
+    "stable_session": true,
+    "stable_action": "reuse",
+    "stable_generation": 0,
+    "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+    "turn": 17,
+    "timestamp": "2026-06-28 00:34:05"
+  }
+]

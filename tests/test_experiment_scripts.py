@@ -547,6 +547,33 @@ def test_build_feedback_marks_positive_high_score_with_validation():
     assert feedback["suggested_action"] == "keep_or_promote_skill"
 
 
+def test_build_feedback_flags_cve_miss_with_source_localization():
+    relevance = assess_skill_relevance(
+        case={"ground_truth": {"root_cause": "parser state machine out of bounds read"}},
+        selected_skills=["source-parser-state-machine-oob"],
+    )
+    feedback = build_feedback(
+        score_result={
+            "score": 8,
+            "max_score": 10,
+            "checks": {
+                "cve": {"hit": False},
+                "file": {"hit": True},
+                "function": {"hit": True},
+                "evidence": {"hit": True},
+                "root_cause": {"hit": True},
+            },
+        },
+        validation_result={"status": "passed"},
+        skill_injection={"selected_skill_names": ["source-parser-state-machine-oob"]},
+        skill_relevance=relevance,
+    )
+
+    assert feedback["decision"] == "neutral"
+    assert feedback["suggested_action"] == "revise_cve_calibration_before_promotion"
+    assert "cve_calibration_miss" in feedback["quality_flags"]
+
+
 def test_build_feedback_does_not_promote_infra_skills():
     relevance = assess_skill_relevance(
         case={"target": {"project": "tcpdump"}, "ground_truth": {"functions": ["frag6_print"]}},

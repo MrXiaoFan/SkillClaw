@@ -1,0 +1,392 @@
+{
+  "case_id": "libxml2-2.9.4-cve-2017-8872",
+  "timestamp": "2026-06-27T16:34:07.114699+00:00",
+  "mode": "skillclaw-inline",
+  "model": "skillclaw-model",
+  "session_id": "",
+  "score": 8.0,
+  "max_score": 10.0,
+  "checks": {
+    "cve": {
+      "hit": false,
+      "matched": [],
+      "expected": [
+        "CVE-2017-8872"
+      ]
+    },
+    "file": {
+      "hit": true,
+      "matched": [
+        "HTMLparser.c"
+      ],
+      "expected": [
+        "HTMLparser.c"
+      ]
+    },
+    "function": {
+      "hit": true,
+      "matched": [
+        "htmlParseTryOrFinish"
+      ],
+      "expected": [
+        "htmlParseTryOrFinish"
+      ]
+    },
+    "evidence": {
+      "hit": true,
+      "matched": [
+        "htmlParseTryOrFinish",
+        "in->cur[2]",
+        "in->cur[3]",
+        "avail"
+      ],
+      "expected": [
+        "htmlParseTryOrFinish",
+        "in->cur[2]",
+        "in->cur[3]",
+        "avail"
+      ]
+    },
+    "root_cause": {
+      "hit": true,
+      "matched": [
+        "parser",
+        "state",
+        "lookahead",
+        "reads",
+        "in->cur[2]",
+        "and",
+        "in->cur[3]",
+        "the"
+      ],
+      "expected_terms": [
+        "parser",
+        "state",
+        "machine",
+        "performs",
+        "lookahead",
+        "reads",
+        "from",
+        "in->cur[2]",
+        "and",
+        "in->cur[3]",
+        "while",
+        "the"
+      ]
+    }
+  },
+  "predictions": {
+    "cves": [
+      "CVE-2016-1833",
+      "CVE-2016-1834",
+      "CVE-2016-1836",
+      "CVE-2016-1837",
+      "CVE-2016-1838",
+      "CVE-2016-1839",
+      "CVE-2016-1840",
+      "CVE-2017-9047",
+      "CVE-2017-9048"
+    ],
+    "files": [
+      "HTMLparser.c",
+      "parser.c",
+      "valid.c"
+    ],
+    "functions": [
+      "htmlParseTryOrFinish",
+      "xmlParseTryOrFinish",
+      "xmlSnprintfElementContent"
+    ],
+    "evidence": [
+      "{'file': 'HTMLparser.c', 'function': 'htmlParseTryOrFinish', 'line': 5401, 'guard': 'avail < 1 -> goto done', 'required': 1, 'sufficient': True}",
+      "{'file': 'HTMLparser.c', 'function': 'htmlParseTryOrFinish', 'state': 'XML_PARSER_MISC', 'lines': [5471, 5476, 5482, 5485], 'access': 'in->cur[2] and in->cur[3]', 'required_available_bytes': 4, 'guard_before_access': 'avail < 2 (line 5476) - insufficient, permits avail=2 or avail=3', 'guard_dominance': 'Guard is before but undersized; only guarantees 2 bytes, read needs 4', 'content_gate': \"(cur=='<') && (next=='!') - content-based gate only, NOT a bounds check\", 'attacker_control': 'HTML input bytes fed via htmlParseChunk -> htmlParseTryOrFinish', 'reachability': 'xmllint --html -> htmlParseChunk -> htmlParseTryOrFinish (confirmed via readelf: UND htmlParseChunk@LIBXML2_2.4.30)', 'confidence': 'high'}",
+      "{'file': 'HTMLparser.c', 'function': 'htmlParseTryOrFinish', 'state': 'XML_PARSER_PROLOG', 'lines': [5541, 5543, 5544, 5545], 'access': 'in->cur[2] and in->cur[3]', 'required_available_bytes': 4, 'guard_before_access': 'avail < 2 (line 5541) - insufficient', 'guard_after_access': 'avail < 4 (line 5567) - too late, in separate else-if branch', 'confidence': 'high'}",
+      "{'file': 'HTMLparser.c', 'function': 'htmlParseTryOrFinish', 'state': 'XML_PARSER_EPILOG', 'lines': [5582, 5589, 5593], 'access': 'in->cur[2] and in->cur[3]', 'required_available_bytes': 4, 'guard_before_access': 'avail < 2 (line 5589) - insufficient', 'confidence': 'high'}",
+      "{'file': 'HTMLparser.c', 'function': 'htmlParseTryOrFinish', 'state': 'XML_PARSER_CONTENT', 'lines': [5801, 5848], 'access': 'in->cur[2] and in->cur[3]', 'required_available_bytes': 4, 'guard_before_access': 'avail < 2 (line 5801) - insufficient', 'additional': 'UPP(2..8) at lines 5837-5840 requires 9 bytes, only 2 guaranteed', 'confidence': 'high'}",
+      "{'file': 'parser.c', 'function': 'xmlParseTryOrFinish', 'state': 'XML_PARSER_CONTENT', 'lines': [11672, 11694, 11699], 'access': 'ctxt->input->cur[2] and ctxt->input->cur[3] at lines 11695-11696', 'required_available_bytes': 4, 'guard_before_access': 'avail < 2 (line 11672) - insufficient', 'guard_after_access': 'avail < 4 (line 11699) - exists but placed AFTER the OOB read', 'attacker_control': 'XML input bytes fed via xmlParseChunk -> xmlParseTryOrFinish', 'reachability': 'xmllint -> libxml2 parser entry -> xmlParseTryOrFinish (confirmed: xmlParseTryOrFinish.isra.0 in .text at 0x51690)', 'confidence': 'high'}",
+      "{'file': 'valid.c', 'function': 'xmlSnprintfElementContent', 'lines': [1250, 1266, 1271, 1274], 'access': 'strcat overflow via stale len', 'required_available_bytes': 'depends on content->name length', 'guard_mechanism': 'size-len<50 check before each strcat, but len not refreshed between prefix and name appends in XML_ELEMENT_CONTENT_ELEMENT case', 'vulnerability': 'content->prefix strcat updates buf but len stays stale; subsequent check for content->name uses original len, missing prefix+colon bytes added', 'attacker_control': 'XML/HTML element content model names in DTD/schema (attacker-crafted long element names)', 'reachability': 'xmllint --valid/--dtdvalid -> xmlSnprintfElementContent (confirmed exported T symbol at 0x6faf0)', 'confidence': 'medium'}"
+    ],
+    "raw_text": [
+      "{\"predicted_cves\": [\"CVE-2016-1833\", \"CVE-2016-1834\", \"CVE-2016-1836\", \"CVE-2016-1837\", \"CVE-2016-1838\", \"CVE-2016-1839\", \"CVE-2016-1840\", \"CVE-2017-9047\", \"CVE-2017-9048\"], \"predicted_files\": [\"HTMLparser.c\", \"parser.c\", \"valid.c\"], \"predicted_functions\": [\"htmlParseTryOrFinish\", \"xmlParseTryOrFinish\", \"xmlSnprintfElementContent\"], \"root_cause\": \"Chunked parser lookahead reads access in->cur[2]/in->cur[3] (and beyond, up to UPP(8)) after only an avail<2 guard when 4-9 bytes are required; the avail<4 guard in some paths is placed AFTER the reads. In valid.c, xmlSnprintfElementContent uses a stale len variable between intermediate strcat appends, enabling stack buffer overflow.\", \"evidence\": [{\"file\": \"HTMLparser.c\", \"function\": \"htmlParseTryOrFinish\", \"line\": 5401, \"guard\": \"avail < 1 -> goto done\", \"required\": 1, \"sufficient\": true}, {\"file\": \"HTMLparser.c\", \"function\": \"htmlParseTryOrFinish\", \"state\": \"XML_PARSER_MISC\", \"lines\": [5471, 5476, 5482, 5485], \"access\": \"in->cur[2] and in->cur[3]\", \"required_available_bytes\": 4, \"guard_before_access\": \"avail < 2 (line 5476) - insufficient, permits avail=2 or avail=3\", \"guard_dominance\": \"Guard is before but undersized; only guarantees 2 bytes, read needs 4\", \"content_gate\": \"(cur=='<') && (next=='!') - content-based gate only, NOT a bounds check\", \"attacker_control\": \"HTML input bytes fed via htmlParseChunk -> htmlParseTryOrFinish\", \"reachability\": \"xmllint --html -> htmlParseChunk -> htmlParseTryOrFinish (confirmed via readelf: UND htmlParseChunk@LIBXML2_2.4.30)\", \"confidence\": \"high\"}, {\"file\": \"HTMLparser.c\", \"function\": \"htmlParseTryOrFinish\", \"state\": \"XML_PARSER_PROLOG\", \"lines\": [5541, 5543, 5544, 5545], \"access\": \"in->cur[2] and in->cur[3]\", \"required_available_bytes\": 4, \"guard_before_access\": \"avail < 2 (line 5541) - insufficient\", \"guard_after_access\": \"avail < 4 (line 5567) - too late, in separate else-if branch\", \"confidence\": \"high\"}, {\"file\": \"HTMLparser.c\", \"function\": \"htmlParseTryOrFinish\", \"state\": \"XML_PARSER_EPILOG\", \"lines\": [5582, 5589, 5593], \"access\": \"in->cur[2] and in->cur[3]\", \"required_available_bytes\": 4, \"guard_before_access\": \"avail < 2 (line 5589) - insufficient\", \"confidence\": \"high\"}, {\"file\": \"HTMLparser.c\", \"function\": \"htmlParseTryOrFinish\", \"state\": \"XML_PARSER_CONTENT\", \"lines\": [5801, 5848], \"access\": \"in->cur[2] and in->cur[3]\", \"required_available_bytes\": 4, \"guard_before_access\": \"avail < 2 (line 5801) - insufficient\", \"additional\": \"UPP(2..8) at lines 5837-5840 requires 9 bytes, only 2 guaranteed\", \"confidence\": \"high\"}, {\"file\": \"parser.c\", \"function\": \"xmlParseTryOrFinish\", \"state\": \"XML_PARSER_CONTENT\", \"lines\": [11672, 11694, 11699], \"access\": \"ctxt->input->cur[2] and ctxt->input->cur[3] at lines 11695-11696\", \"required_available_bytes\": 4, \"guard_before_access\": \"avail < 2 (line 11672) - insufficient\", \"guard_after_access\": \"avail < 4 (line 11699) - exists but placed AFTER the OOB read\", \"attacker_control\": \"XML input bytes fed via xmlParseChunk -> xmlParseTryOrFinish\", \"reachability\": \"xmllint -> libxml2 parser entry -> xmlParseTryOrFinish (confirmed: xmlParseTryOrFinish.isra.0 in .text at 0x51690)\", \"confidence\": \"high\"}, {\"file\": \"valid.c\", \"function\": \"xmlSnprintfElementContent\", \"lines\": [1250, 1266, 1271, 1274], \"access\": \"strcat overflow via stale len\", \"required_available_bytes\": \"depends on content->name length\", \"guard_mechanism\": \"size-len<50 check before each strcat, but len not refreshed between prefix and name appends in XML_ELEMENT_CONTENT_ELEMENT case\", \"vulnerability\": \"content->prefix strcat updates buf but len stays stale; subsequent check for content->name uses original len, missing prefix+colon bytes added\", \"attacker_control\": \"XML/HTML element content model names in DTD/schema (attacker-crafted long element names)\", \"reachability\": \"xmllint --valid/--dtdvalid -> xmlSnprintfElementContent (confirmed exported T symbol at 0x6faf0)\", \"confidence\": \"medium\"}], \"confidence\": \"high\"}"
+    ]
+  },
+  "skill_injection": null,
+  "skill_injection_history": [],
+  "skill_relevance": {
+    "status": "no_selected_skills",
+    "selected_skills": [],
+    "relevant_skills": [],
+    "infra_skills": [],
+    "matched_terms": {}
+  },
+  "validation": {
+    "case_id": "libxml2-2.9.4-cve-2017-8872",
+    "timestamp": "2026-06-27T16:34:07.114155+00:00",
+    "validator_mode": "case-level",
+    "target_root": "/home/li/skillclaw-eval/libxml2-2.9.4",
+    "agent_output_path": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-agent.json",
+    "status": "passed",
+    "checks": [
+      {
+        "name": "agent-output-ground-truth-match",
+        "type": "content_match",
+        "allow_failure": true,
+        "source": "agent_output",
+        "status": "passed",
+        "path": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-agent.json",
+        "match": "any",
+        "hit_count": 9,
+        "total_patterns": 13,
+        "patterns": [
+          {
+            "pattern": "CVE-2017-8872",
+            "hit": false
+          },
+          {
+            "pattern": "HTMLparser.c",
+            "hit": true
+          },
+          {
+            "pattern": "htmlParseTryOrFinish",
+            "hit": true
+          },
+          {
+            "pattern": "in->cur[2]",
+            "hit": true
+          },
+          {
+            "pattern": "in->cur[3]",
+            "hit": true
+          },
+          {
+            "pattern": "avail",
+            "hit": true
+          },
+          {
+            "pattern": "parser",
+            "hit": true
+          },
+          {
+            "pattern": "machine",
+            "hit": false
+          },
+          {
+            "pattern": "performs",
+            "hit": false
+          },
+          {
+            "pattern": "lookahead",
+            "hit": true
+          },
+          {
+            "pattern": "available-byte",
+            "hit": false
+          },
+          {
+            "pattern": "insufficient",
+            "hit": true
+          },
+          {
+            "pattern": "access",
+            "hit": true
+          }
+        ]
+      },
+      {
+        "name": "ground-truth-source-location",
+        "type": "source_contains",
+        "allow_failure": false,
+        "file": "HTMLparser.c",
+        "path": "/home/li/skillclaw-eval/libxml2-2.9.4/HTMLparser.c",
+        "exists": true,
+        "patterns": [
+          {
+            "pattern": "htmlParseTryOrFinish",
+            "hit": true
+          },
+          {
+            "pattern": "in->cur[2]",
+            "hit": true
+          },
+          {
+            "pattern": "in->cur[3]",
+            "hit": true
+          },
+          {
+            "pattern": "avail",
+            "hit": true
+          }
+        ],
+        "status": "passed"
+      },
+      {
+        "name": "binary-links-local-libxml2",
+        "type": "command",
+        "allow_failure": true,
+        "command": "ldd .libs/xmllint | grep -E 'libxml2|not found'",
+        "cwd": "/home/li/skillclaw-eval/libxml2-2.9.4",
+        "status": "passed",
+        "returncode": 0,
+        "stdout_tail": "\tlibxml2.so.2 => /lib/x86_64-linux-gnu/libxml2.so.2 (0x00007ce13a47a000)\n",
+        "stderr_tail": ""
+      },
+      {
+        "name": "bundle-avail-lookahead-check",
+        "type": "bundle_script",
+        "allow_failure": false,
+        "skill_name": "source-parser-state-machine-oob",
+        "script": "/home/li/skillclaw-eval/experiment_cases/skill_bundles/source-parser-state-machine-oob/scripts/check_avail_guard.py",
+        "timestamp": "2026-06-27T16:34:07.070061+00:00",
+        "command": [
+          "/usr/bin/python3",
+          "/home/li/skillclaw-eval/experiment_cases/skill_bundles/source-parser-state-machine-oob/scripts/check_avail_guard.py",
+          "--case",
+          "/home/li/skillclaw-eval/experiment_cases/libxml2-2.9.4-cve-2017-8872.json",
+          "--root",
+          "/home/li/skillclaw-eval/libxml2-2.9.4"
+        ],
+        "status": "passed",
+        "returncode": 0,
+        "stdout_tail": "{\n  \"status\": \"passed\",\n  \"checker\": \"check_avail_guard\",\n  \"summary\": \"Detected lookahead reads that exceed an observed avail guard.\",\n  \"findings\": [\n    {\n      \"file\": \"HTMLparser.c\",\n      \"function\": \"htmlParseTryOrFinish\",\n      \"status\": \"passed\",\n      \"analysis\": {\n        \"cur_indices\": [\n          0,\n          1,\n          2,\n          3\n        ],\n        \"avail_guards\": [\n          1,\n          2,\n          4,\n          9\n        ],\n        \"max_cur_index\": 3,\n        \"max_required_avail\": 4,\n        \"weakest_avail_guard\": 1,\n        \"suspicious\": true\n      },\n      \"evidence\": {\n        \"mentions_cur_2\": true,\n        \"mentions_cur_3\": true,\n        \"mentions_avail\": true\n      }\n    }\n  ]\n}\n",
+        "stderr_tail": "",
+        "parsed_json": {
+          "status": "passed",
+          "checker": "check_avail_guard",
+          "summary": "Detected lookahead reads that exceed an observed avail guard.",
+          "findings": [
+            {
+              "file": "HTMLparser.c",
+              "function": "htmlParseTryOrFinish",
+              "status": "passed",
+              "analysis": {
+                "cur_indices": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "avail_guards": [
+                  1,
+                  2,
+                  4,
+                  9
+                ],
+                "max_cur_index": 3,
+                "max_required_avail": 4,
+                "weakest_avail_guard": 1,
+                "suspicious": true
+              },
+              "evidence": {
+                "mentions_cur_2": true,
+                "mentions_cur_3": true,
+                "mentions_avail": true
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "asan-poc-placeholder",
+        "type": "asan_command",
+        "allow_failure": false,
+        "status": "skipped",
+        "reason": "disabled"
+      }
+    ]
+  },
+  "feedback": {
+    "decision": "positive",
+    "suggested_action": "use_as_baseline_positive",
+    "normalized_score": 0.8,
+    "validation_status": "passed",
+    "selected_skills": [],
+    "skill_relevance": {
+      "status": "no_selected_skills",
+      "selected_skills": [],
+      "relevant_skills": [],
+      "infra_skills": [],
+      "matched_terms": {}
+    },
+    "reasons": [
+      "skill_relevance=no_selected_skills",
+      "score=8.0/10.0",
+      "validation=passed"
+    ]
+  },
+  "run_id": "libxml2-skillclaw-revised-20260628",
+  "run": {
+    "case_id": "libxml2-2.9.4-cve-2017-8872",
+    "run_id": "libxml2-skillclaw-revised-20260628",
+    "mode": "skillclaw-inline",
+    "model": "skillclaw-model",
+    "target_root": "/home/li/skillclaw-eval/libxml2-2.9.4",
+    "start": "2026-06-27T16:31:06.714080+00:00",
+    "agent_ran": true,
+    "status": 0,
+    "end": "2026-06-27T16:34:07.059931+00:00"
+  },
+  "preflight": {
+    "case_id": "libxml2-2.9.4-cve-2017-8872",
+    "case_path": "experiment_cases/libxml2-2.9.4-cve-2017-8872.json",
+    "root": "/home/li/skillclaw-eval/libxml2-2.9.4",
+    "status": "passed",
+    "checks": [
+      {
+        "name": "case_json",
+        "path": "experiment_cases/libxml2-2.9.4-cve-2017-8872.json",
+        "status": "ok",
+        "exists": true
+      },
+      {
+        "name": "source_root",
+        "path": "/home/li/skillclaw-eval/libxml2-2.9.4",
+        "exists": true,
+        "status": "ok"
+      },
+      {
+        "name": "target_binary",
+        "path": "/home/li/skillclaw-eval/libxml2-2.9.4/.libs/xmllint",
+        "exists": true,
+        "status": "ok"
+      },
+      {
+        "name": "ground_truth_file",
+        "path": "/home/li/skillclaw-eval/libxml2-2.9.4/HTMLparser.c",
+        "exists": true,
+        "status": "ok"
+      }
+    ],
+    "claude": {
+      "settings_path": "/home/li/.claude/settings.json",
+      "status": "ok",
+      "provider": "skillclaw",
+      "base_url": "http://10.12.189.47:30000",
+      "model": "skillclaw-model"
+    },
+    "skillclaw": {
+      "url": "http://10.12.189.47:30000",
+      "status": "ok",
+      "healthz": {
+        "http_status": 200,
+        "body": {
+          "ok": true
+        }
+      },
+      "skills": {
+        "http_status": 200,
+        "count": 35
+      }
+    }
+  },
+  "artifacts": {
+    "prompt": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-prompt.txt",
+    "raw": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-raw.txt",
+    "stderr": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-stderr.txt",
+    "meta": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-run.meta",
+    "agent_json": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-agent.json",
+    "score": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-score.json",
+    "validation": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-validation.json",
+    "preflight": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-preflight.json",
+    "final": "runs/libxml2-20260628/libxml2-skillclaw-revised-20260628-final.json"
+  }
+}

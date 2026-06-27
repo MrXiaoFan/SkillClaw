@@ -1,0 +1,53 @@
+{
+  "case_id": "libxml2-2.9.4-cve-2017-8872",
+  "case_path": "experiment_cases/libxml2-2.9.4-cve-2017-8872.json",
+  "root": "/home/li/skillclaw-eval/libxml2-2.9.4",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "case_json",
+      "path": "experiment_cases/libxml2-2.9.4-cve-2017-8872.json",
+      "status": "ok",
+      "exists": true
+    },
+    {
+      "name": "source_root",
+      "path": "/home/li/skillclaw-eval/libxml2-2.9.4",
+      "exists": true,
+      "status": "ok"
+    },
+    {
+      "name": "target_binary",
+      "path": "/home/li/skillclaw-eval/libxml2-2.9.4/.libs/xmllint",
+      "exists": true,
+      "status": "ok"
+    },
+    {
+      "name": "ground_truth_file",
+      "path": "/home/li/skillclaw-eval/libxml2-2.9.4/HTMLparser.c",
+      "exists": true,
+      "status": "ok"
+    }
+  ],
+  "claude": {
+    "settings_path": "/home/li/.claude/settings.json",
+    "status": "ok",
+    "provider": "skillclaw",
+    "base_url": "http://10.12.189.47:30000",
+    "model": "skillclaw-model"
+  },
+  "skillclaw": {
+    "url": "http://10.12.189.47:30000",
+    "status": "ok",
+    "healthz": {
+      "http_status": 200,
+      "body": {
+        "ok": true
+      }
+    },
+    "skills": {
+      "http_status": 200,
+      "count": 35
+    }
+  }
+}

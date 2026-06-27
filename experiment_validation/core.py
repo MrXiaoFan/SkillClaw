@@ -85,6 +85,23 @@ def _latest_validation(validation: Any) -> dict[str, Any] | None:
     return None
 
 
+def _check_hit(score_result: dict[str, Any] | None, key: str) -> bool:
+    if not isinstance(score_result, dict):
+        return False
+    checks = score_result.get("checks")
+    if not isinstance(checks, dict):
+        return False
+    item = checks.get(key)
+    return bool(isinstance(item, dict) and item.get("hit"))
+
+
+def _has_explicit_check(score_result: dict[str, Any] | None, key: str) -> bool:
+    if not isinstance(score_result, dict):
+        return False
+    checks = score_result.get("checks")
+    return isinstance(checks, dict) and isinstance(checks.get(key), dict)
+
+
 def _tokens(text: str) -> set[str]:
     return {
         token
@@ -193,8 +210,19 @@ def build_feedback(
     if validation_status:
         reasons.append(f"validation={validation_status}")
 
+    quality_flags: list[str] = []
+    has_cve_check = _has_explicit_check(score_result, "cve")
+    cve_hit = _check_hit(score_result, "cve")
+    localization_hit = _check_hit(score_result, "file") or _check_hit(score_result, "function")
+    if has_cve_check and not cve_hit and localization_hit:
+        quality_flags.append("cve_calibration_miss")
+        reasons.append("quality_flag=cve_calibration_miss")
+
     if relevance_status == "no_selected_skills":
-        if normalized is not None and normalized >= 0.8 and validation_status in {"passed", "partial", None}:
+        if "cve_calibration_miss" in quality_flags:
+            decision = "neutral"
+            action = "baseline_cve_calibration_review"
+        elif normalized is not None and normalized >= 0.8 and validation_status in {"passed", "partial", None}:
             decision = "positive"
             action = "use_as_baseline_positive"
         else:
@@ -203,6 +231,9 @@ def build_feedback(
     elif relevance_status in {"only_infra_skills", "no_task_relevant_skill"} and selected_skills:
         decision = "neutral"
         action = "inspect_retrieval_before_promoting_skill"
+    elif "cve_calibration_miss" in quality_flags:
+        decision = "neutral"
+        action = "revise_cve_calibration_before_promotion"
     elif normalized is not None and normalized >= 0.8 and validation_status in {"passed", "partial", None}:
         decision = "positive"
         action = "keep_or_promote_skill"
@@ -223,5 +254,6 @@ def build_feedback(
         "validation_status": validation_status,
         "selected_skills": selected_skills,
         "skill_relevance": skill_relevance,
+        "quality_flags": quality_flags,
         "reasons": reasons,
     }

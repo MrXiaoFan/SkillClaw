@@ -28,6 +28,9 @@ skills are intentionally not stored here.
   gate-driven skill revision note. It documents why
   `source-parser-state-machine-oob` was changed to separate source localization
   from exact CVE attribution.
+- `libxml2_revised_skill_rerun_20260628.md`: rerun after that revision. It
+  records that source localization stayed strong, but exact CVE calibration
+  still failed and is now marked with `cve_calibration_miss`.
 - `giflib_case_plan_20260627.md` and `giflib_eval_20260627.md`: preparation
   note and executed comparison for the third benchmark case,
   `giflib-5.1.2-cve-2016-3977`. The remote VM artifacts are archived under
