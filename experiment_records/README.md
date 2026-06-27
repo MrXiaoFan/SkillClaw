@@ -14,6 +14,11 @@ skills are intentionally not stored here.
   automatically derived research observations from the current guarded-clean
   comparison records. These are intended as paper-claim scaffolding, not final
   statistical evidence.
+- `skill_feedback_latest.md` and `skill_feedback_latest.csv`: skill-level
+  aggregation over final experiment records. These files connect selected
+  server-side skills with run-level score, validation status, and feedback
+  decision, and are used to inspect whether a skill is supported by current
+  benchmark evidence.
 - `giflib_case_plan_20260627.md` and `giflib_eval_20260627.md`: preparation
   note and executed comparison for the third benchmark case,
   `giflib-5.1.2-cve-2016-3977`. The remote VM artifacts are archived under
@@ -61,6 +66,9 @@ skills are intentionally not stored here.
 - `experiment_scripts/summarize_research_claims.py` derives conservative
   paper-oriented observations from final JSON records, such as low-budget
   steering gains, high-budget counterexamples, and CVE-calibration failures.
+- `experiment_scripts/summarize_skill_feedback.py` aggregates final records
+  by selected skill. It is the current bridge from case-level validation to
+  skill-level feedback evidence.
 - `experiment_scripts/attach_skill_injection.py` attaches server-side
   SkillClaw injection audit rows back to final records. This is used when a
   remote Claude Code run cannot directly see the proxy's `conversations.jsonl`

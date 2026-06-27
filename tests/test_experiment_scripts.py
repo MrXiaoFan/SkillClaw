@@ -14,6 +14,7 @@ from experiment_scripts.print_case_prompt import FINAL_ANSWER_GUARD, get_case_pr
 from experiment_scripts.skill_bundle_runner import resolve_bundle_script, run_bundle_script
 from experiment_scripts.summarize_research_claims import build_claims, write_markdown as write_claim_markdown
 from experiment_scripts.summarize_results import collect_rows, write_csv, write_markdown
+from experiment_scripts.summarize_skill_feedback import build_skill_feedback
 from experiment_validation.core import assess_skill_relevance, build_feedback
 from skillclaw.skill_manager import SkillManager
 
@@ -234,6 +235,49 @@ def test_attach_skill_injection_updates_final_record_feedback():
     assert updated["skill_injection_history"] == [injection_rows[1]]
     assert updated["skill_relevance"]["status"] == "has_task_relevant_skill"
     assert updated["feedback"]["selected_skills"] == ["source-parser-state-machine-oob"]
+
+
+def test_summarize_skill_feedback_aggregates_selected_skills(tmp_path):
+    records = [
+        (
+            tmp_path / "a.json",
+            {
+                "case_id": "case-a",
+                "mode": "skillclaw-inline",
+                "score": 8,
+                "max_score": 10,
+                "checks": {"file": {"hit": True}, "function": {"hit": True}, "cve": {"hit": False}},
+                "validation": {"status": "passed"},
+                "skill_injection": {"selected_skill_names": ["source-parser-state-machine-oob"]},
+                "feedback": {"decision": "positive", "suggested_action": "keep_or_promote_skill"},
+            },
+        ),
+        (
+            tmp_path / "b.json",
+            {
+                "case_id": "case-b",
+                "mode": "skillclaw-inline",
+                "score": 2,
+                "max_score": 10,
+                "checks": {"file": {"hit": False}, "function": {"hit": False}},
+                "validation": {"status": "failed"},
+                "skill_injection": {"selected_skill_names": ["source-parser-state-machine-oob"]},
+                "feedback": {"decision": "negative", "suggested_action": "inspect_skill_mismatch_or_deprecate"},
+            },
+        ),
+    ]
+
+    rows = build_skill_feedback(records)
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["skill"] == "source-parser-state-machine-oob"
+    assert row["selected_count"] == 2
+    assert row["positive"] == 1
+    assert row["negative"] == 1
+    assert row["mean_score"] == 0.5
+    assert row["validation_passed"] == 1
+    assert row["validation_failed"] == 1
 
 
 def test_print_case_prompt_selects_mode():
