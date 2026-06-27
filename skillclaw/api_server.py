@@ -112,7 +112,7 @@ _KIMI_TOOL_CALL_RE = re.compile(
 _QWEN_TOOL_CALL_RE = re.compile(r"<tool_call>\s*(.*?)\s*</tool_call>", re.DOTALL)
 _TOOL_ARGS_MAX_CHARS = 4_000
 _TOOL_RESULT_CONTENT_MAX_CHARS = 4_000
-_SESSION_IDLE_CLOSE_SECONDS = 180
+_SESSION_IDLE_CLOSE_SECONDS = 1800  # 30 minutes
 _SESSION_SWEEP_INTERVAL_SECONDS = 15
 _SHUTDOWN_DRAIN_TIMEOUT_SECONDS = 15
 _VALID_TURN_TYPES = {"main", "side"}
@@ -1833,6 +1833,58 @@ class SkillClawAPIServer:
             if stored is None:
                 raise HTTPException(status_code=404, detail="response not found")
             return JSONResponse(content={"id": response_id, "object": "response", "deleted": True})
+
+        # ---------------------------------------------------------------- #
+        # Session management
+        # ---------------------------------------------------------------- #
+
+        @app.get("/v1/sessions")
+        async def list_sessions(
+            request: Request,
+            authorization: Optional[str] = Header(default=None),
+            x_api_key: Optional[str] = Header(default=None, alias="x-api-key"),
+        ):
+            owner: SkillClawAPIServer = request.app.state.owner
+            auth_header = authorization or (f"Bearer {x_api_key}" if x_api_key else None)
+            await owner._check_auth(auth_header)
+
+            active_ids = owner._collect_active_session_ids()
+            now = time.time()
+            sessions = []
+            for sid in sorted(active_ids):
+                last_active = owner._session_last_active.get(sid)
+                idle_sec = int(now - last_active) if last_active else -1
+                turn_count = owner._turn_counts.get(sid, 0)
+                sessions.append(
+                    {
+                        "session_id": sid,
+                        "idle_seconds": idle_sec,
+                        "turn_count": turn_count,
+                        "is_closing": sid in owner._closing_sessions,
+                    }
+                )
+            return JSONResponse(content={"sessions": sessions})
+
+        @app.delete("/v1/sessions/{session_id}")
+        async def delete_session(
+            session_id: str,
+            request: Request,
+            authorization: Optional[str] = Header(default=None),
+            x_api_key: Optional[str] = Header(default=None, alias="x-api-key"),
+        ):
+            owner: SkillClawAPIServer = request.app.state.owner
+            owner._mark_request_activity()
+            auth_header = authorization or (f"Bearer {x_api_key}" if x_api_key else None)
+            await owner._check_auth(auth_header)
+
+            if not session_id:
+                raise HTTPException(status_code=400, detail="session_id is required")
+            active_ids = owner._collect_active_session_ids()
+            if session_id not in active_ids:
+                raise HTTPException(status_code=404, detail="session not found")
+
+            await owner._close_session(session_id, reason="user_requested")
+            return JSONResponse(content={"deleted": True, "session_id": session_id})
 
         # ---------------------------------------------------------------- #
         # Anthropic-compatible endpoint — used by NanoClaw (credential proxy

@@ -374,6 +374,11 @@ class ConfigStore:
             retrieval_mode=skills.get("retrieval_mode", "template"),
             skill_top_k=int(skills.get("top_k", 6)),
             max_context_tokens=int(data.get("max_context_tokens", 20000) or 20000),
+            # Session
+            session_idle_close_seconds=int(data.get("session_idle_close_seconds", 1800) or 1800),
+            # Record
+            record_enabled=bool(data.get("record_enabled", True)),
+            record_dir=str(data.get("record_dir", "records/") or "records/"),
             # PRM
             use_prm=bool(prm.get("enabled", True)),
             prm_provider=prm_provider,
