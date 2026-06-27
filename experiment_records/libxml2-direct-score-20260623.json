@@ -1,0 +1,78 @@
+{
+  "case_id": "libxml2-2.9.4-cve-2017-8872",
+  "timestamp": "2026-06-23T08:59:17.837461+00:00",
+  "score": 6.0,
+  "max_score": 10.0,
+  "checks": {
+    "cve": {
+      "hit": true,
+      "matched": [
+        "CVE-2017-8872"
+      ],
+      "expected": [
+        "CVE-2017-8872"
+      ]
+    },
+    "file": {
+      "hit": true,
+      "matched": [
+        "HTMLparser.c"
+      ],
+      "expected": [
+        "HTMLparser.c"
+      ]
+    },
+    "function": {
+      "hit": false,
+      "matched": [],
+      "expected": [
+        "htmlParseTryOrFinish"
+      ]
+    },
+    "evidence": {
+      "hit": false,
+      "matched": [],
+      "expected": [
+        "htmlParseTryOrFinish",
+        "in->cur[2]",
+        "in->cur[3]",
+        "avail"
+      ]
+    },
+    "root_cause": {
+      "hit": true,
+      "matched": [
+        "parser",
+        "state",
+        "reads",
+        "and",
+        "the"
+      ],
+      "expected_terms": [
+        "parser",
+        "state",
+        "machine",
+        "performs",
+        "lookahead",
+        "reads",
+        "from",
+        "in->cur[2]",
+        "and",
+        "in->cur[3]",
+        "while",
+        "the"
+      ]
+    }
+  },
+  "predictions": {
+    "cves": [],
+    "files": [],
+    "functions": [],
+    "evidence": [],
+    "raw_text": [
+      "The analysis is complete. Above is the JSON output identifying **CVE-2017-8872** — a heap out-of-bounds read vulnerability in libxml2 2.9.4's `htmlCurrentChar()` function (`HTMLparser.c:416`).\n\nKey findings:\n\n- **Vulnerable function**: `htmlCurrentChar` reads `*ctxt->input->cur` at line 440 without verifying `cur < ctxt->input->end`\n- **Failed guard**: Only checks `ctxt->instate == XML_PARSER_EOF` (line 417), not the actual buffer boundary\n- **Failed macro**: `GROW` at line 312 silently discards `xmlParserInputGrow`'s return value, so input exhaustion goes undetected\n- **Exploitation via xmllint**: `xmllint --html malicious.html` triggers the HTML parsing path through `htmlReadFile` → `htmlParseContentInternal` → `htmlParseCharDataInternal` → `CUR_CHAR` → `htmlCurrentChar`\n\nConfidence is 0.95 — the vulnerability is well-documented, the source code evidence is clear, and the fix (adding `if (ctxt->input->cur >= ctxt->input->end) return(0);` at the function entry) is straightforward.\n"
+    ]
+  },
+  "agent_json": {},
+  "mode": "direct-deepseek"
+}

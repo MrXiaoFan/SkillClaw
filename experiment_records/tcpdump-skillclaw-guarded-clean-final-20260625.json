@@ -1,0 +1,256 @@
+{
+    "case_id":  "tcpdump-4.9.1-cve-2017-13031",
+    "timestamp":  "2026-06-25T09:13:26.993689+00:00",
+    "mode":  "skillclaw-inline-guarded-clean-budget035",
+    "model":  "skillclaw-model",
+    "session_id":  "9e7e45c8-6f15-49cb-9d0a-4d69c4e0770b",
+    "score":  8.0,
+    "max_score":  10.0,
+    "checks":  {
+                   "cve":  {
+                               "hit":  false,
+                               "matched":  [
+
+                                           ],
+                               "expected":  [
+                                                "CVE-2017-13031"
+                                            ]
+                           },
+                   "file":  {
+                                "hit":  true,
+                                "matched":  [
+                                                "print-frag6.c"
+                                            ],
+                                "expected":  [
+                                                 "print-frag6.c"
+                                             ]
+                            },
+                   "function":  {
+                                    "hit":  true,
+                                    "matched":  [
+                                                    "frag6_print"
+                                                ],
+                                    "expected":  [
+                                                     "frag6_print"
+                                                 ]
+                                },
+                   "evidence":  {
+                                    "hit":  true,
+                                    "matched":  [
+                                                    "frag6_print",
+                                                    "ND_TCHECK",
+                                                    "ip6f_offlg",
+                                                    "ip6f_ident"
+                                                ],
+                                    "expected":  [
+                                                     "frag6_print",
+                                                     "ND_TCHECK",
+                                                     "ip6f_offlg",
+                                                     "ip6f_ident"
+                                                 ]
+                                },
+                   "root_cause":  {
+                                      "hit":  true,
+                                      "matched":  [
+                                                      "fragment",
+                                                      "header",
+                                                      "checks",
+                                                      "insufficient",
+                                                      "the"
+                                                  ],
+                                      "expected_terms":  [
+                                                             "IPv6",
+                                                             "fragment",
+                                                             "header",
+                                                             "printer",
+                                                             "checks",
+                                                             "insufficient",
+                                                             "field",
+                                                             "range",
+                                                             "before",
+                                                             "later",
+                                                             "reading",
+                                                             "the"
+                                                         ]
+                                  }
+               },
+    "predictions":  {
+                        "cves":  [
+                                     "CVE-2017-13005"
+                                 ],
+                        "files":  [
+                                      "print-frag6.c"
+                                  ],
+                        "functions":  [
+                                          "frag6_print"
+                                      ],
+                        "evidence":  [
+                                         "struct ip6_frag layout (ip6.h:191-196): ip6f_nxt[0], ip6f_reserved[1], ip6f_offlg[2-3], ip6f_ident[4-7]. print-frag6.c:43 checks only ND_TCHECK(dp-\u003eip6f_offlg) covering bytes 2-3, but print-frag6.c:47 accesses EXTRACT_32BITS(\u0026dp-\u003eip6f_ident) at bytes 4-7 and print-frag6.c:49 accesses EXTRACT_16BITS(\u0026ip6-\u003eip6_plen) from bp2 without any bounds verification. Binary confirms frag6_print is compiled at offset 0x599e0 and called from ip6_print in print-ip6.c:307 for IPPROTO_FRAGMENT packets."
+                                     ],
+                        "raw_text":  [
+                                         "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":85327,\"duration_api_ms\":85119,\"num_turns\":9,\"result\":\"The evidence is clear. The vulnerability is in `frag6_print()` in `print-frag6.c`. The function only bounds-checks `dp-\u003eip6f_offlg` (2 bytes at offset 2 of the struct) but then accesses `dp-\u003eip6f_ident` (4 bytes at offset 4) without any bounds check. A truncated packet containing exactly 4 bytes of fragment header passes the check but triggers a 4-byte over-read on `ip6f_ident`.\\n\\n```json\\n{\\n  \\\"predicted_cves\\\": [\\\"CVE-2017-13005\\\"],\\n  \\\"predicted_files\\\": [\\\"print-frag6.c\\\"],\\n  \\\"predicted_functions\\\": [\\\"frag6_print\\\"],\\n  \\\"root_cause\\\": \\\"Insufficient ND_TCHECK bounds check in frag6_print. Only dp-\u003eip6f_offlg (offset 2, 2 bytes) is checked via ND_TCHECK, but dp-\u003eip6f_ident (offset 4, 4 bytes) and ip6-\u003eip6_plen are accessed without corresponding bounds checks. A truncated packet with exactly 4 bytes of fragment header data (enough for ip6f_nxt + ip6f_reserved + ip6f_offlg) passes the ND_TCHECK check at offset 2 but causes a 4-byte out-of-bounds read at offset 4 when EXTRACT_32BITS(\u0026dp-\u003eip6f_ident) is evaluated.\\\",\\n  \\\"evidence\\\": \\\"struct ip6_frag layout (ip6.h:191-196): ip6f_nxt[0], ip6f_reserved[1], ip6f_offlg[2-3], ip6f_ident[4-7]. print-frag6.c:43 checks only ND_TCHECK(dp-\u003eip6f_offlg) covering bytes 2-3, but print-frag6.c:47 accesses EXTRACT_32BITS(\u0026dp-\u003eip6f_ident) at bytes 4-7 and print-frag6.c:49 accesses EXTRACT_16BITS(\u0026ip6-\u003eip6_plen) from bp2 without any bounds verification. Binary confirms frag6_print is compiled at offset 0x599e0 and called from ip6_print in print-ip6.c:307 for IPPROTO_FRAGMENT packets.\\\",\\n  \\\"confidence\\\": \\\"high\\\"\\n}\\n```\",\"stop_reason\":\"end_turn\",\"session_id\":\"9e7e45c8-6f15-49cb-9d0a-4d69c4e0770b\",\"total_cost_usd\":0.271084,\"usage\":{\"input_tokens\":11466,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":199808,\"output_tokens\":4554,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"skillclaw-model\":{\"inputTokens\":11466,\"outputTokens\":4554,\"cacheReadInputTokens\":199808,\"cacheCreationInputTokens\":0,\"webSearchRequests\":0,\"costUSD\":0.271084,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"f9f63417-4806-4cba-a63c-514175c07d43\"}\n"
+                                     ]
+                    },
+    "skill_injection":  {
+                            "line_no":  1772,
+                            "session_id":  "9e7e45c8-6f15-49cb-9d0a-4d69c4e0770b",
+                            "turn_num":  6,
+                            "timestamp":  "2026-06-25 15:27:27",
+                            "injection_mode":  "inline",
+                            "selected_skill_names":  [
+                                                         "source-parser-state-machine-oob",
+                                                         "elf-cwe120-firmware-triage",
+                                                         "vuln-hunting"
+                                                     ],
+                            "skill_prompt_hash":  "53ae35e8ffdacec1",
+                            "available_skill_count":  35,
+                            "skill_top_k":  3
+                        },
+    "skill_injection_history":  [
+                                    {
+                                        "line_no":  1767,
+                                        "session_id":  "9e7e45c8-6f15-49cb-9d0a-4d69c4e0770b",
+                                        "turn_num":  1,
+                                        "timestamp":  "2026-06-25 15:26:08",
+                                        "injection_mode":  "inline",
+                                        "selected_skill_names":  [
+                                                                     "source-parser-state-machine-oob",
+                                                                     "elf-cwe120-firmware-triage",
+                                                                     "vuln-hunting"
+                                                                 ],
+                                        "skill_prompt_hash":  "53ae35e8ffdacec1",
+                                        "available_skill_count":  35,
+                                        "skill_top_k":  3
+                                    },
+                                    {
+                                        "line_no":  1768,
+                                        "session_id":  "9e7e45c8-6f15-49cb-9d0a-4d69c4e0770b",
+                                        "turn_num":  2,
+                                        "timestamp":  "2026-06-25 15:26:12",
+                                        "injection_mode":  "inline",
+                                        "selected_skill_names":  [
+                                                                     "source-parser-state-machine-oob",
+                                                                     "elf-cwe120-firmware-triage",
+                                                                     "vuln-hunting"
+                                                                 ],
+                                        "skill_prompt_hash":  "53ae35e8ffdacec1",
+                                        "available_skill_count":  35,
+                                        "skill_top_k":  3
+                                    },
+                                    {
+                                        "line_no":  1769,
+                                        "session_id":  "9e7e45c8-6f15-49cb-9d0a-4d69c4e0770b",
+                                        "turn_num":  3,
+                                        "timestamp":  "2026-06-25 15:26:28",
+                                        "injection_mode":  "inline",
+                                        "selected_skill_names":  [
+                                                                     "source-parser-state-machine-oob",
+                                                                     "elf-cwe120-firmware-triage",
+                                                                     "vuln-hunting"
+                                                                 ],
+                                        "skill_prompt_hash":  "53ae35e8ffdacec1",
+                                        "available_skill_count":  35,
+                                        "skill_top_k":  3
+                                    },
+                                    {
+                                        "line_no":  1770,
+                                        "session_id":  "9e7e45c8-6f15-49cb-9d0a-4d69c4e0770b",
+                                        "turn_num":  4,
+                                        "timestamp":  "2026-06-25 15:26:52",
+                                        "injection_mode":  "inline",
+                                        "selected_skill_names":  [
+                                                                     "source-parser-state-machine-oob",
+                                                                     "elf-cwe120-firmware-triage",
+                                                                     "vuln-hunting"
+                                                                 ],
+                                        "skill_prompt_hash":  "53ae35e8ffdacec1",
+                                        "available_skill_count":  35,
+                                        "skill_top_k":  3
+                                    },
+                                    {
+                                        "line_no":  1771,
+                                        "session_id":  "9e7e45c8-6f15-49cb-9d0a-4d69c4e0770b",
+                                        "turn_num":  5,
+                                        "timestamp":  "2026-06-25 15:27:07",
+                                        "injection_mode":  "inline",
+                                        "selected_skill_names":  [
+                                                                     "source-parser-state-machine-oob",
+                                                                     "elf-cwe120-firmware-triage",
+                                                                     "vuln-hunting"
+                                                                 ],
+                                        "skill_prompt_hash":  "53ae35e8ffdacec1",
+                                        "available_skill_count":  35,
+                                        "skill_top_k":  3
+                                    },
+                                    {
+                                        "line_no":  1772,
+                                        "session_id":  "9e7e45c8-6f15-49cb-9d0a-4d69c4e0770b",
+                                        "turn_num":  6,
+                                        "timestamp":  "2026-06-25 15:27:27",
+                                        "injection_mode":  "inline",
+                                        "selected_skill_names":  [
+                                                                     "source-parser-state-machine-oob",
+                                                                     "elf-cwe120-firmware-triage",
+                                                                     "vuln-hunting"
+                                                                 ],
+                                        "skill_prompt_hash":  "53ae35e8ffdacec1",
+                                        "available_skill_count":  35,
+                                        "skill_top_k":  3
+                                    }
+                                ],
+    "skill_relevance":  {
+                            "status":  "has_task_relevant_skill",
+                            "selected_skills":  [
+                                                    "source-parser-state-machine-oob",
+                                                    "elf-cwe120-firmware-triage",
+                                                    "vuln-hunting"
+                                                ],
+                            "relevant_skills":  [
+                                                    "source-parser-state-machine-oob"
+                                                ],
+                            "infra_skills":  [
+
+                                             ],
+                            "matched_terms":  {
+                                                  "source-parser-state-machine-oob":  [
+                                                                                          "source"
+                                                                                      ]
+                                              }
+                        },
+    "validation":  null,
+    "feedback":  {
+                     "decision":  "positive",
+                     "suggested_action":  "keep_or_promote_skill",
+                     "normalized_score":  0.8,
+                     "validation_status":  null,
+                     "selected_skills":  [
+                                             "source-parser-state-machine-oob",
+                                             "elf-cwe120-firmware-triage",
+                                             "vuln-hunting"
+                                         ],
+                     "skill_relevance":  {
+                                             "status":  "has_task_relevant_skill",
+                                             "selected_skills":  [
+                                                                     "source-parser-state-machine-oob",
+                                                                     "elf-cwe120-firmware-triage",
+                                                                     "vuln-hunting"
+                                                                 ],
+                                             "relevant_skills":  [
+                                                                     "source-parser-state-machine-oob"
+                                                                 ],
+                                             "infra_skills":  [
+
+                                                              ],
+                                             "matched_terms":  {
+                                                                   "source-parser-state-machine-oob":  [
+                                                                                                           "source"
+                                                                                                       ]
+                                                               }
+                                         },
+                     "reasons":  [
+                                     "selected_skills=source-parser-state-machine-oob,elf-cwe120-firmware-triage,vuln-hunting",
+                                     "skill_relevance=has_task_relevant_skill",
+                                     "score=8.0/10.0"
+                                 ]
+                 }
+}

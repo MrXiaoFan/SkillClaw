@@ -1,0 +1,457 @@
+﻿{
+  "case_id": "tcpdump-4.9.1-cve-2017-13031",
+  "timestamp": "2026-06-24T03:49:02.628781+00:00",
+  "mode": "skillclaw-inline-rerun",
+  "model": "skillclaw-model",
+  "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+  "score": 5.0,
+  "max_score": 10.0,
+  "checks": {
+    "cve": {
+      "hit": false,
+      "matched": [],
+      "expected": [
+        "CVE-2017-13031"
+      ]
+    },
+    "file": {
+      "hit": true,
+      "matched": [
+        "print-frag6.c"
+      ],
+      "expected": [
+        "print-frag6.c"
+      ]
+    },
+    "function": {
+      "hit": false,
+      "matched": [],
+      "expected": [
+        "frag6_print"
+      ]
+    },
+    "evidence": {
+      "hit": true,
+      "matched": [
+        "ND_TCHECK",
+        "ip6f_offlg",
+        "ip6f_ident"
+      ],
+      "expected": [
+        "frag6_print",
+        "ND_TCHECK",
+        "ip6f_offlg",
+        "ip6f_ident"
+      ]
+    },
+    "root_cause": {
+      "hit": true,
+      "matched": [
+        "checks",
+        "the"
+      ],
+      "expected_terms": [
+        "IPv6",
+        "fragment",
+        "header",
+        "printer",
+        "checks",
+        "insufficient",
+        "field",
+        "range",
+        "before",
+        "later",
+        "reading",
+        "the"
+      ]
+    }
+  },
+  "predictions": {
+    "cves": [],
+    "files": [],
+    "functions": [],
+    "evidence": [],
+    "raw_text": [
+      "The analysis is complete. The vulnerability is in `print-frag6.c:43` where `ND_TCHECK(dp->ip6f_offlg)` only checks 2 bytes (offset 2-3) of the 8-byte `struct ip6_frag`, but the code subsequently reads 4 bytes at offset 4 (`ip6f_ident`) via `EXTRACT_32BITS(&dp->ip6f_ident)` at line 47 without bounds validation — a classic buffer over-read when the capture snapshot is truncated.\n"
+    ]
+  },
+  "skill_injection": {
+    "line_no": 80,
+    "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+    "turn_num": 13,
+    "timestamp": "2026-06-24 11:43:12",
+    "injection_mode": "inline",
+    "selected_skill_names": [
+      "elf-cwe120-firmware-triage",
+      "ssh-password-recon-workflow",
+      "skillclaw-skill-discovery"
+    ],
+    "skill_prompt_hash": "0eb63a27f2caa145",
+    "available_skill_count": 35,
+    "skill_top_k": 3
+  },
+  "skill_injection_history": [
+    {
+      "line_no": 68,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 1,
+      "timestamp": "2026-06-24 11:40:33",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "source-parser-state-machine-oob",
+        "elf-cwe120-firmware-triage",
+        "vuln-hunting"
+      ],
+      "skill_prompt_hash": "53ae35e8ffdacec1",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 69,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 2,
+      "timestamp": "2026-06-24 11:40:34",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 70,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 3,
+      "timestamp": "2026-06-24 11:40:39",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 71,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 4,
+      "timestamp": "2026-06-24 11:40:43",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 72,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 5,
+      "timestamp": "2026-06-24 11:41:24",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 73,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 6,
+      "timestamp": "2026-06-24 11:41:27",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 74,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 7,
+      "timestamp": "2026-06-24 11:41:41",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 75,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 8,
+      "timestamp": "2026-06-24 11:41:45",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 76,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 9,
+      "timestamp": "2026-06-24 11:42:11",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 77,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 10,
+      "timestamp": "2026-06-24 11:42:16",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 78,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 11,
+      "timestamp": "2026-06-24 11:42:37",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 79,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 12,
+      "timestamp": "2026-06-24 11:42:58",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    },
+    {
+      "line_no": 80,
+      "session_id": "7c2417d5-1499-4b1c-9e34-0090ccaf8336",
+      "turn_num": 13,
+      "timestamp": "2026-06-24 11:43:12",
+      "injection_mode": "inline",
+      "selected_skill_names": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "skill_prompt_hash": "0eb63a27f2caa145",
+      "available_skill_count": 35,
+      "skill_top_k": 3
+    }
+  ],
+  "skill_relevance": {
+    "status": "no_task_relevant_skill",
+    "selected_skills": [
+      "elf-cwe120-firmware-triage",
+      "ssh-password-recon-workflow",
+      "skillclaw-skill-discovery"
+    ],
+    "relevant_skills": [],
+    "infra_skills": [
+      "skillclaw-skill-discovery"
+    ],
+    "matched_terms": {}
+  },
+  "validation": {
+    "case_id": "tcpdump-4.9.1-cve-2017-13031",
+    "timestamp": "2026-06-24T03:43:17.210332+00:00",
+    "validator_mode": "case-level",
+    "target_root": "/home/li/skillclaw-eval/tcpdump-4.9.1",
+    "agent_output_path": "experiment_records/tcpdump-skillclaw-rerun-20260624/tcpdump-skillclaw-rerun-20260624-raw.txt",
+    "status": "passed",
+    "checks": [
+      {
+        "name": "agent-output-ground-truth-match",
+        "type": "content_match",
+        "allow_failure": true,
+        "source": "agent_output",
+        "status": "passed",
+        "path": "experiment_records/tcpdump-skillclaw-rerun-20260624/tcpdump-skillclaw-rerun-20260624-raw.txt",
+        "match": "any",
+        "hit_count": 5,
+        "total_patterns": 14,
+        "patterns": [
+          {
+            "pattern": "CVE-2017-13031",
+            "hit": false
+          },
+          {
+            "pattern": "print-frag6.c",
+            "hit": true
+          },
+          {
+            "pattern": "frag6_print",
+            "hit": false
+          },
+          {
+            "pattern": "ND_TCHECK",
+            "hit": true
+          },
+          {
+            "pattern": "ip6f_offlg",
+            "hit": true
+          },
+          {
+            "pattern": "ip6f_ident",
+            "hit": true
+          },
+          {
+            "pattern": "fragment",
+            "hit": false
+          },
+          {
+            "pattern": "header",
+            "hit": false
+          },
+          {
+            "pattern": "printer",
+            "hit": false
+          },
+          {
+            "pattern": "checks",
+            "hit": true
+          },
+          {
+            "pattern": "insufficient",
+            "hit": false
+          },
+          {
+            "pattern": "before",
+            "hit": false
+          },
+          {
+            "pattern": "reading",
+            "hit": false
+          },
+          {
+            "pattern": "identification",
+            "hit": false
+          }
+        ]
+      },
+      {
+        "name": "ground-truth-source-location",
+        "type": "source_contains",
+        "allow_failure": false,
+        "file": "print-frag6.c",
+        "path": "/home/li/skillclaw-eval/tcpdump-4.9.1/print-frag6.c",
+        "exists": true,
+        "patterns": [
+          {
+            "pattern": "frag6_print",
+            "hit": true
+          },
+          {
+            "pattern": "ND_TCHECK",
+            "hit": true
+          },
+          {
+            "pattern": "ip6f_offlg",
+            "hit": true
+          },
+          {
+            "pattern": "ip6f_ident",
+            "hit": true
+          }
+        ],
+        "status": "passed"
+      },
+      {
+        "name": "binary-present",
+        "type": "command",
+        "allow_failure": true,
+        "command": "file tcpdump && readelf -h tcpdump | head -20",
+        "cwd": "/home/li/skillclaw-eval/tcpdump-4.9.1",
+        "status": "passed",
+        "returncode": 0,
+        "stdout_tail": "tcpdump: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=d7e29d642835e69af3ed8ad162794fd9e0de436d, for GNU/Linux 3.2.0, with debug_info, not stripped\nELF Header:\n  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00 \n  Class:                             ELF64\n  Data:                              2's complement, little endian\n  Version:                           1 (current)\n  OS/ABI:                            UNIX - System V\n  ABI Version:                       0\n  Type:                              DYN (Position-Independent Executable file)\n  Machine:                           Advanced Micro Devices X86-64\n  Version:                           0x1\n  Entry point address:               0x32e20\n  Start of program headers:          64 (bytes into file)\n  Start of section headers:          3625264 (bytes into file)\n  Flags:                             0x0\n  Size of this header:               64 (bytes)\n  Size of program headers:           56 (bytes)\n  Number of program headers:         13\n  Size of section headers:           64 (bytes)\n  Number of section headers:         40\n  Section header string table index: 39\n",
+        "stderr_tail": ""
+      },
+      {
+        "name": "pcap-poc-placeholder",
+        "type": "asan_command",
+        "allow_failure": false,
+        "status": "skipped",
+        "reason": "disabled"
+      }
+    ]
+  },
+  "feedback": {
+    "decision": "neutral",
+    "suggested_action": "inspect_retrieval_before_promoting_skill",
+    "normalized_score": 0.5,
+    "validation_status": "passed",
+    "selected_skills": [
+      "elf-cwe120-firmware-triage",
+      "ssh-password-recon-workflow",
+      "skillclaw-skill-discovery"
+    ],
+    "skill_relevance": {
+      "status": "no_task_relevant_skill",
+      "selected_skills": [
+        "elf-cwe120-firmware-triage",
+        "ssh-password-recon-workflow",
+        "skillclaw-skill-discovery"
+      ],
+      "relevant_skills": [],
+      "infra_skills": [
+        "skillclaw-skill-discovery"
+      ],
+      "matched_terms": {}
+    },
+    "reasons": [
+      "selected_skills=elf-cwe120-firmware-triage,ssh-password-recon-workflow,skillclaw-skill-discovery",
+      "skill_relevance=no_task_relevant_skill",
+      "score=5.0/10.0",
+      "validation=passed"
+    ]
+  }
+}

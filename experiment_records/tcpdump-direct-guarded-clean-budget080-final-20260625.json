@@ -1,0 +1,142 @@
+{
+    "case_id":  "tcpdump-4.9.1-cve-2017-13031",
+    "timestamp":  "2026-06-25T09:13:27.487899+00:00",
+    "mode":  "direct-deepseek-guarded-clean-budget080",
+    "model":  "deepseek-v4-pro",
+    "session_id":  "942c0ad4-188c-48a5-9eb3-de9e6879158f",
+    "score":  8.0,
+    "max_score":  10.0,
+    "checks":  {
+                   "cve":  {
+                               "hit":  false,
+                               "matched":  [
+
+                                           ],
+                               "expected":  [
+                                                "CVE-2017-13031"
+                                            ]
+                           },
+                   "file":  {
+                                "hit":  true,
+                                "matched":  [
+                                                "print-frag6.c"
+                                            ],
+                                "expected":  [
+                                                 "print-frag6.c"
+                                             ]
+                            },
+                   "function":  {
+                                    "hit":  true,
+                                    "matched":  [
+                                                    "frag6_print"
+                                                ],
+                                    "expected":  [
+                                                     "frag6_print"
+                                                 ]
+                                },
+                   "evidence":  {
+                                    "hit":  true,
+                                    "matched":  [
+                                                    "frag6_print",
+                                                    "ND_TCHECK",
+                                                    "ip6f_offlg",
+                                                    "ip6f_ident"
+                                                ],
+                                    "expected":  [
+                                                     "frag6_print",
+                                                     "ND_TCHECK",
+                                                     "ip6f_offlg",
+                                                     "ip6f_ident"
+                                                 ]
+                                },
+                   "root_cause":  {
+                                      "hit":  true,
+                                      "matched":  [
+                                                      "IPv6",
+                                                      "fragment",
+                                                      "header",
+                                                      "checks",
+                                                      "the"
+                                                  ],
+                                      "expected_terms":  [
+                                                             "IPv6",
+                                                             "fragment",
+                                                             "header",
+                                                             "printer",
+                                                             "checks",
+                                                             "insufficient",
+                                                             "field",
+                                                             "range",
+                                                             "before",
+                                                             "later",
+                                                             "reading",
+                                                             "the"
+                                                         ]
+                                  }
+               },
+    "predictions":  {
+                        "cves":  [
+                                     "CVE-2017-12932"
+                                 ],
+                        "files":  [
+                                      "print-frag6.c"
+                                  ],
+                        "functions":  [
+                                          "frag6_print"
+                                      ],
+                        "evidence":  [
+                                         "print-frag6.c line 43: ND_TCHECK(dp-\u003eip6f_offlg) checks sizeof(uint16_t)=2 bytes at struct offset 2 (validating up to offset 4). Line 47: EXTRACT_32BITS(\u0026dp-\u003eip6f_ident) reads 4 bytes at struct offset 4, requiring 8 bytes total — 4 bytes beyond the TCHECK. Line 49: EXTRACT_16BITS(\u0026ip6-\u003eip6_plen) dereferences bp2-\u003eip6_plen without any bounds validation. The ip6_frag struct (ip6.h lines 191-196) confirms ip6f_ident is at offset 4, past the 4-byte validated region."
+                                     ],
+                        "raw_text":  [
+                                         "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":63278,\"duration_api_ms\":63108,\"num_turns\":7,\"result\":\"The analysis is complete. The `struct ip6_frag` occupies 8 bytes (ip6f_nxt at offset 0, ip6f_reserved at offset 1, ip6f_offlg at offset 2, ip6f_ident at offset 4). The `ND_TCHECK(dp-\u003eip6f_offlg)` on line 43 only validates 2 bytes of capture (offset 2 through 3), but the code at line 47 reads `ip6f_ident` at offset 4 — 4 bytes beyond the validated region — and line 49 dereferences `ip6-\u003eip6_plen` from `bp2` without any bounds check at all.\\n\\n```json\\n{\\n  \\\"predicted_cves\\\": [\\\"CVE-2017-12932\\\"],\\n  \\\"predicted_files\\\": [\\\"print-frag6.c\\\"],\\n  \\\"predicted_functions\\\": [\\\"frag6_print\\\"],\\n  \\\"root_cause\\\": \\\"The frag6_print function in print-frag6.c calls ND_TCHECK(dp-\u003eip6f_offlg) which only validates 2 bytes (the ip6f_offlg uint16_t at offset 2 in struct ip6_frag), but then reads 4 bytes from dp-\u003eip6f_ident at a higher offset (offset 4) without a corresponding bounds check. Additionally, ip6-\u003eip6_plen from the IPv6 header pointer bp2 is accessed with no ND_TCHECK at all. If a truncated packet contains only 4-7 bytes of the fragmentation header, the TCHECK passes but the subsequent reads overflow the captured buffer.\\\",\\n  \\\"evidence\\\": \\\"print-frag6.c line 43: ND_TCHECK(dp-\u003eip6f_offlg) checks sizeof(uint16_t)=2 bytes at struct offset 2 (validating up to offset 4). Line 47: EXTRACT_32BITS(\u0026dp-\u003eip6f_ident) reads 4 bytes at struct offset 4, requiring 8 bytes total — 4 bytes beyond the TCHECK. Line 49: EXTRACT_16BITS(\u0026ip6-\u003eip6_plen) dereferences bp2-\u003eip6_plen without any bounds validation. The ip6_frag struct (ip6.h lines 191-196) confirms ip6f_ident is at offset 4, past the 4-byte validated region.\\\",\\n  \\\"confidence\\\": \\\"high\\\"\\n}\\n```\",\"stop_reason\":\"end_turn\",\"session_id\":\"942c0ad4-188c-48a5-9eb3-de9e6879158f\",\"total_cost_usd\":0.270181,\"usage\":{\"input_tokens\":27580,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":109312,\"output_tokens\":3105,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"deepseek-v4-pro\":{\"inputTokens\":27580,\"outputTokens\":3105,\"cacheReadInputTokens\":109312,\"cacheCreationInputTokens\":0,\"webSearchRequests\":0,\"costUSD\":0.270181,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"6762b6fc-113c-4048-86f9-75e0c50a208d\"}\n"
+                                     ]
+                    },
+    "skill_injection":  null,
+    "skill_injection_history":  [
+
+                                ],
+    "skill_relevance":  {
+                            "status":  "no_selected_skills",
+                            "selected_skills":  [
+
+                                                ],
+                            "relevant_skills":  [
+
+                                                ],
+                            "infra_skills":  [
+
+                                             ],
+                            "matched_terms":  {
+
+                                              }
+                        },
+    "validation":  null,
+    "feedback":  {
+                     "decision":  "positive",
+                     "suggested_action":  "use_as_baseline_positive",
+                     "normalized_score":  0.8,
+                     "validation_status":  null,
+                     "selected_skills":  [
+
+                                         ],
+                     "skill_relevance":  {
+                                             "status":  "no_selected_skills",
+                                             "selected_skills":  [
+
+                                                                 ],
+                                             "relevant_skills":  [
+
+                                                                 ],
+                                             "infra_skills":  [
+
+                                                              ],
+                                             "matched_terms":  {
+
+                                                               }
+                                         },
+                     "reasons":  [
+                                     "skill_relevance=no_selected_skills",
+                                     "score=8.0/10.0"
+                                 ]
+                 }
+}

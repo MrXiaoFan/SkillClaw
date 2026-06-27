@@ -1,0 +1,95 @@
+﻿{
+  "case_id": "libxml2-2.9.4-cve-2017-8872",
+  "timestamp": "2026-06-25T10:59:05.706308+00:00",
+  "mode": "direct-deepseek-guarded-clean-budget035",
+  "model": "deepseek-v4-pro",
+  "session_id": "1b5523df-81a4-4a0d-b717-29244da4befc",
+  "score": 0.0,
+  "max_score": 10.0,
+  "checks": {
+    "cve": {
+      "hit": false,
+      "matched": [],
+      "expected": [
+        "CVE-2017-8872"
+      ]
+    },
+    "file": {
+      "hit": false,
+      "matched": [],
+      "expected": [
+        "HTMLparser.c"
+      ]
+    },
+    "function": {
+      "hit": false,
+      "matched": [],
+      "expected": [
+        "htmlParseTryOrFinish"
+      ]
+    },
+    "evidence": {
+      "hit": false,
+      "matched": [],
+      "expected": [
+        "htmlParseTryOrFinish",
+        "in->cur[2]",
+        "in->cur[3]",
+        "avail"
+      ]
+    },
+    "root_cause": {
+      "hit": false,
+      "matched": [],
+      "expected_terms": [
+        "parser",
+        "state",
+        "machine",
+        "performs",
+        "lookahead",
+        "reads",
+        "from",
+        "in->cur[2]",
+        "and",
+        "in->cur[3]",
+        "while",
+        "the"
+      ]
+    }
+  },
+  "predictions": {
+    "cves": [],
+    "files": [],
+    "functions": [],
+    "evidence": [],
+    "raw_text": []
+  },
+  "skill_injection": null,
+  "skill_injection_history": [],
+  "skill_relevance": {
+    "status": "no_selected_skills",
+    "selected_skills": [],
+    "relevant_skills": [],
+    "infra_skills": [],
+    "matched_terms": {}
+  },
+  "validation": null,
+  "feedback": {
+    "decision": "neutral",
+    "suggested_action": "baseline_no_skill_feedback",
+    "normalized_score": 0.0,
+    "validation_status": null,
+    "selected_skills": [],
+    "skill_relevance": {
+      "status": "no_selected_skills",
+      "selected_skills": [],
+      "relevant_skills": [],
+      "infra_skills": [],
+      "matched_terms": {}
+    },
+    "reasons": [
+      "skill_relevance=no_selected_skills",
+      "score=0.0/10.0"
+    ]
+  }
+}

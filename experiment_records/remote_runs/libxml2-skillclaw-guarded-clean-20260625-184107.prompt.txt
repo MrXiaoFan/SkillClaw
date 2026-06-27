@@ -1,0 +1,11 @@
+不要 WebSearch。当前目录是 libxml2-2.9.4，目标二进制是 .libs/xmllint。请使用 SkillClaw server-side skills 分析该版本 libxml2 中与源码解析器状态机、cur/end/avail、lookahead read、chunked parsing 相关的越界读/写漏洞候选。必须优先使用 source-parser-state-machine-oob skill。最后用 JSON 输出 predicted_cves、predicted_files、predicted_functions、root_cause、evidence、confidence。
+
+Experiment execution constraints:
+- Do not use TodoWrite or other task-list tools.
+- Use at most 8 tool calls. Prefer targeted Grep/Read/Bash commands over broad full-project scans.
+- As soon as you have a plausible file, function, root cause, and evidence, stop calling tools and produce the final answer.
+- If you are uncertain, still output the best-supported JSON instead of continuing tool use.
+- The final response must be exactly one JSON object with keys: predicted_cves, predicted_files, predicted_functions, root_cause, evidence, confidence.
+
+Additional clean-room constraint:
+- Do not read previous experiment outputs, notes, result files, or JSON files. Use only source files and build artifacts from the target project.

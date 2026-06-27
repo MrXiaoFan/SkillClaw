@@ -1,0 +1,71 @@
+{
+  "predicted_cves": [
+    "CVE-2017-12986"
+  ],
+  "predicted_files": [
+    "print-frag6.c"
+  ],
+  "predicted_functions": [
+    "frag6_print"
+  ],
+  "root_cause": "frag6_print() only calls ND_TCHECK(dp->ip6f_offlg) which bounds-checks 2 bytes at frag-header offset 2 (bytes 2-3). The subsequent EXTRACT_32BITS(&dp->ip6f_ident) at line 47 reads 4 bytes at offset 4 (bytes 4-7) without any dominating guard. The struct ip6_frag is 8 bytes total, but only bytes 2-3 are verified before accessing bytes 4-7 via EXTRACT_32BITS. Additionally, EXTRACT_16BITS(&ip6->ip6_plen) at lines 49 and 54 reads the IPv6 header payload length with zero bounds checks on the ip6 pointer within this function.",
+  "evidence": {
+    "struct_ip6_frag": {
+      "file": "ip6.h",
+      "lines": "191-196",
+      "layout": {
+        "ip6f_nxt": "offset 0, size 1",
+        "ip6f_reserved": "offset 1, size 1",
+        "ip6f_offlg": "offset 2, size 2",
+        "ip6f_ident": "offset 4, size 4"
+      }
+    },
+    "single_bounds_check": {
+      "file": "print-frag6.c",
+      "line": 43,
+      "code": "ND_TCHECK(dp->ip6f_offlg);",
+      "expands_to": "ND_TCHECK2(dp->ip6f_offlg, 2)",
+      "checks": "&dp->ip6f_offlg + 2 <= ndo_snapend, i.e. bp+4 <= ndo_snapend",
+      "covers_bytes": "offsets 2-3 only"
+    },
+    "unguarded_read_1": {
+      "file": "print-frag6.c",
+      "line": 47,
+      "code": "EXTRACT_32BITS(&dp->ip6f_ident)",
+      "reads_bytes": "offsets 4-7 (4 bytes at &dp + 4)",
+      "requires": "bp + 8 <= ndo_snapend",
+      "guard_before_access": "ND_TCHECK at line 43 only checks up to bp+4, NOT bp+8",
+      "gap": "4 bytes (offsets 4-7) are read without any preceding bounds check"
+    },
+    "unguarded_read_2": {
+      "file": "print-frag6.c",
+      "lines": "49, 54",
+      "code": "EXTRACT_16BITS(&ip6->ip6_plen)",
+      "reads_bytes": "IPv6 header offset 4-5 (payload length field)",
+      "guard_before_access": "NONE - no ND_TCHECK or ND_TCHECK2 on ip6 or ip6->ip6_plen within frag6_print",
+      "note": "ip6 is passed as bp2 from caller; the function does not independently verify it"
+    },
+    "extract_macros_no_bounds_check": {
+      "file": "extract.h",
+      "lines": "118-125",
+      "confirmation": "EXTRACT_16BITS and EXTRACT_32BITS are pure dereference macros with zero bounds checking"
+    },
+    "caller_context": {
+      "file": "print-ip6.c",
+      "line_90": "ND_TCHECK2(*cp, 1) checks only 1 byte before setting advance = sizeof(struct ip6_frag)",
+      "line_307": "frag6_print(ndo, cp, (const u_char *)ip6) called with no additional pre-check",
+      "attack_scenario": "Truncated IPv6 fragment header with 4-7 captured bytes: ND_TCHECK(dp->ip6f_offlg) passes (bp+4 ok), but EXTRACT_32BITS(&dp->ip6f_ident) reads beyond snapend"
+    }
+  },
+  "confidence": "high",
+  "commands_used_briefly": [
+    "Read print-frag6.c (full file, 70 lines)",
+    "Grep ND_TCHECK/ND_TCHECK2/EXTRACT in print-frag6.c",
+    "Grep '#define ND_TCHECK|EXTRACT' across repo",
+    "Grep 'struct ip6_frag|ip6f_ident|ip6f_offlg|ip6_plen' in ip6.h",
+    "Read ip6.h lines 76-105, 188-201 (struct definitions)",
+    "Read netdissect.h lines 310-329 (ND_TTEST2/ND_TCHECK2/ND_TCHECK macros)",
+    "Read extract.h lines 115-134 (EXTRACT_16BITS/32BITS confirmation: pure deref, no bounds)",
+    "Read print-ip6.c lines 55-93, 295-312 (caller reachability, while-loop cp advance, ND_TCHECK2(*cp,1) pre-check)"
+  ]
+}

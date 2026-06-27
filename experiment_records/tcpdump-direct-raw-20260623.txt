@@ -1,0 +1,14 @@
+Here is the analysis of the vulnerability:
+
+**Vulnerability summary**: In `print-frag6.c:43`, the `ND_TCHECK(dp->ip6f_offlg)` only validates 2 bytes at offset 2 of `struct ip6_frag` (i.e., `bp + 4` bytes). However, when verbose mode is enabled, line 47 reads `dp->ip6f_ident` (a `uint32_t` at offset 4) requiring `bp + 8` bytes. An attacker can craft an IPv6 packet with a truncated fragmentation header (4-7 bytes captured) that passes the bounds check but causes a 4-byte heap buffer over-read.
+
+```json
+{
+  "predicted_cves": ["CVE-2017-13034"],
+  "predicted_files": ["print-frag6.c", "ip6.h", "print-ip6.c"],
+  "predicted_functions": ["frag6_print"],
+  "root_cause": "In print-frag6.c:frag6_print(), ND_TCHECK(dp->ip6f_offlg) validates only 2 bytes (ip6f_offlg is uint16_t at offset 2 within struct ip6_frag, so bp+4 total). But when ndo_vflag is set, EXTRACT_32BITS(&dp->ip6f_ident) at line 47 reads 4 bytes from offset 4 (bp+8 total). A truncated packet with only 4-7 bytes of the frag header captured passes the TCHECK but triggers a 4-byte buffer over-read when accessing ip6f_ident. The insufficient bounds check does not cover all accessed fields of struct ip6_frag.",
+  "evidence": "print-frag6.c:43: ND_TCHECK(dp->ip6f_offlg) -- ip6f_offlg is uint16_t at offset 2, validates bp+4 bytes. print-frag6.c:47-48: EXTRACT_32BITS(&dp->ip6f_ident) -- ip6f_ident is uint32_t at offset 4, reads bp+8 bytes. ip6.h:191-196: struct ip6_frag { uint8_t ip6f_nxt; uint8_t ip6f_reserved; uint16_t ip6f_offlg; uint32_t ip6f_ident; } -- 8 bytes total. The ND_TCHECK at line 43 only validates 4 of the 8 bytes subsequently read.",
+  "confidence": 0.95
+}
+```
