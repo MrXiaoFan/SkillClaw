@@ -17,7 +17,8 @@ skills are intentionally not stored here.
 - `giflib_case_plan_20260627.md` and `giflib_eval_20260627.md`: preparation
   note and executed comparison for the third benchmark case,
   `giflib-5.1.2-cve-2016-3977`. The remote VM artifacts are archived under
-  `remote_runs/giflib-20260627/`.
+  `remote_runs/giflib-20260627/`. This case now includes a real ASan dynamic
+  validation run that triggers `heap-buffer-overflow` in `DumpScreen2RGB`.
 - `libxml2_deepseek_vs_skillclaw_20260623.md`: focused comparison of
   SkillClaw inline skill injection and direct DeepSeek on the libxml2 2.9.4
   case.

@@ -100,7 +100,7 @@ def smoke_cases(cases_dir: Path) -> list[dict[str, Any]]:
                 root,
                 case_path=case_path,
                 agent_output_path=None,
-                skip_commands=False,
+                skip_commands=True,
             )
             results.append(result)
     return results

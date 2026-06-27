@@ -22,8 +22,14 @@ SkillClaw 组运行 ID 为 `giflib-skillclaw-guarded-20260627`，模式为 `skil
 
 DeepSeek 直连组运行 ID 为 `giflib-direct-guarded-20260627`，模式为 `direct-deepseek-guarded`，最终得分 `8/10`。模型同样定位到 `util/gif2rgb.c` 和 `DumpScreen2RGB`，并完整覆盖 `GifFile->SBackGroundColor`、`ScreenBuffer[0][i]`、`ColorMap->Colors[GifRow[j]]`、`ColorMap->ColorCount` 等关键证据；但 CVE 编号输出为 `CVE-2016-3177`，未命中正确的 `CVE-2016-3977`，因此扣分。
 
+## 动态验证
+
+本次实验进一步将 `asan_command` 从占位验证升级为真实动态验证。新增 PoC 生成脚本 `experiment_cases/pocs/giflib-5.1.2-cve-2016-3977/make_poc.py`，生成一个 20 字节 GIF：逻辑屏幕为 1x1，全局色表只有 2 个颜色项，但 Background Color Index 设置为 2。该输入不需要 image record，即可让 `gif2rgb` 在 dump 初始化后的屏幕缓冲区时访问 `ColorMap->Colors[2]`，越过 2 项色表边界。
+
+远端 VM 上使用 `-fsanitize=address -g -O0 -fno-omit-frame-pointer` 构建 `util/gif2rgb_asan`，随后执行 validator。动态验证结果为 `passed`：ASan 报告 `heap-buffer-overflow`，return code 为 134，栈中命中 `DumpScreen2RGB util/gif2rgb.c:305`，分配栈命中 `GifMakeMapObject lib/gifalloc.c:55` 和 `DGifGetScreenDesc lib/dgif_lib.c:264`。这说明本 case 已不只是文本匹配或源码定位，而是具备可复现的漏洞触发证据。
+
 ## 初步结论
 
-本 case 中，SkillClaw 组优于 Direct 组的主要原因不是源码定位能力，而是 CVE identity/calibration 更准确。Direct 组已经具备很强的源码级定位和根因分析能力，但在漏洞编号上出现近似错误。结合注入记录看，本次 SkillClaw 确实选择了与状态机越界和漏洞狩猎相关的 task skill，但仍不能单独证明提升来自某一个 skill；更稳妥的论文表述是：SkillClaw 不应被宣称为普遍提升漏洞定位能力，而更适合作为任务稳定化、检索增强和漏洞身份校准机制来研究；源码定位、CVE 校准、skill 归因和动态触发验证应拆成不同评价维度。
+本 case 中，SkillClaw 组优于 Direct 组的主要原因不是源码定位能力，而是 CVE identity/calibration 更准确。Direct 组已经具备很强的源码级定位和根因分析能力，但在漏洞编号上出现近似错误。结合注入记录看，本次 SkillClaw 确实选择了与状态机越界和漏洞狩猎相关的 task skill，但仍不能单独证明提升来自某一个 skill；更稳妥的论文表述是：SkillClaw 不应被宣称为普遍提升漏洞定位能力，而更适合作为任务稳定化、检索增强、漏洞身份校准和验证闭环机制来研究；源码定位、CVE 校准、skill 归因和动态触发验证应拆成不同评价维度。
 
 相关原始产物保存在 `experiment_records/remote_runs/giflib-20260627/`。跨实验汇总已更新到 `experiment_records/research_claims_20260627.md` 和 `experiment_records/research_claims_20260627.json`。
