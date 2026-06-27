@@ -19,6 +19,7 @@ from typing import Any
 
 try:
     from experiment_scripts.build_result_record import _select_injection, _select_injection_history
+    from experiment_scripts.check_experiment_env import check_case_environment
     from experiment_scripts.print_case_prompt import get_case_prompt
     from experiment_scripts.score_agent_output import score_output
     from experiment_validation.core import assess_skill_relevance, build_feedback
@@ -26,6 +27,7 @@ try:
 except ImportError:  # pragma: no cover - direct script execution from copied folders.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from experiment_scripts.build_result_record import _select_injection, _select_injection_history
+    from experiment_scripts.check_experiment_env import check_case_environment
     from experiment_scripts.print_case_prompt import get_case_prompt
     from experiment_scripts.score_agent_output import score_output
     from experiment_validation.core import assess_skill_relevance, build_feedback
@@ -93,6 +95,7 @@ def run_paths(output_dir: Path, run_id: str) -> dict[str, Path]:
         "agent_json": output_dir / f"{run_id}-agent.json",
         "score": output_dir / f"{run_id}-score.json",
         "validation": output_dir / f"{run_id}-validation.json",
+        "preflight": output_dir / f"{run_id}-preflight.json",
         "final": output_dir / f"{run_id}-final.json",
     }
 
@@ -239,6 +242,22 @@ def run_case(args: argparse.Namespace) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     paths["prompt"].write_text(prompt + "\n", encoding="utf-8")
 
+    preflight = None
+    if getattr(args, "preflight", False):
+        preflight = check_case_environment(
+            case_path=args.case,
+            root_override=args.root,
+            settings_path=None if getattr(args, "no_claude_settings", False) else getattr(args, "settings", None),
+            expected_provider=getattr(args, "expected_provider", None),
+            skillclaw_url=getattr(args, "skillclaw_url", None),
+            skillclaw_key=getattr(args, "skillclaw_key", None),
+            expected_skill_count=getattr(args, "expected_skill_count", None),
+            timeout=float(getattr(args, "preflight_timeout", 5.0)),
+        )
+        write_json(paths["preflight"], preflight)
+        if preflight.get("status") == "failed" and not getattr(args, "preflight_allow_fail", False):
+            raise RuntimeError(f"preflight failed; see {paths['preflight']}")
+
     meta = {
         "case_id": case_id,
         "run_id": run_id,
@@ -312,6 +331,7 @@ def run_case(args: argparse.Namespace) -> dict[str, Any]:
     )
     final["run_id"] = run_id
     final["run"] = meta
+    final["preflight"] = preflight
     final["artifacts"] = {key: str(value) for key, value in paths.items()}
     write_json(paths["final"], final)
     if args.final_records:
@@ -336,6 +356,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--claude-cmd", default="claude")
     parser.add_argument("--timeout-seconds", type=int, default=2700)
     parser.add_argument("--skip-commands", action="store_true")
+    parser.add_argument("--preflight", action="store_true", help="Check target and provider before running the agent.")
+    parser.add_argument("--preflight-allow-fail", action="store_true", help="Record preflight failures but continue.")
+    parser.add_argument("--preflight-timeout", type=float, default=5.0)
+    parser.add_argument("--settings", type=Path, default=Path.home() / ".claude" / "settings.json")
+    parser.add_argument("--no-claude-settings", action="store_true")
+    parser.add_argument("--expected-provider", choices=["skillclaw", "deepseek", "unknown"])
+    parser.add_argument("--skillclaw-url", default="")
+    parser.add_argument("--skillclaw-key", default="")
+    parser.add_argument("--expected-skill-count", type=int)
     parser.add_argument("--final-records", default="results/final_records.jsonl")
     parser.add_argument("--strict-exit", action="store_true")
     args = parser.parse_args(argv)

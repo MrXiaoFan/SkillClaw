@@ -122,6 +122,23 @@ python3 experiment_scripts/run_dynamic_case.py \
   --result-out ~/skillclaw-eval/results/libxml2-validation.jsonl
 ```
 
+Alternatively, use the integrated runner. It writes the prompt, raw agent
+output, score, validation result, preflight report, and final record into one
+run directory:
+
+```bash
+python3 experiment_scripts/run_eval_case.py \
+  experiment_cases/libxml2-2.9.4-cve-2017-8872.json \
+  --mode skillclaw-inline-guarded \
+  --root ~/skillclaw-eval/libxml2-2.9.4 \
+  --output-dir ~/skillclaw-eval/results \
+  --preflight \
+  --expected-provider skillclaw \
+  --skillclaw-url http://10.12.189.47:30000 \
+  --skillclaw-key sk-skillclaw-lab \
+  --expected-skill-count 35
+```
+
 Build one consolidated result record:
 
 ```bash

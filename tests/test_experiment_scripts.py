@@ -668,6 +668,96 @@ def test_run_eval_case_with_existing_agent_output(tmp_path):
     assert (tmp_path / "results" / "demo-run-final.json").is_file()
 
 
+def test_run_eval_case_can_preflight_before_existing_output(tmp_path):
+    root = tmp_path / "target"
+    root.mkdir()
+    (root / "demo-bin").write_text("binary\n", encoding="utf-8")
+    (root / "HTMLparser.c").write_text(
+        "static void htmlParseTryOrFinish(void) { if (avail < 2) in->cur[2]; }\n",
+        encoding="utf-8",
+    )
+    case_path = tmp_path / "case.json"
+    case_path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo-case",
+                "target": {"source_root": str(root), "binary": "demo-bin"},
+                "ground_truth": {
+                    "cves": ["CVE-0000-0001"],
+                    "files": ["HTMLparser.c"],
+                    "functions": ["htmlParseTryOrFinish"],
+                    "root_cause": "weak avail guard before in->cur[2]",
+                    "required_evidence": ["avail", "in->cur[2]"],
+                },
+                "validators": [
+                    {
+                        "name": "source",
+                        "type": "source_contains",
+                        "file": "HTMLparser.c",
+                        "patterns": ["htmlParseTryOrFinish", "avail", "in->cur[2]"],
+                    }
+                ],
+                "scoring": {
+                    "max_score": 10,
+                    "weights": {"cve": 2, "file": 2, "function": 3, "root_cause": 2, "evidence": 1},
+                },
+                "prompt": {"recommended_direct": "analyze target"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    settings = tmp_path / "settings.json"
+    settings.write_text(
+        json.dumps({"env": {"ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic", "ANTHROPIC_MODEL": "deepseek-v4-pro"}}),
+        encoding="utf-8",
+    )
+    answer = tmp_path / "answer.txt"
+    answer.write_text(
+        json.dumps(
+            {
+                "predicted_cves": ["CVE-0000-0001"],
+                "predicted_files": ["HTMLparser.c"],
+                "predicted_functions": ["htmlParseTryOrFinish"],
+                "root_cause": "weak avail guard before in->cur[2]",
+                "evidence": ["avail", "in->cur[2]"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    final = run_case(
+        Namespace(
+            case=case_path,
+            mode="direct-deepseek",
+            root=None,
+            output_dir=str(tmp_path / "results"),
+            run_id="demo-preflight",
+            model="test-model",
+            session_id="",
+            injection_json=None,
+            agent_output=str(answer),
+            no_run_agent=False,
+            claude_cmd="claude",
+            timeout_seconds=10,
+            skip_commands=False,
+            preflight=True,
+            preflight_allow_fail=False,
+            preflight_timeout=1.0,
+            settings=settings,
+            no_claude_settings=False,
+            expected_provider="deepseek",
+            skillclaw_url="",
+            skillclaw_key="",
+            expected_skill_count=None,
+            final_records=str(tmp_path / "results" / "final_records.jsonl"),
+        )
+    )
+
+    assert final["preflight"]["status"] == "passed"
+    assert final["preflight"]["claude"]["provider"] == "deepseek"
+    assert (tmp_path / "results" / "demo-preflight-preflight.json").is_file()
+
+
 def test_smoke_validate_framework_runs_repository_cases():
     results = smoke_cases(Path("experiment_cases"))
 
