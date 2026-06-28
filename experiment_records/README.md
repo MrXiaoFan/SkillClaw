@@ -24,6 +24,10 @@ skills are intentionally not stored here.
   This is the current lightweight bridge from validator-backed evidence to
   skill evolution policy (`promote`, `keep`, `revise`, `demote`, or
   `insufficient_evidence`).
+- `skill_feedback_bundle_latest.md` and `skill_feedback_bundle_latest.json`:
+  evolver-ready bundles that preserve dimension-level evidence for each
+  selected skill, including localization success, CVE calibration misses,
+  validator status, and revision directives.
 - `skill_revision_source_parser_state_machine_oob_20260628.md`: first manual
   gate-driven skill revision note. It documents why
   `source-parser-state-machine-oob` was changed to separate source localization
@@ -84,6 +88,9 @@ skills are intentionally not stored here.
 - `experiment_scripts/build_skill_gate_report.py` converts skill-level
   feedback into conservative gate decisions and revision suggestions. It does
   not automatically publish, rewrite, or delete any skill.
+- `experiment_scripts/build_skill_feedback_bundle.py` converts final records
+  and gate decisions into structured feedback bundles intended as the next
+  input boundary for skill evolution.
 - `experiment_scripts/attach_skill_injection.py` attaches server-side
   SkillClaw injection audit rows back to final records. This is used when a
   remote Claude Code run cannot directly see the proxy's `conversations.jsonl`

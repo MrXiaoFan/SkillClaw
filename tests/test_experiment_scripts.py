@@ -11,6 +11,11 @@ from experiment_scripts.smoke_validate_framework import smoke_cases
 from experiment_scripts.score_agent_output import score_output
 from experiment_scripts.build_result_record import _select_injection, _select_injection_history, _select_validation
 from experiment_scripts.build_skill_gate_report import build_gate_report, decide_gate
+from experiment_scripts.build_skill_feedback_bundle import (
+    build_feedback_bundles,
+    write_json as write_bundle_json,
+    write_markdown as write_bundle_markdown,
+)
 from experiment_scripts.print_case_prompt import FINAL_ANSWER_GUARD, get_case_prompt
 from experiment_scripts.skill_bundle_runner import resolve_bundle_script, run_bundle_script
 from experiment_scripts.summarize_research_claims import build_claims, write_markdown as write_claim_markdown
@@ -318,6 +323,70 @@ def test_skill_gate_demotes_infrastructure_skill():
 
     assert decision["gate_decision"] == "demote"
     assert "infrastructure" in decision["reasons"][0]
+
+
+def test_build_skill_feedback_bundle_tracks_dimension_flags(tmp_path):
+    record = {
+        "case_id": "libxml2-demo",
+        "mode": "skillclaw-inline",
+        "model": "skillclaw-model",
+        "session_id": "session-a",
+        "score": 8,
+        "max_score": 10,
+        "checks": {
+            "cve": {"hit": False, "expected": ["CVE-0000-0001"], "matched": []},
+            "file": {"hit": True, "expected": ["HTMLparser.c"], "matched": ["HTMLparser.c"]},
+            "function": {
+                "hit": True,
+                "expected": ["htmlParseTryOrFinish"],
+                "matched": ["htmlParseTryOrFinish"],
+            },
+            "evidence": {"hit": True},
+            "root_cause": {"hit": True},
+        },
+        "predictions": {"cves": ["CVE-0000-9999"]},
+        "validation": {
+            "status": "passed",
+            "checks": [
+                {"name": "bundle", "type": "bundle_script", "status": "passed"},
+            ],
+        },
+        "skill_injection": {
+            "selected_skill_names": ["source-parser-state-machine-oob"],
+        },
+        "feedback": {
+            "decision": "neutral",
+            "suggested_action": "revise_cve_calibration_before_promotion",
+            "quality_flags": ["cve_calibration_miss"],
+        },
+    }
+    gate = {
+        "source-parser-state-machine-oob": {
+            "gate_decision": "revise",
+            "suggestions": ["add advisory evidence requirement"],
+            "reasons": ["localization evidence exists but exact CVE calibration is absent"],
+        }
+    }
+
+    bundles = build_feedback_bundles([(tmp_path / "final.json", record)], gate_map=gate)
+
+    assert len(bundles) == 1
+    bundle = bundles[0]
+    assert bundle["skill"] == "source-parser-state-machine-oob"
+    assert bundle["gate_decision"] == "revise"
+    assert bundle["summary"]["neutral"] == 1
+    assert bundle["dimensions"]["localization_success"] == 1
+    assert bundle["dimensions"]["cve_success"] == 0
+    assert bundle["dimensions"]["cve_calibration_miss"] == 1
+    assert bundle["dimensions"]["dynamic_or_bundle_validation_passed"] == 1
+    assert any("CVE identity" in item for item in bundle["revision_directives"])
+
+    json_path = tmp_path / "bundle.json"
+    md_path = tmp_path / "bundle.md"
+    write_bundle_json(bundles, json_path)
+    write_bundle_markdown(bundles, md_path)
+    assert "source-parser-state-machine-oob" in json_path.read_text(encoding="utf-8")
+    assert "cve_miss" in md_path.read_text(encoding="utf-8")
 
 
 def test_build_skill_gate_report_orders_promote_before_revise():
