@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import logging
 import os
 import time
@@ -225,6 +226,40 @@ class AgentEvolveServer(EvolveEngineMixin):
                 skills[name] = bundle
         return skills
 
+    def _load_feedback_bundle(self) -> list[dict[str, Any]] | None:
+        """Load the latest validator-backed skill feedback bundle if available."""
+        raw_path = str(self.config.feedback_bundle_path or "").strip()
+        if not raw_path:
+            return None
+        path = Path(raw_path)
+        if not path.is_file():
+            logger.info(
+                "[AgentEvolveServer] feedback bundle not found at %s; continuing without it",
+                path,
+            )
+            return None
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.warning(
+                "[AgentEvolveServer] failed to parse feedback bundle %s: %s",
+                path,
+                exc,
+            )
+            return None
+        if not isinstance(payload, list):
+            logger.warning(
+                "[AgentEvolveServer] feedback bundle %s is not a list; ignoring",
+                path,
+            )
+            return None
+        logger.info(
+            "[AgentEvolveServer] loaded validator-backed feedback bundle: %d skill record(s) from %s",
+            len(payload),
+            path,
+        )
+        return payload
+
     # ================================================================= #
     #  Upload evolved skills                                             #
     # ================================================================= #
@@ -348,6 +383,7 @@ class AgentEvolveServer(EvolveEngineMixin):
         existing_skills = await self._call_storage(self._fetch_all_skills, manifest)
 
         agents_md_text = self._load_agents_md()
+        feedback_bundle = self._load_feedback_bundle()
 
         registry_info = self._id_registry.all_entries()
 
@@ -357,6 +393,7 @@ class AgentEvolveServer(EvolveEngineMixin):
             manifest=manifest,
             agents_md=agents_md_text,
             skill_registry_info=registry_info,
+            feedback_bundle=feedback_bundle,
         )
 
         # ---- 3. snapshot --------------------------------------------- #

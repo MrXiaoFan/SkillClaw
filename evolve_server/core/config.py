@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _PACKAGE_DIR.parent.parent
 _DEFAULT_AGENT_EVOLVE_BASE_URL = "https://api.openai.com/v1"
 _DEFAULT_AGENT_EVOLVE_MODEL = "gpt-5.4"
 _NACOS_PUBLISH_MODES = {"draft", "review", "direct"}
@@ -140,6 +141,7 @@ class EvolveServerConfig:
     agent_timeout: int = 600
     workspace_root: str = ""
     agents_md_path: str = ""
+    feedback_bundle_path: str = ""
 
     def __post_init__(self) -> None:
         self.engine = str(self.engine or "workflow").strip().lower() or "workflow"
@@ -166,6 +168,10 @@ class EvolveServerConfig:
                 self.openclaw_home = str(_PACKAGE_DIR / ".openclaw_home")
             if not self.workspace_root:
                 self.workspace_root = str(_PACKAGE_DIR / "agent_workspace")
+            if not self.feedback_bundle_path:
+                self.feedback_bundle_path = str(
+                    _REPO_ROOT / "experiment_records" / "skill_feedback_bundle_latest.json"
+                )
 
     @classmethod
     def from_env(cls) -> "EvolveServerConfig":
@@ -266,6 +272,10 @@ class EvolveServerConfig:
             agent_timeout=int(os.environ.get("AGENT_EVOLVE_TIMEOUT", "600")),
             workspace_root=os.environ.get("AGENT_EVOLVE_WORKSPACE_ROOT", ""),
             agents_md_path=os.environ.get("AGENT_EVOLVE_AGENTS_MD", ""),
+            feedback_bundle_path=_first_env(
+                "AGENT_EVOLVE_FEEDBACK_BUNDLE",
+                "EVOLVE_FEEDBACK_BUNDLE",
+            ),
         )
 
     @classmethod
@@ -379,4 +389,8 @@ class EvolveServerConfig:
             agent_timeout=int(os.environ.get("AGENT_EVOLVE_TIMEOUT", "600")),
             workspace_root=os.environ.get("AGENT_EVOLVE_WORKSPACE_ROOT", ""),
             agents_md_path=os.environ.get("AGENT_EVOLVE_AGENTS_MD", ""),
+            feedback_bundle_path=_first_env(
+                "AGENT_EVOLVE_FEEDBACK_BUNDLE",
+                "EVOLVE_FEEDBACK_BUNDLE",
+            ),
         )

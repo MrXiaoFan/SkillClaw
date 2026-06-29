@@ -44,6 +44,62 @@ _TEXT_BUNDLE_SUFFIXES = {
 }
 
 
+def _format_feedback_bundle_summary(records: list[dict[str, Any]]) -> str:
+    """Render a compact Markdown summary for validator-backed skill feedback."""
+    lines = [
+        "# Validator-Backed Skill Feedback Summary",
+        "",
+        "Use this file as a high-signal index before reading the full JSON bundle.",
+        "Prefer these validator-backed signals over speculative interpretations of session text alone.",
+        "",
+        "| Skill | Gate | Runs | Mean | Loc | CVE | CVE Miss | Validator |",
+        "|---|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for record in records:
+        summary = record.get("summary") or {}
+        dims = record.get("dimensions") or {}
+        lines.append(
+            "| {skill} | {gate} | {runs} | {mean:.2f} | {loc} | {cve} | {cve_miss} | {validator} |".format(
+                skill=record.get("skill", ""),
+                gate=record.get("gate_decision", ""),
+                runs=int(summary.get("selected_runs", 0) or 0),
+                mean=float(summary.get("mean_score", 0.0) or 0.0),
+                loc=int(dims.get("localization_success", 0) or 0),
+                cve=int(dims.get("cve_success", 0) or 0),
+                cve_miss=int(dims.get("cve_calibration_miss", 0) or 0),
+                validator=int(dims.get("validator_passed", 0) or 0),
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## How To Use",
+            "",
+            "- Treat `gate_decision=revise` as evidence that the skill is useful but incomplete.",
+            "- Treat `cve_calibration_miss>0` as a sign that localization and exact CVE identity must be separated.",
+            "- Read `revision_directives` in the JSON before editing any selected skill.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def _augment_agents_md_with_feedback(agents_md: str, feedback_rel_path: str) -> str:
+    return (
+        agents_md.rstrip()
+        + "\n\n---\n\n"
+        + "## Validator-backed feedback available in this workspace\n\n"
+        + f"A structured validator-backed feedback bundle is available at `{feedback_rel_path}`.\n"
+        + "Before changing a skill, read this bundle and prefer its evidence over session-text impressions alone.\n"
+        + "Pay special attention to:\n"
+        + "- `gate_decision`\n"
+        + "- `revision_directives`\n"
+        + "- `dimensions.localization_success`\n"
+        + "- `dimensions.cve_success`\n"
+        + "- `dimensions.cve_calibration_miss`\n"
+        + "- per-case `validator_checks`\n"
+    )
+
+
 def _normalize_text_bundle_newlines(bundle_files: dict[str, bytes]) -> dict[str, bytes]:
     """Normalize text bundle newlines for stable cross-platform evolution diffs.
 
@@ -86,6 +142,9 @@ cat EVOLVE_AGENTS.md
 ```
 workspace/
 ├── EVOLVE_AGENTS.md   ← full evolution methodology (READ THIS FIRST)
+├── feedback/          ← validator-backed skill feedback bundle (if present)
+│   ├── skill_feedback_bundle_latest.json
+│   └── SUMMARY.md
 ├── sessions/          ← agent session JSON files to analyze
 ├── skills/            ← current skill library (read + write)
 │   └── <name>/
@@ -102,6 +161,7 @@ workspace/
 
 - **All file operations** stay within this workspace directory.
 - Do NOT modify `sessions/`, `manifest.json`, or `skill_registry.json`.
+- Do NOT modify `feedback/` artifacts; they are read-only evidence for this round.
 - Write changes only inside `skills/<name>/` bundles.
 - You may inspect and edit `SKILL.md`, `references/`, `scripts/`, `assets/`,
   `history/`, and other supporting files that belong to a skill.
@@ -155,6 +215,7 @@ class AgentWorkspace:
         manifest: dict[str, dict],
         agents_md: str,
         skill_registry_info: dict[str, Any] | None = None,
+        feedback_bundle: list[dict[str, Any]] | None = None,
     ) -> None:
         """Populate the workspace with input data for the agent.
 
@@ -219,6 +280,24 @@ class AgentWorkspace:
             registry_path.write_text(
                 json.dumps(skill_registry_info, ensure_ascii=False, indent=2),
                 encoding="utf-8",
+            )
+
+        # Write optional validator-backed feedback bundle for this round.
+        if feedback_bundle:
+            feedback_dir = self.root / "feedback"
+            feedback_dir.mkdir(parents=True, exist_ok=True)
+            feedback_json_path = feedback_dir / "skill_feedback_bundle_latest.json"
+            feedback_json_path.write_text(
+                json.dumps(feedback_bundle, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            (feedback_dir / "SUMMARY.md").write_text(
+                _format_feedback_bundle_summary(feedback_bundle),
+                encoding="utf-8",
+            )
+            agents_md = _augment_agents_md_with_feedback(
+                agents_md,
+                "feedback/skill_feedback_bundle_latest.json",
             )
 
         # Write EVOLVE_AGENTS.md (the detailed methodology the agent follows)
