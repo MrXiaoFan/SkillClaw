@@ -12,6 +12,9 @@ def test_evolve_agents_md_requires_center_harness_self_validation():
     assert "history/v<N>_evidence.md" in text
     assert "workspace directory" in text
     assert "Do NOT read or write files outside the workspace" in text
+    assert "gate_decision" in text
+    assert "revision_directives" in text
+    assert "feedback/PLAYBOOK.md" in text
 
 
 def test_agent_workspace_bootstrap_mentions_self_validation():
@@ -20,3 +23,5 @@ def test_agent_workspace_bootstrap_mentions_self_validation():
     assert "self-validation" in text
     assert "EVOLVE_AGENTS.md" in text
     assert "Before finalizing" in text
+    assert "gate_decision" in text
+    assert "revision_directives" in text

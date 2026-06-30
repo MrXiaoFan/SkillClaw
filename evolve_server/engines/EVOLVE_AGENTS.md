@@ -276,6 +276,10 @@ step.
 3. Write `history/v<N>_evidence.md` noting:
    - Which sessions drove this change (session IDs, task IDs, PRM scores,
      success/fail counts, tool errors, repeated failure patterns)
+   - Which validator-backed feedback artifacts you used (`feedback/skill_feedback_bundle_latest.json`,
+     `feedback/SUMMARY.md`, `feedback/PLAYBOOK.md`)
+   - Which `gate_decision` applied to this skill and why
+   - Which `revision_directives` you followed, and which you intentionally did not apply
    - What the positive/negative signals were
    - What previous history entries you read and how they informed this edit
    - How the old version performed in the available session evidence
@@ -306,18 +310,23 @@ Each `v<N>_evidence.md` should include, in a concise but explicit form:
    - action type
    - target skill
    - why change is needed now
+   - gate decision for this skill (`revise`, `demote`, `keep`, `promote`, or `insufficient_evidence`)
 2. **Session evidence**
    - relevant session IDs / task IDs
    - representative PRM scores or aggregate metrics
    - recurring tool failures / observations
-3. **Historical comparison**
+3. **Validator-backed feedback**
+   - which feedback artifact(s) you read
+   - the exact `revision_directives` you applied
+   - any `gate_decision` constraint that limited or blocked editing
+4. **Historical comparison**
    - what previous version(s) attempted
    - whether later evidence suggests those edits improved outcomes,
      regressed outcomes, or remain inconclusive
-4. **Edit plan**
+5. **Edit plan**
    - exact parts of the skill being changed
    - exact parts intentionally preserved
-5. **Open questions**
+6. **Open questions**
    - uncertainty that future rounds should monitor
 
 ### History persistence depends on fresh mode

@@ -233,6 +233,8 @@ workspace/
   by `EVOLVE_AGENTS.md`; if validation fails, keep editing or revert the
   change rather than leaving a known-failing skill in `skills/`.
 - Record self-validation results in the paired `history/v<N>_evidence.md` file.
+- When `feedback/` exists, every changed skill's `history/v<N>_evidence.md`
+  must cite the applicable `gate_decision` and the `revision_directives` it followed.
 
 ## Memory
 
