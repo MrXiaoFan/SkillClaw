@@ -83,6 +83,68 @@ def _format_feedback_bundle_summary(records: list[dict[str, Any]]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _format_feedback_gate_playbook(records: list[dict[str, Any]]) -> str:
+    """Render an action-oriented playbook from gate decisions."""
+    grouped: dict[str, list[dict[str, Any]]] = {
+        "revise": [],
+        "demote": [],
+        "keep": [],
+        "promote": [],
+        "insufficient_evidence": [],
+    }
+    for record in records:
+        decision = str(record.get("gate_decision") or "").strip().lower()
+        grouped.setdefault(decision, []).append(record)
+
+    lines = [
+        "# Gate Decision Playbook",
+        "",
+        "Use this file to translate validator-backed gate decisions into editing behavior.",
+        "",
+        "## Required Behavior By Gate",
+        "",
+        "- `revise`: edit the skill conservatively. Preserve sections that already support localization or evidence, and focus only on the failing dimension named in `revision_directives`.",
+        "- `demote`: do not improve this skill for the current task family unless the evidence clearly shows it is still relevant. Prefer narrowing retrieval boundaries and adding stronger `NOT for:` exclusions.",
+        "- `keep`: avoid speculative edits. Keep the skill unchanged unless a small clarification is directly supported by the evidence.",
+        "- `promote`: avoid rewriting. At most, preserve current structure and record why the skill is stable.",
+        "- `insufficient_evidence`: do not change the skill unless there is an obvious correctness bug independent of the current evidence volume.",
+        "",
+    ]
+    for decision in ("revise", "demote", "keep", "promote", "insufficient_evidence"):
+        items = grouped.get(decision) or []
+        if not items:
+            continue
+        lines.append(f"## {decision}")
+        lines.append("")
+        for record in items:
+            skill = str(record.get("skill") or "")
+            directives = record.get("revision_directives") or []
+            dims = record.get("dimensions") or {}
+            summary = record.get("summary") or {}
+            lines.append(f"### {skill}")
+            lines.append("")
+            lines.append(
+                "- Evidence snapshot: runs={runs}, mean_score={mean:.2f}, "
+                "localization={loc}, cve={cve}, cve_miss={cve_miss}, validator_passed={validator}".format(
+                    runs=int(summary.get("selected_runs", 0) or 0),
+                    mean=float(summary.get("mean_score", 0.0) or 0.0),
+                    loc=int(dims.get("localization_success", 0) or 0),
+                    cve=int(dims.get("cve_success", 0) or 0),
+                    cve_miss=int(dims.get("cve_calibration_miss", 0) or 0),
+                    validator=int(dims.get("validator_passed", 0) or 0),
+                )
+            )
+            if directives:
+                lines.append("- Revision directives:")
+                for directive in directives:
+                    lines.append(f"  - {directive}")
+            else:
+                lines.append("- Revision directives: none")
+            lines.append("")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _augment_agents_md_with_feedback(agents_md: str, feedback_rel_path: str) -> str:
     return (
         agents_md.rstrip()
@@ -90,6 +152,7 @@ def _augment_agents_md_with_feedback(agents_md: str, feedback_rel_path: str) -> 
         + "## Validator-backed feedback available in this workspace\n\n"
         + f"A structured validator-backed feedback bundle is available at `{feedback_rel_path}`.\n"
         + "Before changing a skill, read this bundle and prefer its evidence over session-text impressions alone.\n"
+        + "Also read `feedback/PLAYBOOK.md` and follow its gate-specific editing behavior.\n"
         + "Pay special attention to:\n"
         + "- `gate_decision`\n"
         + "- `revision_directives`\n"
@@ -293,6 +356,10 @@ class AgentWorkspace:
             )
             (feedback_dir / "SUMMARY.md").write_text(
                 _format_feedback_bundle_summary(feedback_bundle),
+                encoding="utf-8",
+            )
+            (feedback_dir / "PLAYBOOK.md").write_text(
+                _format_feedback_gate_playbook(feedback_bundle),
                 encoding="utf-8",
             )
             agents_md = _augment_agents_md_with_feedback(

@@ -31,13 +31,19 @@ def test_agent_workspace_writes_feedback_bundle_and_summary(tmp_path):
 
     feedback_json = workspace.root / "feedback" / "skill_feedback_bundle_latest.json"
     feedback_summary = workspace.root / "feedback" / "SUMMARY.md"
+    feedback_playbook = workspace.root / "feedback" / "PLAYBOOK.md"
     evolve_agents = workspace.root / "EVOLVE_AGENTS.md"
 
     assert feedback_json.is_file()
     assert feedback_summary.is_file()
+    assert feedback_playbook.is_file()
     assert json.loads(feedback_json.read_text(encoding="utf-8"))[0]["skill"] == "source-parser-state-machine-oob"
     assert "cve_calibration_miss" in feedback_summary.read_text(encoding="utf-8")
+    playbook_text = feedback_playbook.read_text(encoding="utf-8")
+    assert "## revise" in playbook_text
+    assert "separate localization from CVE identity" in playbook_text
     assert "feedback/skill_feedback_bundle_latest.json" in evolve_agents.read_text(encoding="utf-8")
+    assert "feedback/PLAYBOOK.md" in evolve_agents.read_text(encoding="utf-8")
 
 
 def test_agent_config_defaults_feedback_bundle_path_for_agent_engine():
