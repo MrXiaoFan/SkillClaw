@@ -380,6 +380,8 @@ def test_build_skill_feedback_bundle_tracks_dimension_flags(tmp_path):
     assert bundle["dimensions"]["cve_calibration_miss"] == 1
     assert bundle["dimensions"]["dynamic_or_bundle_validation_passed"] == 1
     assert any("CVE identity" in item for item in bundle["revision_directives"])
+    assert bundle["revision_templates"][0]["template_id"] == "cve_calibration_miss"
+    assert "uncertain" in bundle["revision_templates"][0]["required_changes"][2].lower()
 
     json_path = tmp_path / "bundle.json"
     md_path = tmp_path / "bundle.md"
@@ -387,6 +389,7 @@ def test_build_skill_feedback_bundle_tracks_dimension_flags(tmp_path):
     write_bundle_markdown(bundles, md_path)
     assert "source-parser-state-machine-oob" in json_path.read_text(encoding="utf-8")
     assert "cve_miss" in md_path.read_text(encoding="utf-8")
+    assert "cve_calibration_miss" in md_path.read_text(encoding="utf-8")
 
 
 def test_build_skill_gate_report_orders_promote_before_revise():

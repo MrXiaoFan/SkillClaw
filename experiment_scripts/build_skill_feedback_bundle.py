@@ -177,9 +177,41 @@ def _new_bundle(skill: str, gate: dict[str, Any] | None) -> dict[str, Any]:
             "dynamic_or_bundle_validation_passed": 0,
         },
         "revision_directives": [],
+        "revision_templates": [],
         "cases": [],
         "_scores": [],
     }
+
+
+def _add_revision_templates(bundle: dict[str, Any]) -> None:
+    templates: list[dict[str, Any]] = []
+    dimensions = bundle["dimensions"]
+    if dimensions["cve_calibration_miss"]:
+        templates.append(
+            {
+                "template_id": "cve_calibration_miss",
+                "title": "Separate bug localization from exact CVE attribution",
+                "when_to_apply": (
+                    "Apply when localization/root-cause evidence is strong but the predicted CVE "
+                    "is absent, unstable, or repeatedly wrong."
+                ),
+                "required_changes": [
+                    "Add an explicit rule that source-level localization alone is not sufficient to name a CVE.",
+                    "Require advisory, patch, commit, or version-range evidence before emitting an exact CVE ID.",
+                    "Add an uncertainty fallback such as 'CVE uncertain' when only localization evidence exists.",
+                    "Preserve strong localization and root-cause guidance unless other evidence contradicts it.",
+                ],
+                "anti_patterns": [
+                    "Do not add nearby CVE examples as substitutes for verification evidence.",
+                    "Do not merge localization success and exact CVE identity into one decision rule.",
+                    "Do not remove useful parser/binary/source guidance just because CVE attribution failed.",
+                ],
+                "suggested_history_note": (
+                    "This edit targets CVE calibration only; localization workflow is intentionally preserved."
+                ),
+            }
+        )
+    bundle["revision_templates"] = templates
 
 
 def _add_revision_directives(bundle: dict[str, Any]) -> None:
@@ -261,6 +293,7 @@ def build_feedback_bundles(
         scores = bundle.pop("_scores")
         bundle["summary"]["mean_score"] = round(sum(scores) / len(scores), 3) if scores else None
         _add_revision_directives(bundle)
+        _add_revision_templates(bundle)
         output.append(bundle)
     return sorted(
         output,
@@ -305,6 +338,7 @@ def write_markdown(bundles: list[dict[str, Any]], out_path: Path) -> None:
         "cve_miss",
         "validator_passed",
         "directives",
+        "templates",
     ]
     lines = [
         "# Skill Feedback Bundles",
@@ -327,6 +361,7 @@ def write_markdown(bundles: list[dict[str, Any]], out_path: Path) -> None:
             "cve_miss": dimensions["cve_calibration_miss"],
             "validator_passed": dimensions["validator_passed"],
             "directives": bundle["revision_directives"],
+            "templates": [item.get("template_id") for item in bundle.get("revision_templates") or []],
         }
         lines.append("| " + " | ".join(_md_escape(row[key]) for key in headers) + " |")
     lines.append("")

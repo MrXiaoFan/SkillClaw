@@ -109,6 +109,10 @@ def _format_feedback_gate_playbook(records: list[dict[str, Any]]) -> str:
         "- `promote`: avoid rewriting. At most, preserve current structure and record why the skill is stable.",
         "- `insufficient_evidence`: do not change the skill unless there is an obvious correctness bug independent of the current evidence volume.",
         "",
+        "## Built-in Revision Templates",
+        "",
+        "- `cve_calibration_miss`: use when localization/root-cause evidence is strong but exact CVE attribution is wrong or unstable. Preserve localization guidance, add explicit CVE-evidence requirements, and add an uncertainty fallback instead of guessing a CVE.",
+        "",
     ]
     for decision in ("revise", "demote", "keep", "promote", "insufficient_evidence"):
         items = grouped.get(decision) or []
@@ -140,6 +144,15 @@ def _format_feedback_gate_playbook(records: list[dict[str, Any]]) -> str:
                     lines.append(f"  - {directive}")
             else:
                 lines.append("- Revision directives: none")
+            templates = record.get("revision_templates") or []
+            if templates:
+                lines.append("- Revision templates:")
+                for template in templates:
+                    template_id = str(template.get("template_id") or "").strip()
+                    title = str(template.get("title") or "").strip()
+                    lines.append(f"  - {template_id}: {title}")
+            else:
+                lines.append("- Revision templates: none")
             lines.append("")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"

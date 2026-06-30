@@ -18,6 +18,12 @@ def test_agent_workspace_writes_feedback_bundle_and_summary(tmp_path):
                 "validator_passed": 2,
             },
             "revision_directives": ["separate localization from CVE identity"],
+            "revision_templates": [
+                {
+                    "template_id": "cve_calibration_miss",
+                    "title": "Separate bug localization from exact CVE attribution",
+                }
+            ],
         }
     ]
 
@@ -42,6 +48,7 @@ def test_agent_workspace_writes_feedback_bundle_and_summary(tmp_path):
     playbook_text = feedback_playbook.read_text(encoding="utf-8")
     assert "## revise" in playbook_text
     assert "separate localization from CVE identity" in playbook_text
+    assert "cve_calibration_miss" in playbook_text
     assert "feedback/skill_feedback_bundle_latest.json" in evolve_agents.read_text(encoding="utf-8")
     assert "feedback/PLAYBOOK.md" in evolve_agents.read_text(encoding="utf-8")
 
