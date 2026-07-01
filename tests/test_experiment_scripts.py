@@ -515,6 +515,37 @@ def test_print_case_prompt_guarded_mode_appends_execution_constraints():
     assert "at most 8 tool calls" in guarded
 
 
+def test_print_case_prompt_appends_confirmation_contract():
+    case = {
+        "case_id": "gif-demo",
+        "prompt": {
+            "recommended_skillclaw": "analyze target",
+        },
+        "expected_artifacts": [
+            {
+                "name": "poc",
+                "path": "artifacts/poc.gif",
+                "type": "binary",
+                "description": "minimal trigger input",
+            }
+        ],
+        "repro": {
+            "build": ["make -j"],
+            "run": ["./target artifacts/poc.gif"],
+            "success_markers": ["AddressSanitizer", "heap-buffer-overflow"],
+            "target_frames": ["DumpScreen2RGB"],
+        },
+    }
+
+    prompt = get_case_prompt(case, "skillclaw-inline")
+
+    assert "Artifact generation requirements:" in prompt
+    assert "artifacts/poc.gif" in prompt
+    assert "Confirmation / repro targets:" in prompt
+    assert "AddressSanitizer" in prompt
+    assert "DumpScreen2RGB" in prompt
+
+
 def test_repository_case_prompts_are_not_mojibake():
     suspicious_fragments = ["涓", "銆", "乸", "乺", "锛", "鏄"]
     for case_path in Path("experiment_cases").glob("*.json"):

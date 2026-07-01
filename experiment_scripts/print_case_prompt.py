@@ -32,6 +32,53 @@ Experiment execution constraints:
 """.strip()
 
 
+def _render_confirmation_contract(case: dict[str, Any]) -> str:
+    expected = case.get("expected_artifacts")
+    repro = case.get("repro")
+    lines: list[str] = []
+    if isinstance(expected, list) and expected:
+        lines.extend(
+            [
+                "Artifact generation requirements:",
+            ]
+        )
+        for item in expected:
+            if not isinstance(item, dict):
+                continue
+            path = str(item.get("path") or "").strip()
+            description = str(item.get("description") or "").strip()
+            artifact_type = str(item.get("type") or "").strip()
+            if not path:
+                continue
+            suffix = []
+            if artifact_type:
+                suffix.append(artifact_type)
+            if description:
+                suffix.append(description)
+            detail = f" ({'; '.join(suffix)})" if suffix else ""
+            lines.append(f"- Create `{path}`{detail}.")
+    if isinstance(repro, dict) and repro:
+        build = [str(item).strip() for item in repro.get("build") or [] if str(item).strip()]
+        run = [str(item).strip() for item in repro.get("run") or [] if str(item).strip()]
+        success = [str(item).strip() for item in repro.get("success_markers") or [] if str(item).strip()]
+        frames = [str(item).strip() for item in repro.get("target_frames") or [] if str(item).strip()]
+        if build or run or success or frames:
+            lines.append("Confirmation / repro targets:")
+            if build:
+                lines.append("- Be compatible with these build steps:")
+                lines.extend(f"  - `{item}`" for item in build)
+            if run:
+                lines.append("- Be compatible with these run steps:")
+                lines.extend(f"  - `{item}`" for item in run)
+            if success:
+                lines.append("- Expected success markers:")
+                lines.extend(f"  - `{item}`" for item in success)
+            if frames:
+                lines.append("- Target frames or files to hit:")
+                lines.extend(f"  - `{item}`" for item in frames)
+    return "\n".join(lines).strip()
+
+
 def load_case(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
 
@@ -45,6 +92,9 @@ def get_case_prompt(case: dict[str, Any], mode: str) -> str:
     key = MODE_TO_PROMPT_KEY.get(mode, mode)
     prompt = str(prompts.get(key, "") or "").strip()
     if prompt:
+        contract = _render_confirmation_contract(case)
+        if contract:
+            prompt = f"{prompt}\n\n{contract}"
         if _should_apply_guard(mode):
             return f"{prompt}\n\n{FINAL_ANSWER_GUARD}"
         return prompt
