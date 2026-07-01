@@ -96,6 +96,15 @@ def _normalized(record: dict[str, Any]) -> float | None:
 def _case_evidence(record: dict[str, Any]) -> dict[str, Any]:
     validation = _validation(record)
     feedback = _feedback(record)
+    validator_checks = [
+        {
+            "name": item.get("name"),
+            "type": item.get("type"),
+            "status": item.get("status"),
+            "allow_failure": bool(item.get("allow_failure")),
+        }
+        for item in _validation_checks(record)
+    ]
     return {
         "case_id": record.get("case_id"),
         "mode": record.get("mode"),
@@ -126,15 +135,7 @@ def _case_evidence(record: dict[str, Any]) -> dict[str, Any]:
             "functions": _check_matched(record, "function"),
         },
         "predicted_cves": _predicted_cves(record),
-        "validator_checks": [
-            {
-                "name": item.get("name"),
-                "type": item.get("type"),
-                "status": item.get("status"),
-                "allow_failure": bool(item.get("allow_failure")),
-            }
-            for item in _validation_checks(record)
-        ],
+        "validator_checks": validator_checks,
     }
 
 
@@ -175,6 +176,8 @@ def _new_bundle(skill: str, gate: dict[str, Any] | None) -> dict[str, Any]:
             "validator_passed": 0,
             "validator_failed": 0,
             "dynamic_or_bundle_validation_passed": 0,
+            "artifact_generated": 0,
+            "artifact_execution_passed": 0,
         },
         "revision_directives": [],
         "revision_templates": [],
@@ -262,6 +265,14 @@ def build_feedback_bundles(
             item.get("status") == "passed" and str(item.get("type") or "") in {"bundle_script", "asan_command"}
             for item in evidence.get("validator_checks") or []
         )
+        artifact_generated = any(
+            item.get("status") == "passed" and str(item.get("type") or "") == "artifact_exists"
+            for item in evidence.get("validator_checks") or []
+        )
+        artifact_execution_passed = any(
+            item.get("status") == "passed" and str(item.get("type") or "") == "artifact_exec"
+            for item in evidence.get("validator_checks") or []
+        )
         for skill in selected:
             bundle = bundles.setdefault(skill, _new_bundle(skill, gate_map.get(skill)))
             summary = bundle["summary"]
@@ -286,6 +297,10 @@ def build_feedback_bundles(
                 dimensions["validator_failed"] += 1
             if dynamic_pass:
                 dimensions["dynamic_or_bundle_validation_passed"] += 1
+            if artifact_generated:
+                dimensions["artifact_generated"] += 1
+            if artifact_execution_passed:
+                dimensions["artifact_execution_passed"] += 1
             bundle["cases"].append({"record": str(path), **evidence})
 
     output = []
@@ -337,6 +352,8 @@ def write_markdown(bundles: list[dict[str, Any]], out_path: Path) -> None:
         "cve_hit",
         "cve_miss",
         "validator_passed",
+        "artifact_generated",
+        "artifact_exec",
         "directives",
         "templates",
     ]
@@ -360,6 +377,8 @@ def write_markdown(bundles: list[dict[str, Any]], out_path: Path) -> None:
             "cve_hit": dimensions["cve_success"],
             "cve_miss": dimensions["cve_calibration_miss"],
             "validator_passed": dimensions["validator_passed"],
+            "artifact_generated": dimensions["artifact_generated"],
+            "artifact_exec": dimensions["artifact_execution_passed"],
             "directives": bundle["revision_directives"],
             "templates": [item.get("template_id") for item in bundle.get("revision_templates") or []],
         }

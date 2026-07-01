@@ -90,6 +90,8 @@ def _new_bucket(skill: str) -> dict[str, Any]:
         "validation_passed": 0,
         "validation_partial": 0,
         "validation_failed": 0,
+        "artifact_generated": 0,
+        "artifact_execution_passed": 0,
         "cve_hits": 0,
         "file_hits": 0,
         "function_hits": 0,
@@ -111,6 +113,23 @@ def build_skill_feedback(records: list[tuple[Path, dict[str, Any]]]) -> list[dic
         decision = _feedback_decision(record) or "neutral"
         normalized = _normalized_score(record)
         validation = _validation_status(record)
+        validation_checks = (
+            record.get("validation", {}).get("checks")
+            if isinstance(record.get("validation"), dict)
+            else []
+        )
+        artifact_generated = any(
+            isinstance(item, dict)
+            and str(item.get("type") or "") == "artifact_exists"
+            and str(item.get("status") or "") == "passed"
+            for item in (validation_checks or [])
+        )
+        artifact_execution_passed = any(
+            isinstance(item, dict)
+            and str(item.get("type") or "") == "artifact_exec"
+            and str(item.get("status") or "") == "passed"
+            for item in (validation_checks or [])
+        )
         for skill in skills:
             bucket = buckets.setdefault(skill, _new_bucket(skill))
             bucket["selected_count"] += 1
@@ -125,6 +144,10 @@ def build_skill_feedback(records: list[tuple[Path, dict[str, Any]]]) -> list[dic
                 bucket["validation_partial"] += 1
             elif validation == "failed":
                 bucket["validation_failed"] += 1
+            if artifact_generated:
+                bucket["artifact_generated"] += 1
+            if artifact_execution_passed:
+                bucket["artifact_execution_passed"] += 1
             for key in ("cve", "file", "function", "evidence", "root_cause"):
                 if _hit(record, key):
                     bucket[f"{key}_hits"] += 1
@@ -171,6 +194,8 @@ def write_markdown(rows: list[dict[str, Any]], out_path: Path) -> None:
         "validation_passed",
         "validation_partial",
         "validation_failed",
+        "artifact_generated",
+        "artifact_execution_passed",
         "file_hits",
         "function_hits",
         "cve_hits",
@@ -193,6 +218,7 @@ def write_markdown(rows: list[dict[str, Any]], out_path: Path) -> None:
     lines.append("")
     lines.append("- `positive/neutral/negative` comes from the run-level feedback decision.")
     lines.append("- `mean_score` is the mean normalized localization score across selected runs.")
+    lines.append("- `artifact_generated` / `artifact_execution_passed` summarize confirmation-oriented artifact checks.")
     lines.append("- A skill with few selections should be treated as anecdotal evidence, not a stable ranking.")
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -209,6 +235,8 @@ def write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
         "validation_passed",
         "validation_partial",
         "validation_failed",
+        "artifact_generated",
+        "artifact_execution_passed",
         "cve_hits",
         "file_hits",
         "function_hits",

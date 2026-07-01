@@ -16,6 +16,8 @@ def test_agent_workspace_writes_feedback_bundle_and_summary(tmp_path):
                 "cve_success": 0,
                 "cve_calibration_miss": 1,
                 "validator_passed": 2,
+                "artifact_generated": 1,
+                "artifact_execution_passed": 1,
             },
             "revision_directives": ["separate localization from CVE identity"],
             "revision_templates": [
@@ -45,6 +47,7 @@ def test_agent_workspace_writes_feedback_bundle_and_summary(tmp_path):
     assert feedback_playbook.is_file()
     assert json.loads(feedback_json.read_text(encoding="utf-8"))[0]["skill"] == "source-parser-state-machine-oob"
     assert "cve_calibration_miss" in feedback_summary.read_text(encoding="utf-8")
+    assert "Artifact Exec" in feedback_summary.read_text(encoding="utf-8")
     playbook_text = feedback_playbook.read_text(encoding="utf-8")
     assert "## revise" in playbook_text
     assert "separate localization from CVE identity" in playbook_text

@@ -52,14 +52,14 @@ def _format_feedback_bundle_summary(records: list[dict[str, Any]]) -> str:
         "Use this file as a high-signal index before reading the full JSON bundle.",
         "Prefer these validator-backed signals over speculative interpretations of session text alone.",
         "",
-        "| Skill | Gate | Runs | Mean | Loc | CVE | CVE Miss | Validator |",
-        "|---|---|---:|---:|---:|---:|---:|---:|",
+        "| Skill | Gate | Runs | Mean | Loc | CVE | CVE Miss | Validator | Artifact | Artifact Exec |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for record in records:
         summary = record.get("summary") or {}
         dims = record.get("dimensions") or {}
         lines.append(
-            "| {skill} | {gate} | {runs} | {mean:.2f} | {loc} | {cve} | {cve_miss} | {validator} |".format(
+            "| {skill} | {gate} | {runs} | {mean:.2f} | {loc} | {cve} | {cve_miss} | {validator} | {artifact} | {artifact_exec} |".format(
                 skill=record.get("skill", ""),
                 gate=record.get("gate_decision", ""),
                 runs=int(summary.get("selected_runs", 0) or 0),
@@ -68,6 +68,8 @@ def _format_feedback_bundle_summary(records: list[dict[str, Any]]) -> str:
                 cve=int(dims.get("cve_success", 0) or 0),
                 cve_miss=int(dims.get("cve_calibration_miss", 0) or 0),
                 validator=int(dims.get("validator_passed", 0) or 0),
+                artifact=int(dims.get("artifact_generated", 0) or 0),
+                artifact_exec=int(dims.get("artifact_execution_passed", 0) or 0),
             )
         )
     lines.extend(
@@ -77,6 +79,7 @@ def _format_feedback_bundle_summary(records: list[dict[str, Any]]) -> str:
             "",
             "- Treat `gate_decision=revise` as evidence that the skill is useful but incomplete.",
             "- Treat `cve_calibration_miss>0` as a sign that localization and exact CVE identity must be separated.",
+            "- Treat `artifact_generated` and `artifact_execution_passed` as confirmation-oriented signals, not just analysis signals.",
             "- Read `revision_directives` in the JSON before editing any selected skill.",
         ]
     )

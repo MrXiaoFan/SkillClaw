@@ -305,7 +305,13 @@ def test_summarize_skill_feedback_aggregates_selected_skills(tmp_path):
                 "score": 8,
                 "max_score": 10,
                 "checks": {"file": {"hit": True}, "function": {"hit": True}, "cve": {"hit": False}},
-                "validation": {"status": "passed"},
+                "validation": {
+                    "status": "passed",
+                    "checks": [
+                        {"name": "artifact", "type": "artifact_exists", "status": "passed"},
+                        {"name": "artifact-exec", "type": "artifact_exec", "status": "passed"},
+                    ],
+                },
                 "skill_injection": {"selected_skill_names": ["source-parser-state-machine-oob"]},
                 "feedback": {"decision": "positive", "suggested_action": "keep_or_promote_skill"},
             },
@@ -336,6 +342,8 @@ def test_summarize_skill_feedback_aggregates_selected_skills(tmp_path):
     assert row["mean_score"] == 0.5
     assert row["validation_passed"] == 1
     assert row["validation_failed"] == 1
+    assert row["artifact_generated"] == 1
+    assert row["artifact_execution_passed"] == 1
 
 
 def test_skill_gate_revises_high_score_without_cve_calibration():
@@ -400,6 +408,8 @@ def test_build_skill_feedback_bundle_tracks_dimension_flags(tmp_path):
         "validation": {
             "status": "passed",
             "checks": [
+                {"name": "artifact", "type": "artifact_exists", "status": "passed"},
+                {"name": "artifact-exec", "type": "artifact_exec", "status": "passed"},
                 {"name": "bundle", "type": "bundle_script", "status": "passed"},
             ],
         },
@@ -431,6 +441,8 @@ def test_build_skill_feedback_bundle_tracks_dimension_flags(tmp_path):
     assert bundle["dimensions"]["cve_success"] == 0
     assert bundle["dimensions"]["cve_calibration_miss"] == 1
     assert bundle["dimensions"]["dynamic_or_bundle_validation_passed"] == 1
+    assert bundle["dimensions"]["artifact_generated"] == 1
+    assert bundle["dimensions"]["artifact_execution_passed"] == 1
     assert any("CVE identity" in item for item in bundle["revision_directives"])
     assert bundle["revision_templates"][0]["template_id"] == "cve_calibration_miss"
     assert "uncertain" in bundle["revision_templates"][0]["required_changes"][2].lower()
