@@ -17,6 +17,7 @@ from experiment_scripts.build_skill_feedback_bundle import (
     write_markdown as write_bundle_markdown,
 )
 from experiment_scripts.print_case_prompt import FINAL_ANSWER_GUARD, get_case_prompt
+from experiment_scripts.print_case_runbook import render_runbook
 from experiment_scripts.skill_bundle_runner import resolve_bundle_script, run_bundle_script
 from experiment_scripts.summarize_research_claims import build_claims, write_markdown as write_claim_markdown
 from experiment_scripts.summarize_results import collect_rows, write_csv, write_markdown
@@ -544,6 +545,43 @@ def test_print_case_prompt_appends_confirmation_contract():
     assert "Confirmation / repro targets:" in prompt
     assert "AddressSanitizer" in prompt
     assert "DumpScreen2RGB" in prompt
+
+
+def test_print_case_runbook_includes_artifacts_repro_and_commands(tmp_path):
+    case_path = tmp_path / "demo.json"
+    case = {
+        "case_id": "gif-demo",
+        "target": {
+            "project": "giflib",
+            "version": "5.1.2",
+            "source_root": "/home/li/skillclaw-eval/giflib-5.1.2",
+        },
+        "expected_artifacts": [
+            {"path": "artifacts/poc.gif", "type": "binary", "description": "trigger input"},
+            {"path": "artifacts/run.sh", "type": "shell", "description": "repro helper"},
+        ],
+        "repro": {
+            "build": ["make -j"],
+            "run": ["./target artifacts/poc.gif"],
+            "success_markers": ["AddressSanitizer"],
+            "target_frames": ["DumpScreen2RGB"],
+        },
+    }
+    case_path.write_text(json.dumps(case, ensure_ascii=False), encoding="utf-8")
+
+    text = render_runbook(
+        case,
+        case_path=case_path,
+        root_override=None,
+        output_dir="~/skillclaw-eval/runs/demo",
+    )
+
+    assert "# Runbook: gif-demo" in text
+    assert "artifacts/poc.gif" in text
+    assert "AddressSanitizer" in text
+    assert "skillclaw-inline-guarded" in text
+    assert "direct-deepseek-guarded" in text
+    assert "run_eval_case.py" in text
 
 
 def test_repository_case_prompts_are_not_mojibake():
