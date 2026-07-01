@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from experiment_scripts.check_experiment_env import check_case_environment, infer_claude_provider
+from experiment_scripts.compare_experiment_records import compare_records, render_markdown
 from experiment_scripts.attach_skill_injection import attach_injection
 from experiment_scripts.run_eval_case import extract_json_object, infer_session_id_from_injection, run_case
 from experiment_scripts.run_dynamic_case import run_validators
@@ -650,6 +651,68 @@ def test_print_case_prompt_selects_mode():
 
     assert get_case_prompt(case, "skillclaw-inline") == "use skillclaw"
     assert get_case_prompt(case, "direct-deepseek") == "direct baseline"
+
+
+def test_compare_experiment_records_reports_key_deltas():
+    before = {
+        "case_id": "libxml2-demo",
+        "mode": "skillclaw-inline",
+        "model": "skillclaw-model",
+        "score": 8,
+        "max_score": 10,
+        "checks": {
+            "cve": {"hit": False},
+            "file": {"hit": True},
+            "function": {"hit": True},
+            "evidence": {"hit": True},
+            "root_cause": {"hit": True},
+        },
+        "validation": {
+            "status": "passed",
+            "checks": [
+                {"type": "artifact_exec", "status": "failed"},
+                {"type": "asan_command", "status": "passed"},
+            ],
+        },
+        "feedback": {"decision": "neutral", "quality_flags": ["cve_calibration_miss"]},
+        "skill_injection": {"selected_skill_names": ["source-parser-state-machine-oob"]},
+    }
+    after = {
+        "case_id": "libxml2-demo",
+        "mode": "skillclaw-inline",
+        "model": "skillclaw-model",
+        "score": 10,
+        "max_score": 10,
+        "checks": {
+            "cve": {"hit": True},
+            "file": {"hit": True},
+            "function": {"hit": True},
+            "evidence": {"hit": True},
+            "root_cause": {"hit": True},
+        },
+        "validation": {
+            "status": "passed",
+            "checks": [
+                {"type": "artifact_exec", "status": "passed"},
+                {"type": "asan_command", "status": "passed"},
+            ],
+        },
+        "feedback": {"decision": "positive", "quality_flags": []},
+        "skill_injection": {"selected_skill_names": ["source-parser-state-machine-oob", "vuln-hunting"]},
+    }
+
+    result = compare_records(before, after)
+
+    assert result["delta"]["score_delta"] == 2.0
+    assert result["delta"]["exact_cve_improved"] is True
+    assert result["delta"]["localization_regressed"] is False
+    assert result["delta"]["artifact_exec_change"] == "failed -> passed"
+    assert result["delta"]["quality_flags_removed"] == ["cve_calibration_miss"]
+    assert result["delta"]["selected_skills_added"] == ["vuln-hunting"]
+
+    markdown = render_markdown(result)
+    assert "Experiment Compare: libxml2-demo" in markdown
+    assert "artifact exec change" in markdown
 
 
 def test_print_case_prompt_guarded_mode_appends_execution_constraints():
