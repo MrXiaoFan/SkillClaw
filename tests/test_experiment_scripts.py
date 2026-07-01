@@ -1,11 +1,12 @@
 import json
 import sys
 from argparse import Namespace
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from experiment_scripts.check_experiment_env import check_case_environment, infer_claude_provider
 from experiment_scripts.attach_skill_injection import attach_injection
-from experiment_scripts.run_eval_case import extract_json_object, run_case
+from experiment_scripts.run_eval_case import extract_json_object, infer_session_id_from_injection, run_case
 from experiment_scripts.run_dynamic_case import run_validators
 from experiment_scripts.smoke_validate_framework import smoke_cases
 from experiment_scripts.score_agent_output import score_output
@@ -328,6 +329,22 @@ def test_attach_skill_injection_updates_final_record_feedback():
     assert updated["skill_injection_history"] == [injection_rows[1]]
     assert updated["skill_relevance"]["status"] == "has_task_relevant_skill"
     assert updated["feedback"]["selected_skills"] == ["source-parser-state-machine-oob"]
+
+
+def test_infer_session_id_from_injection_uses_run_window():
+    injection_rows = [
+        {"session_id": "old", "timestamp": "2026-07-01 14:30:00", "turn": 8},
+        {"session_id": "target", "timestamp": "2026-07-01 15:43:09", "turn": 1},
+        {"session_id": "target", "timestamp": "2026-07-01 15:48:23", "turn": 24},
+    ]
+    run_meta = {
+        "start": "2026-07-01T07:43:10+00:00",
+        "end": "2026-07-01T07:48:24+00:00",
+    }
+
+    session_id = infer_session_id_from_injection(injection_rows, run_meta)
+
+    assert session_id == "target"
 
 
 def test_summarize_skill_feedback_aggregates_selected_skills(tmp_path):
@@ -1234,6 +1251,116 @@ def test_run_eval_case_can_preflight_before_existing_output(tmp_path):
     assert final["preflight"]["status"] == "passed"
     assert final["preflight"]["claude"]["provider"] == "deepseek"
     assert (tmp_path / "results" / "demo-preflight-preflight.json").is_file()
+
+
+def test_run_case_infers_session_id_and_attaches_injection(tmp_path):
+    root = tmp_path / "target"
+    root.mkdir()
+    (root / "HTMLparser.c").write_text(
+        "static void htmlParseTryOrFinish(void) { if (avail < 2) in->cur[2]; }\n",
+        encoding="utf-8",
+    )
+    case_path = tmp_path / "case.json"
+    case_path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo-case",
+                "target": {"source_root": str(root), "project": "parser"},
+                "ground_truth": {
+                    "cves": ["CVE-0000-0001"],
+                    "files": ["HTMLparser.c"],
+                    "functions": ["htmlParseTryOrFinish"],
+                    "root_cause": "weak avail guard before in->cur[2]",
+                    "required_evidence": ["avail", "in->cur[2]"],
+                },
+                "validators": [
+                    {
+                        "name": "source",
+                        "type": "source_contains",
+                        "file": "HTMLparser.c",
+                        "patterns": ["htmlParseTryOrFinish", "avail", "in->cur[2]"],
+                    }
+                ],
+                "scoring": {
+                    "max_score": 10,
+                    "weights": {"cve": 2, "file": 2, "function": 3, "root_cause": 2, "evidence": 1},
+                },
+                "prompt": {
+                    "recommended_direct": "analyze target",
+                    "recommended_skillclaw": "analyze target with skills",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    answer = tmp_path / "answer.txt"
+    answer.write_text(
+        json.dumps(
+            {
+                "predicted_cves": ["CVE-0000-0001"],
+                "predicted_files": ["HTMLparser.c"],
+                "predicted_functions": ["htmlParseTryOrFinish"],
+                "root_cause": "weak avail guard before in->cur[2]",
+                "evidence": ["avail", "in->cur[2]"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    now_local = datetime.now().astimezone()
+    ts_old = (now_local - timedelta(minutes=20)).strftime("%Y-%m-%d %H:%M:%S")
+    ts_target = (now_local - timedelta(seconds=2)).strftime("%Y-%m-%d %H:%M:%S")
+    injection_json = tmp_path / "conversations.jsonl"
+    injection_json.write_text(
+        "\n".join(
+            [
+                json.dumps({"session_id": "older", "timestamp": ts_old, "turn": 8, "selected_skill_names": ["other"]}),
+                json.dumps(
+                    {
+                        "session_id": "target",
+                        "timestamp": ts_target,
+                        "turn": 1,
+                        "injection_mode": "inline",
+                        "selected_skill_names": ["source-parser-state-machine-oob"],
+                        "available_skill_count": 35,
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    final = run_case(
+        Namespace(
+            case=case_path,
+            mode="skillclaw-inline",
+            root=None,
+            output_dir=str(tmp_path / "results"),
+            run_id="demo-infer-session",
+            model="skillclaw-model",
+            session_id="",
+            injection_json=injection_json,
+            agent_output=str(answer),
+            no_run_agent=False,
+            claude_cmd="claude",
+            timeout_seconds=10,
+            skip_commands=False,
+            preflight=False,
+            preflight_allow_fail=False,
+            preflight_timeout=1.0,
+            settings=tmp_path / "settings.json",
+            no_claude_settings=True,
+            expected_provider=None,
+            skillclaw_url="",
+            skillclaw_key="",
+            expected_skill_count=None,
+            final_records=str(tmp_path / "results" / "final_records.jsonl"),
+        )
+    )
+
+    assert final["session_id"] == "target"
+    assert final["session_id_source"] == "inferred_from_injection_log"
+    assert final["skill_injection"]["selected_skill_names"] == ["source-parser-state-machine-oob"]
 
 
 def test_smoke_validate_framework_runs_repository_cases():
