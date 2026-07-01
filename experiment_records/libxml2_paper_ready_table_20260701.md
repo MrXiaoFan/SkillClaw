@@ -15,7 +15,7 @@ claims:
 | Direct baseline (`2026-06-25`) | `10/10` | yes | yes | yes | passed | strong upper baseline on this case |
 | SkillClaw baseline (`2026-06-23`) | `8/10` | no | yes | yes | passed | localized correctly but overclaimed many neighboring CVEs |
 | SkillClaw revised (`2026-06-28`) | `8/10` | no | yes | yes | passed | still localized correctly; `cve_calibration_miss` became explicit |
-| SkillClaw template-driven rerun (`2026-07-01`) | `10/10` | yes | yes | yes | passed | first clean exact-CVE hit after targeted CVE-calibration revision |
+| SkillClaw template-driven rerun (`2026-07-01`) | `10/10` | yes | yes | yes | passed | first clean exact-CVE hit after targeted CVE-calibration revision; injection audit later recovered |
 
 ## SkillClaw Trajectory Only
 
@@ -33,11 +33,20 @@ The strongest paper-safe statement supported by current evidence is:
 > SkillClaw's exact-CVE attribution behavior without degrading the already
 > correct localization target (`HTMLparser.c / htmlParseTryOrFinish`).
 
-## Important Caveat
+## Injection Audit Status
 
 The `2026-07-01` rerun was executed after temporarily disabling local sharing
-reload/pull, because the shared pool was overwriting the revised local skill.
-So this table supports a **local template-driven revision success** claim first.
+reload/pull so the revised local skill would not be overwritten. The first
+saved final record lacked attached `skill_injection`, but the local service log
+still retained the rerun session and selected-skill metadata.
 
-It does **not yet** prove that the shared multi-user injection pipeline would
-log the same result end to end without an additional synchronized rerun.
+Recovered audit trail:
+
+- `session_id`: `3e940773-4651-4198-ab3a-95236c180fe9`
+- `selected_skills`:
+  - `source-parser-state-machine-oob`
+  - `vuln-hunting`
+  - `elf-cwe120-firmware-triage`
+
+So the paper-safe claim can now be strengthened from **local revision success**
+to **local revision success with recovered SkillClaw injection evidence**.
