@@ -34,6 +34,13 @@ def _selected_skills(record: dict[str, Any]) -> list[str]:
     return [str(item) for item in injection.get("selected_skill_names") or [] if str(item).strip()]
 
 
+def _matches_case_filter(record: dict[str, Any], allowed_case_ids: set[str] | None) -> bool:
+    if not allowed_case_ids:
+        return True
+    case_id = str(record.get("case_id") or "").strip()
+    return case_id in allowed_case_ids
+
+
 def _hit(record: dict[str, Any], key: str) -> bool:
     checks = record.get("checks")
     if not isinstance(checks, dict):
@@ -246,10 +253,14 @@ def build_feedback_bundles(
     records: list[tuple[Path, dict[str, Any]]],
     *,
     gate_map: dict[str, dict[str, Any]] | None = None,
+    only_skills: set[str] | None = None,
+    only_case_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     gate_map = gate_map or {}
     bundles: dict[str, dict[str, Any]] = {}
     for path, record in records:
+        if not _matches_case_filter(record, only_case_ids):
+            continue
         selected = _selected_skills(record)
         if not selected:
             continue
@@ -274,6 +285,8 @@ def build_feedback_bundles(
             for item in evidence.get("validator_checks") or []
         )
         for skill in selected:
+            if only_skills and skill not in only_skills:
+                continue
             bundle = bundles.setdefault(skill, _new_bundle(skill, gate_map.get(skill)))
             summary = bundle["summary"]
             dimensions = bundle["dimensions"]
@@ -403,11 +416,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--gate-json", type=Path, default=Path("experiment_records/skill_gate_report_latest.json"))
     parser.add_argument("--out-json", type=Path, default=Path("experiment_records/skill_feedback_bundle_latest.json"))
     parser.add_argument("--out-md", type=Path, default=Path("experiment_records/skill_feedback_bundle_latest.md"))
+    parser.add_argument("--skill", action="append", default=[], help="Only include selected skill(s). Repeatable.")
+    parser.add_argument("--case-id", action="append", default=[], help="Only include selected case id(s). Repeatable.")
     args = parser.parse_args(argv)
 
     bundles = build_feedback_bundles(
         collect_records(_resolve_inputs(args)),
         gate_map=_load_gate_map(args.gate_json),
+        only_skills={item for item in args.skill if str(item).strip()} or None,
+        only_case_ids={item for item in args.case_id if str(item).strip()} or None,
     )
     write_json(bundles, args.out_json)
     write_markdown(bundles, args.out_md)

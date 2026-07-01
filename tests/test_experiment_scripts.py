@@ -521,6 +521,61 @@ def test_build_skill_gate_report_orders_promote_before_revise():
     assert report[0]["gate_decision"] == "promote"
 
 
+def test_build_feedback_bundle_filters_skill_and_case(tmp_path):
+    record = {
+        "case_id": "libxml2-2.9.4-cve-2017-8872",
+        "score": 8.0,
+        "max_score": 10.0,
+        "checks": {
+            "cve": {"hit": False, "expected": ["CVE-2017-8872"], "matched": []},
+            "file": {"hit": True, "expected": ["HTMLparser.c"], "matched": ["HTMLparser.c"]},
+            "function": {
+                "hit": True,
+                "expected": ["htmlParseTryOrFinish"],
+                "matched": ["htmlParseTryOrFinish"],
+            },
+            "evidence": {"hit": True},
+            "root_cause": {"hit": True},
+        },
+        "predictions": {"cves": ["CVE-2016-1839"]},
+        "validation": {"status": "passed", "checks": []},
+        "skill_injection": {
+            "selected_skill_names": ["source-parser-state-machine-oob", "vuln-hunting"],
+        },
+        "feedback": {
+            "decision": "neutral",
+            "suggested_action": "revise_cve_calibration_before_promotion",
+            "quality_flags": ["cve_calibration_miss"],
+        },
+    }
+    gate = {
+        "source-parser-state-machine-oob": {
+            "gate_decision": "revise",
+            "suggestions": ["add advisory evidence requirement"],
+            "reasons": ["localization evidence exists but exact CVE calibration is absent"],
+        }
+    }
+
+    bundles = build_feedback_bundles(
+        [(tmp_path / "final.json", record)],
+        gate_map=gate,
+        only_skills={"source-parser-state-machine-oob"},
+        only_case_ids={"libxml2-2.9.4-cve-2017-8872"},
+    )
+
+    assert len(bundles) == 1
+    assert bundles[0]["skill"] == "source-parser-state-machine-oob"
+
+    bundles = build_feedback_bundles(
+        [(tmp_path / "final.json", record)],
+        gate_map=gate,
+        only_skills={"vuln-hunting"},
+        only_case_ids={"tcpdump-4.9.1-cve-2017-13031"},
+    )
+
+    assert bundles == []
+
+
 def test_print_case_prompt_selects_mode():
     case = {
         "case_id": "demo",

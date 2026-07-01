@@ -1,0 +1,228 @@
+[
+  {
+    "skill": "source-parser-state-machine-oob",
+    "generated_at": "2026-07-01T07:00:48.247130+00:00",
+    "gate_decision": "revise",
+    "gate_reasons": [
+      "3 positive run(s), mean_score=0.8, file/function evidence hit",
+      "localization evidence exists but exact CVE calibration is absent",
+      "2 validator-passed run(s)"
+    ],
+    "gate_suggestions": [
+      "keep as localization guidance, but revise before promotion",
+      "add guidance to verify exact CVE identity against advisories or patch metadata"
+    ],
+    "summary": {
+      "selected_runs": 2,
+      "positive": 1,
+      "neutral": 1,
+      "negative": 0,
+      "mean_score": 0.8
+    },
+    "dimensions": {
+      "localization_success": 2,
+      "cve_success": 0,
+      "cve_calibration_miss": 1,
+      "evidence_success": 2,
+      "root_cause_success": 2,
+      "validator_passed": 2,
+      "validator_failed": 0,
+      "dynamic_or_bundle_validation_passed": 2,
+      "artifact_generated": 0,
+      "artifact_execution_passed": 0
+    },
+    "revision_directives": [
+      "Keep useful localization guidance, but add an explicit CVE-calibration section and uncertainty fallback.",
+      "Separate source localization from exact CVE identity; require advisory, patch, or version-range evidence before naming a CVE.",
+      "add guidance to verify exact CVE identity against advisories or patch metadata",
+      "keep as localization guidance, but revise before promotion"
+    ],
+    "revision_templates": [
+      {
+        "template_id": "cve_calibration_miss",
+        "title": "Separate bug localization from exact CVE attribution",
+        "when_to_apply": "Apply when localization/root-cause evidence is strong but the predicted CVE is absent, unstable, or repeatedly wrong.",
+        "required_changes": [
+          "Add an explicit rule that source-level localization alone is not sufficient to name a CVE.",
+          "Require advisory, patch, commit, or version-range evidence before emitting an exact CVE ID.",
+          "Add an uncertainty fallback such as 'CVE uncertain' when only localization evidence exists.",
+          "Preserve strong localization and root-cause guidance unless other evidence contradicts it."
+        ],
+        "anti_patterns": [
+          "Do not add nearby CVE examples as substitutes for verification evidence.",
+          "Do not merge localization success and exact CVE identity into one decision rule.",
+          "Do not remove useful parser/binary/source guidance just because CVE attribution failed."
+        ],
+        "suggested_history_note": "This edit targets CVE calibration only; localization workflow is intentionally preserved."
+      }
+    ],
+    "cases": [
+      {
+        "record": "experiment_records\\libxml2-skillclaw-final-with-injection-20260623.json",
+        "case_id": "libxml2-2.9.4-cve-2017-8872",
+        "mode": "skillclaw-inline",
+        "model": "skillclaw-model",
+        "session_id": "1380b45f-33e1-444d-86e1-f6c733eecf64",
+        "score": 8.0,
+        "max_score": 10.0,
+        "normalized_score": 0.8,
+        "feedback_decision": "positive",
+        "suggested_action": "keep_or_promote_skill",
+        "quality_flags": [],
+        "validation_status": "passed",
+        "hits": {
+          "cve": false,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2017-8872"
+          ],
+          "files": [
+            "HTMLparser.c"
+          ],
+          "functions": [
+            "htmlParseTryOrFinish"
+          ]
+        },
+        "matched": {
+          "cves": [],
+          "files": [
+            "HTMLparser.c"
+          ],
+          "functions": [
+            "htmlParseTryOrFinish"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2017-9049",
+          "CVE-2017-9050",
+          "CVE-2017-9047",
+          "CVE-2017-9048",
+          "CVE-2016-1833"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-links-local-libxml2",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "bundle-avail-lookahead-check",
+            "type": "bundle_script",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "asan-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      },
+      {
+        "record": "experiment_records\\libxml2-skillclaw-revised-final-20260628.json",
+        "case_id": "libxml2-2.9.4-cve-2017-8872",
+        "mode": "skillclaw-inline",
+        "model": "skillclaw-model",
+        "session_id": "4185693c-2de4-488f-a2c0-7cc78f92a615",
+        "score": 8.0,
+        "max_score": 10.0,
+        "normalized_score": 0.8,
+        "feedback_decision": "neutral",
+        "suggested_action": "revise_cve_calibration_before_promotion",
+        "quality_flags": [
+          "cve_calibration_miss"
+        ],
+        "validation_status": "passed",
+        "hits": {
+          "cve": false,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2017-8872"
+          ],
+          "files": [
+            "HTMLparser.c"
+          ],
+          "functions": [
+            "htmlParseTryOrFinish"
+          ]
+        },
+        "matched": {
+          "cves": [],
+          "files": [
+            "HTMLparser.c"
+          ],
+          "functions": [
+            "htmlParseTryOrFinish"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2016-1833",
+          "CVE-2016-1834",
+          "CVE-2016-1836",
+          "CVE-2016-1837",
+          "CVE-2016-1838",
+          "CVE-2016-1839",
+          "CVE-2016-1840",
+          "CVE-2017-9047",
+          "CVE-2017-9048"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-links-local-libxml2",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "bundle-avail-lookahead-check",
+            "type": "bundle_script",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "asan-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      }
+    ]
+  }
+]
