@@ -20,6 +20,8 @@ Locate real parser boundary bugs in source code by following parser state variab
 6. Prefer source evidence over generic binary import evidence. Use binary tools only to confirm the compiled target and reachable caller path.
 7. If the finding does not match a concrete guarded/unguarded access pattern, label it uncertain instead of presenting it as confirmed.
 8. Separate source localization from CVE identity. A correct file/function/root-cause hit is not enough to claim an exact CVE. Only report a CVE as confirmed when the task provides it, an advisory, patch diff, or version range supports it, or the evidence is explicitly tied to that CVE. Otherwise report the exact CVE identity as uncertain.
+9. Do not output multiple neighboring CVEs as a hedge when advisory-level evidence is missing. Prefer one exact CVE with evidence, or an empty/uncertain CVE field.
+10. Do not let a strong localization result automatically upgrade CVE confidence. File/function/root-cause confidence and exact CVE attribution confidence must be tracked separately.
 
 ## Workflow
 
@@ -138,6 +140,28 @@ If no advisory, patch, or case metadata is available, phrase the result as a
 localized parser OOB candidate and explicitly state that exact CVE attribution
 needs external confirmation. This prevents a high-quality localization from
 being scored as a false CVE match.
+
+### 7. Output Policy For Exact CVE Attribution
+
+When the task expects structured benchmark output, use this policy:
+
+```json
+{
+  "localized_file": "HTMLparser.c",
+  "localized_function": "htmlParseTryOrFinish",
+  "localized_root_cause": "lookahead read can exceed the available-byte guard",
+  "predicted_cves": [],
+  "cve_identity": "uncertain",
+  "cve_basis": "no advisory, patch diff, or version-range evidence tied this exact site to one CVE"
+}
+```
+
+Rules:
+
+- If you have advisory, patch, or version metadata for one exact CVE, report that one exact CVE only.
+- If you only have strong localization evidence, leave `predicted_cves` empty or mark the CVE as uncertain.
+- Do not list neighboring libxml2 CVEs as candidates unless the task explicitly asks for candidate enumeration.
+- Preserve strong localization and root-cause reporting even when exact CVE attribution remains uncertain.
 
 ## Exit Gate
 
