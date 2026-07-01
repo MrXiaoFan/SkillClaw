@@ -1,0 +1,379 @@
+{
+  "case_id": "giflib-5.1.2-cve-2016-3977",
+  "timestamp": "2026-07-01T06:43:48.920947+00:00",
+  "mode": "direct-deepseek-guarded",
+  "model": "deepseek-v4-pro",
+  "session_id": "",
+  "score": 10.0,
+  "max_score": 10.0,
+  "checks": {
+    "cve": {
+      "hit": true,
+      "matched": [
+        "CVE-2016-3977"
+      ],
+      "expected": [
+        "CVE-2016-3977"
+      ]
+    },
+    "file": {
+      "hit": true,
+      "matched": [
+        "util/gif2rgb.c"
+      ],
+      "expected": [
+        "util/gif2rgb.c"
+      ]
+    },
+    "function": {
+      "hit": true,
+      "matched": [
+        "DumpScreen2RGB"
+      ],
+      "expected": [
+        "DumpScreen2RGB"
+      ]
+    },
+    "evidence": {
+      "hit": true,
+      "matched": [
+        "DumpScreen2RGB",
+        "ColorMap->Colors[GifRow[j]]",
+        "ColorMap->ColorCount"
+      ],
+      "expected": [
+        "GifFile->SBackGroundColor",
+        "ScreenBuffer[0][i]",
+        "DumpScreen2RGB",
+        "ColorMap->Colors[GifRow[j]]",
+        "ColorMap->ColorCount"
+      ]
+    },
+    "root_cause": {
+      "hit": true,
+      "matched": [
+        "gif2rgb",
+        "the",
+        "screen",
+        "buffer",
+        "with",
+        "without",
+        "the",
+        "background"
+      ],
+      "expected_terms": [
+        "gif2rgb",
+        "initializes",
+        "the",
+        "screen",
+        "buffer",
+        "with",
+        "GifFile->SBackGroundColor",
+        "without",
+        "validating",
+        "that",
+        "the",
+        "background"
+      ]
+    }
+  },
+  "predictions": {
+    "cves": [
+      "CVE-2016-3977"
+    ],
+    "files": [
+      "util/gif2rgb.c",
+      "lib/dgif_lib.c"
+    ],
+    "functions": [
+      "DumpScreen2RGB",
+      "DGifGetScreenDesc"
+    ],
+    "evidence": [
+      "ASAN report confirms READ of size 1 at heap-buffer-overflow address in DumpScreen2RGB util/gif2rgb.c:305 (dereferencing the out-of-bounds ColorMapEntry->Red). Triggered by a 20-byte GIF with screen 1x1, global color table of 2 entries (BitsPerPixel=1), and SBackGroundColor=0xFF (255), which is 253 indices past the valid Colors[0..1] range."
+    ],
+    "raw_text": [
+      "{\"predicted_cves\": [\"CVE-2016-3977\"], \"predicted_files\": [\"util/gif2rgb.c\", \"lib/dgif_lib.c\"], \"predicted_functions\": [\"DumpScreen2RGB\", \"DGifGetScreenDesc\"], \"root_cause\": \"The GIF Logical Screen Descriptor's Background Color Index byte (SBackGroundColor, line dgif_lib.c:259) is read directly from the file without validation against the global color map size. In LoadRGB/GIF2RGB (gif2rgb.c:394-395), every pixel of the screen buffer is initialized to SBackGroundColor. Later, DumpScreen2RGB (gif2rgb.c:304) uses each pixel value as an unchecked index into ColorMap->Colors[], performing ColorMap->Colors[GifRow[j]]. When SBackGroundColor >= ColorMap->ColorCount, this reads beyond the heap-allocated Colors array, causing a heap-buffer-overflow.\", \"evidence\": \"ASAN report confirms READ of size 1 at heap-buffer-overflow address in DumpScreen2RGB util/gif2rgb.c:305 (dereferencing the out-of-bounds ColorMapEntry->Red). Triggered by a 20-byte GIF with screen 1x1, global color table of 2 entries (BitsPerPixel=1), and SBackGroundColor=0xFF (255), which is 253 indices past the valid Colors[0..1] range.\", \"confidence\": \"high\"}"
+    ]
+  },
+  "skill_injection": null,
+  "skill_injection_history": [],
+  "skill_relevance": {
+    "status": "no_selected_skills",
+    "selected_skills": [],
+    "relevant_skills": [],
+    "infra_skills": [],
+    "matched_terms": {}
+  },
+  "validation": {
+    "case_id": "giflib-5.1.2-cve-2016-3977",
+    "timestamp": "2026-07-01T06:43:48.920488+00:00",
+    "validator_mode": "case-level",
+    "target_root": "/home/li/skillclaw-eval/giflib-5.1.2",
+    "agent_output_path": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-agent.json",
+    "status": "passed",
+    "checks": [
+      {
+        "name": "agent-output-ground-truth-match",
+        "type": "content_match",
+        "allow_failure": true,
+        "source": "agent_output",
+        "status": "passed",
+        "path": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-agent.json",
+        "match": "any",
+        "hit_count": 12,
+        "total_patterns": 17,
+        "patterns": [
+          {
+            "pattern": "CVE-2016-3977",
+            "hit": true
+          },
+          {
+            "pattern": "util/gif2rgb.c",
+            "hit": true
+          },
+          {
+            "pattern": "DumpScreen2RGB",
+            "hit": true
+          },
+          {
+            "pattern": "GifFile->SBackGroundColor",
+            "hit": false
+          },
+          {
+            "pattern": "ScreenBuffer[0][i]",
+            "hit": false
+          },
+          {
+            "pattern": "ColorMap->Colors[GifRow[j]]",
+            "hit": true
+          },
+          {
+            "pattern": "ColorMap->ColorCount",
+            "hit": true
+          },
+          {
+            "pattern": "gif2rgb",
+            "hit": true
+          },
+          {
+            "pattern": "initializes",
+            "hit": false
+          },
+          {
+            "pattern": "screen",
+            "hit": true
+          },
+          {
+            "pattern": "buffer",
+            "hit": true
+          },
+          {
+            "pattern": "without",
+            "hit": true
+          },
+          {
+            "pattern": "validating",
+            "hit": false
+          },
+          {
+            "pattern": "background",
+            "hit": true
+          },
+          {
+            "pattern": "within",
+            "hit": false
+          },
+          {
+            "pattern": "GifRow[j]",
+            "hit": true
+          },
+          {
+            "pattern": "ColorMap->Colors",
+            "hit": true
+          }
+        ]
+      },
+      {
+        "name": "ground-truth-source-location",
+        "type": "source_contains",
+        "allow_failure": false,
+        "file": "util/gif2rgb.c",
+        "path": "/home/li/skillclaw-eval/giflib-5.1.2/util/gif2rgb.c",
+        "exists": true,
+        "patterns": [
+          {
+            "pattern": "DumpScreen2RGB",
+            "hit": true
+          },
+          {
+            "pattern": "GifFile->SBackGroundColor",
+            "hit": true
+          },
+          {
+            "pattern": "ScreenBuffer[0][i]",
+            "hit": true
+          },
+          {
+            "pattern": "ColorMap->Colors[GifRow[j]]",
+            "hit": true
+          }
+        ],
+        "status": "passed"
+      },
+      {
+        "name": "gif2rgb-binary-present",
+        "type": "command",
+        "allow_failure": true,
+        "command": "file util/gif2rgb && ./util/gif2rgb -h 2>&1 | head -20",
+        "cwd": "/home/li/skillclaw-eval/giflib-5.1.2",
+        "status": "passed",
+        "returncode": 0,
+        "stdout_tail": "util/gif2rgb: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=f9cb61a0476d4b2aa8c29a54c6061d7e3b554b6f, for GNU/Linux 3.2.0, with debug_info, not stripped\ngif2rgb Version 5.1, \tGershon Elber,\tJun 27 2026,   22:40:19\n(C) Copyright 1989 Gershon Elber.\nUsage: gif2rgb [-v] [-c #Colors] [-s Width Height] [-1] [-o OutFileName] [-h] GifFile\n",
+        "stderr_tail": ""
+      },
+      {
+        "name": "generated-poc-input-exists",
+        "type": "artifact_exists",
+        "allow_failure": false,
+        "path": "/home/li/skillclaw-eval/giflib-5.1.2/artifacts/poc-cve-2016-3977.gif",
+        "exists": true,
+        "size_bytes": 20,
+        "status": "passed"
+      },
+      {
+        "name": "generated-poc-input-executes",
+        "type": "artifact_exec",
+        "allow_failure": false,
+        "path": "/home/li/skillclaw-eval/giflib-5.1.2/artifacts/run_giflib_poc.sh",
+        "cwd": "/home/li/skillclaw-eval/giflib-5.1.2",
+        "command": "bash \"/home/li/skillclaw-eval/giflib-5.1.2/artifacts/run_giflib_poc.sh\"",
+        "status": "passed",
+        "returncode": 134,
+        "stdout_tail": "Running PoC for CVE-2016-3977...\nExpect: AddressSanitizer heap-buffer-overflow in DumpScreen2RGB\n\n",
+        "stderr_tail": "=================================================================\n==788530==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x50200000032d at pc 0x5ca2b7afb16b bp 0x7ffd5edb38b0 sp 0x7ffd5edb38a0\nREAD of size 1 at 0x50200000032d thread T0\n    #0 0x5ca2b7afb16a in DumpScreen2RGB util/gif2rgb.c:305\n    #1 0x5ca2b7afcdfc in GIF2RGB util/gif2rgb.c:480\n    #2 0x5ca2b7afd64b in main util/gif2rgb.c:531\n    #3 0x7cc40d829d8f in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58\n    #4 0x7cc40d829e3f in __libc_start_main_impl ../csu/libc-start.c:392\n    #5 0x5ca2b7af96e4 in _start (/home/li/skillclaw-eval/giflib-5.1.2/util/gif2rgb_asan+0x46e4)\n\n0x50200000032d is located 666 bytes to the right of 3-byte region [0x502000000090,0x502000000093)\nallocated by thread T0 here:\n    #0 0x7cc40dcb4887 in __interceptor_malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:145\n    #1 0x5ca2b7afaf89 in DumpScreen2RGB util/gif2rgb.c:298\n    #2 0x5ca2b7afcdfc in GIF2RGB util/gif2rgb.c:480\n    #3 0x5ca2b7afd64b in main util/gif2rgb.c:531\n    #4 0x7cc40d829d8f in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58\n\nSUMMARY: AddressSanitizer: heap-buffer-overflow util/gif2rgb.c:305 in DumpScreen2RGB\nShadow bytes around the buggy address:\n  0x0a047fff8010: fa fa 03 fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8020: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8030: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8040: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8050: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n=>0x0a047fff8060: fa fa fa fa fa[fa]fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8070: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8080: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8090: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff80a0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff80b0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\nShadow byte legend (one shadow byte represents 8 application bytes):\n  Addressable:           00\n  Partially addressable: 01 02 03 04 05 06 07 \n  Heap left redzone:       fa\n  Freed heap region:       fd\n  Stack left redzone:      f1\n  Stack mid redzone:       f2\n  Stack right redzone:     f3\n  Stack after return:      f5\n  Stack use after scope:   f8\n  Global redzone:          f9\n  Global init order:       f6\n  Poisoned by user:        f7\n  Container overflow:      fc\n  Array cookie:            ac\n  Intra object redzone:    bb\n  ASan internal:           fe\n  Left alloca redzone:     ca\n  Right alloca redzone:    cb\n  Shadow gap:              cc\n==788530==ABORTING\n/home/li/skillclaw-eval/giflib-5.1.2/artifacts/run_giflib_poc.sh: line 24: 788530 Aborted                 (core dumped) ASAN_OPTIONS=abort_on_error=1:symbolize=1 \"${BINARY}\" -1 -o \"${OUT}\" \"${POC}\"\n",
+        "success_markers": [
+          "AddressSanitizer",
+          "heap-buffer-overflow",
+          "DumpScreen2RGB"
+        ],
+        "matched_markers": [
+          "AddressSanitizer",
+          "heap-buffer-overflow",
+          "DumpScreen2RGB"
+        ],
+        "expect_crash": true
+      },
+      {
+        "name": "asan-poc-cve-2016-3977",
+        "type": "asan_command",
+        "allow_failure": false,
+        "command": "python3 ../experiment_cases/pocs/giflib-5.1.2-cve-2016-3977/make_poc.py artifacts/poc-cve-2016-3977.gif && (test -x util/gif2rgb_asan || gcc -Ilib -Iutil -g -O0 -fno-omit-frame-pointer -fsanitize=address util/gif2rgb.c util/getarg.c util/qprintf.c lib/dgif_lib.c lib/egif_lib.c lib/gifalloc.c lib/gif_err.c lib/gif_font.c lib/gif_hash.c lib/quantize.c lib/openbsd-reallocarray.c -lm -o util/gif2rgb_asan) && ASAN_OPTIONS=abort_on_error=1:symbolize=1 ./util/gif2rgb_asan -1 -o /tmp/giflib-cve-2016-3977.rgb artifacts/poc-cve-2016-3977.gif",
+        "cwd": "/home/li/skillclaw-eval/giflib-5.1.2",
+        "status": "passed",
+        "returncode": 134,
+        "expect_crash": true,
+        "crash_observed": true,
+        "sanitizer_marker_hit": true,
+        "matched_markers": [
+          "AddressSanitizer",
+          "heap-buffer-overflow"
+        ],
+        "stack_match": "any",
+        "stack_hit": true,
+        "matched_stack_patterns": [
+          "util/gif2rgb.c",
+          "DumpScreen2RGB"
+        ],
+        "expected_stack_patterns": [
+          "util/gif2rgb.c",
+          "DumpScreen2RGB"
+        ],
+        "stdout_tail": "wrote artifacts/poc-cve-2016-3977.gif (20 bytes)\n",
+        "stderr_tail": "=================================================================\n==788535==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x502000000036 at pc 0x58093714116b bp 0x7ffc8331c410 sp 0x7ffc8331c400\nREAD of size 1 at 0x502000000036 thread T0\n    #0 0x58093714116a in DumpScreen2RGB util/gif2rgb.c:305\n    #1 0x580937142dfc in GIF2RGB util/gif2rgb.c:480\n    #2 0x58093714364b in main util/gif2rgb.c:531\n    #3 0x721fdf829d8f in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58\n    #4 0x721fdf829e3f in __libc_start_main_impl ../csu/libc-start.c:392\n    #5 0x58093713f6e4 in _start (/home/li/skillclaw-eval/giflib-5.1.2/util/gif2rgb_asan+0x46e4)\n\n0x502000000036 is located 0 bytes to the right of 6-byte region [0x502000000030,0x502000000036)\nallocated by thread T0 here:\n    #0 0x721fdfcb4a57 in __interceptor_calloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:154\n    #1 0x5809371572ec in GifMakeMapObject lib/gifalloc.c:55\n    #2 0x5809371491f6 in DGifGetScreenDesc lib/dgif_lib.c:264\n    #3 0x58093714837f in DGifOpenFileHandle lib/dgif_lib.c:137\n    #4 0x580937147d2d in DGifOpenFileName lib/dgif_lib.c:61\n    #5 0x580937141daa in GIF2RGB util/gif2rgb.c:367\n    #6 0x58093714364b in main util/gif2rgb.c:531\n    #7 0x721fdf829d8f in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58\n\nSUMMARY: AddressSanitizer: heap-buffer-overflow util/gif2rgb.c:305 in DumpScreen2RGB\nShadow bytes around the buggy address:\n  0x0a047fff7fb0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0a047fff7fc0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0a047fff7fd0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0a047fff7fe0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0a047fff7ff0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n=>0x0a047fff8000: fa fa 03 fa fa fa[06]fa fa fa 00 fa fa fa 01 fa\n  0x0a047fff8010: fa fa 03 fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8020: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8030: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8040: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\n  0x0a047fff8050: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa\nShadow byte legend (one shadow byte represents 8 application bytes):\n  Addressable:           00\n  Partially addressable: 01 02 03 04 05 06 07 \n  Heap left redzone:       fa\n  Freed heap region:       fd\n  Stack left redzone:      f1\n  Stack mid redzone:       f2\n  Stack right redzone:     f3\n  Stack after return:      f5\n  Stack use after scope:   f8\n  Global redzone:          f9\n  Global init order:       f6\n  Poisoned by user:        f7\n  Container overflow:      fc\n  Array cookie:            ac\n  Intra object redzone:    bb\n  ASan internal:           fe\n  Left alloca redzone:     ca\n  Right alloca redzone:    cb\n  Shadow gap:              cc\n==788535==ABORTING\nAborted (core dumped)\n"
+      }
+    ]
+  },
+  "feedback": {
+    "decision": "positive",
+    "suggested_action": "use_as_baseline_positive",
+    "normalized_score": 1.0,
+    "validation_status": "passed",
+    "selected_skills": [],
+    "skill_relevance": {
+      "status": "no_selected_skills",
+      "selected_skills": [],
+      "relevant_skills": [],
+      "infra_skills": [],
+      "matched_terms": {}
+    },
+    "reasons": [
+      "skill_relevance=no_selected_skills",
+      "score=10.0/10.0",
+      "validation=passed"
+    ]
+  },
+  "run_id": "giflib-direct-confirmation-20260701",
+  "run": {
+    "case_id": "giflib-5.1.2-cve-2016-3977",
+    "run_id": "giflib-direct-confirmation-20260701",
+    "mode": "direct-deepseek-guarded",
+    "model": "deepseek-v4-pro",
+    "target_root": "/home/li/skillclaw-eval/giflib-5.1.2",
+    "start": "2026-07-01T06:42:15.996075+00:00",
+    "agent_ran": true,
+    "status": 0,
+    "end": "2026-07-01T06:43:48.475846+00:00"
+  },
+  "preflight": {
+    "case_id": "giflib-5.1.2-cve-2016-3977",
+    "case_path": "experiment_cases/giflib-5.1.2-cve-2016-3977.json",
+    "root": "/home/li/skillclaw-eval/giflib-5.1.2",
+    "status": "passed",
+    "checks": [
+      {
+        "name": "case_json",
+        "path": "experiment_cases/giflib-5.1.2-cve-2016-3977.json",
+        "status": "ok",
+        "exists": true
+      },
+      {
+        "name": "source_root",
+        "path": "/home/li/skillclaw-eval/giflib-5.1.2",
+        "exists": true,
+        "status": "ok"
+      },
+      {
+        "name": "target_binary",
+        "path": "/home/li/skillclaw-eval/giflib-5.1.2/util/gif2rgb",
+        "exists": true,
+        "status": "ok"
+      },
+      {
+        "name": "ground_truth_file",
+        "path": "/home/li/skillclaw-eval/giflib-5.1.2/util/gif2rgb.c",
+        "exists": true,
+        "status": "ok"
+      }
+    ],
+    "claude": {
+      "settings_path": "/home/li/.claude/settings.json",
+      "status": "ok",
+      "provider": "deepseek",
+      "base_url": "https://api.deepseek.com/anthropic",
+      "model": "deepseek-v4-pro"
+    },
+    "skillclaw": null
+  },
+  "artifacts": {
+    "prompt": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-prompt.txt",
+    "raw": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-raw.txt",
+    "stderr": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-stderr.txt",
+    "meta": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-run.meta",
+    "agent_json": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-agent.json",
+    "score": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-score.json",
+    "validation": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-validation.json",
+    "preflight": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-preflight.json",
+    "final": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701/giflib-direct-confirmation-20260701-final.json"
+  }
+}
