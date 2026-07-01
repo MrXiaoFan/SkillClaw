@@ -167,6 +167,58 @@ def test_run_dynamic_case_source_contains(tmp_path):
     assert result["checks"][0]["status"] == "passed"
 
 
+def test_run_dynamic_case_artifact_exists(tmp_path):
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir()
+    payload = artifacts_dir / "demo.bin"
+    payload.write_bytes(b"A" * 32)
+    case = {
+        "case_id": "demo-artifact",
+        "validators": [
+            {
+                "name": "artifact",
+                "type": "artifact_exists",
+                "path": "artifacts/demo.bin",
+                "artifact_type": "file",
+                "min_size_bytes": 16,
+            }
+        ],
+    }
+
+    result = run_validators(case, tmp_path, skip_commands=True)
+
+    assert result["status"] == "passed"
+    assert result["checks"][0]["status"] == "passed"
+    assert result["checks"][0]["size_bytes"] == 32
+
+
+def test_run_dynamic_case_artifact_exec(tmp_path):
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir()
+    script = artifacts_dir / "run.py"
+    script.write_text("print('TRIGGER_OK')\n", encoding="utf-8")
+    case = {
+        "case_id": "demo-artifact-exec",
+        "validators": [
+            {
+                "name": "artifact-exec",
+                "type": "artifact_exec",
+                "path": "artifacts/run.py",
+                "exec_mode": "python",
+                "success_markers": ["TRIGGER_OK"],
+                "require_markers": True,
+                "timeout_seconds": 10,
+            }
+        ],
+    }
+
+    result = run_validators(case, tmp_path, skip_commands=False)
+
+    assert result["status"] == "passed"
+    assert result["checks"][0]["status"] == "passed"
+    assert "TRIGGER_OK" in result["checks"][0]["matched_markers"]
+
+
 def test_build_result_record_selects_session_injection():
     rows = [
         {"session_id": "a", "selected_skill_names": ["old"]},

@@ -6,7 +6,9 @@ validator modes through a registry:
 
 - content_match: search the final agent output for ground-truth signals
 - source_contains: check source files for required symbols/patterns
+- artifact_exists: verify that the agent produced an expected artifact
 - command: run a case-defined shell command
+- artifact_exec: execute an agent-produced artifact and inspect its output
 - asan_command: run a PoC/ASan/UBSan command
 - bundle_script: execute a script shipped inside a skill bundle
 """

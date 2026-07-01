@@ -27,6 +27,18 @@ DEFAULT_SANITIZER_MARKERS = [
 ]
 
 
+def _resolve_artifact_path(ctx: ValidationContext, value: str) -> Path:
+    artifact = str(value or "").strip()
+    if not artifact:
+        return ctx.root
+    path = Path(os.path.expandvars(os.path.expanduser(artifact)))
+    if path.is_absolute():
+        return path
+    if artifact.startswith("artifacts/") or artifact.startswith("artifacts\\"):
+        return ctx.root / artifact
+    return ctx.root / "artifacts" / artifact
+
+
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8-sig", errors="replace")
 
@@ -132,6 +144,39 @@ def source_contains_validator(ctx: ValidationContext, spec: dict[str, Any]) -> d
     return result
 
 
+def artifact_exists_validator(ctx: ValidationContext, spec: dict[str, Any]) -> dict[str, Any]:
+    artifact_path = _resolve_artifact_path(ctx, str(spec.get("path", "") or ""))
+    result: dict[str, Any] = {
+        "name": spec.get("name"),
+        "type": "artifact_exists",
+        "allow_failure": bool(spec.get("allow_failure")),
+        "path": str(artifact_path),
+        "exists": artifact_path.exists(),
+    }
+    expected_type = str(spec.get("artifact_type", "") or "").strip().lower()
+    if not artifact_path.exists():
+        result["status"] = "missing"
+        return result
+    if expected_type == "file" and not artifact_path.is_file():
+        result["status"] = "failed"
+        result["reason"] = "expected file"
+        return result
+    if expected_type == "directory" and not artifact_path.is_dir():
+        result["status"] = "failed"
+        result["reason"] = "expected directory"
+        return result
+    min_size = spec.get("min_size_bytes")
+    if isinstance(min_size, (int, float)) and artifact_path.is_file():
+        size = artifact_path.stat().st_size
+        result["size_bytes"] = size
+        if size < int(min_size):
+            result["status"] = "failed"
+            result["reason"] = f"artifact smaller than required minimum {int(min_size)} bytes"
+            return result
+    result["status"] = "passed"
+    return result
+
+
 def command_validator(ctx: ValidationContext, spec: dict[str, Any]) -> dict[str, Any]:
     vtype = str(spec.get("type", "command") or "command")
     if ctx.skip_commands:
@@ -183,6 +228,96 @@ def command_validator(ctx: ValidationContext, spec: dict[str, Any]) -> dict[str,
             "returncode": proc.returncode,
             "stdout_tail": _tail(proc.stdout),
             "stderr_tail": _tail(proc.stderr),
+        }
+    )
+    return result
+
+
+def artifact_exec_validator(ctx: ValidationContext, spec: dict[str, Any]) -> dict[str, Any]:
+    if ctx.skip_commands:
+        return {
+            "name": spec.get("name"),
+            "type": "artifact_exec",
+            "allow_failure": bool(spec.get("allow_failure")),
+            "status": "skipped",
+            "reason": "commands skipped by context",
+        }
+
+    artifact_path = _resolve_artifact_path(ctx, str(spec.get("path", "") or ""))
+    timeout = int(spec.get("timeout_seconds", 60) or 60)
+    result: dict[str, Any] = {
+        "name": spec.get("name"),
+        "type": "artifact_exec",
+        "allow_failure": bool(spec.get("allow_failure")),
+        "path": str(artifact_path),
+        "cwd": str(ctx.root),
+    }
+    if not artifact_path.exists():
+        result["status"] = "missing"
+        return result
+
+    command = str(spec.get("command", "") or "").strip()
+    if not command:
+        exec_mode = str(spec.get("exec_mode", "") or "").strip().lower()
+        if exec_mode == "python":
+            command = f'python "{artifact_path}"'
+        elif exec_mode == "bash":
+            command = f'bash "{artifact_path}"'
+        elif exec_mode == "sh":
+            command = f'sh "{artifact_path}"'
+        elif exec_mode == "direct":
+            command = str(artifact_path)
+        else:
+            command = f'"{artifact_path}"'
+    extra_args = [str(item) for item in spec.get("args", []) or [] if str(item).strip()]
+    if extra_args:
+        command = " ".join([command, *extra_args])
+    result["command"] = command
+
+    try:
+        proc = subprocess.run(
+            command,
+            cwd=str(ctx.root),
+            shell=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        result.update(
+            {
+                "status": "failed",
+                "error": f"command timed out after {timeout}s",
+                "stdout_tail": _tail(exc.stdout),
+                "stderr_tail": _tail(exc.stderr),
+            }
+        )
+        return result
+
+    stdout_tail = _tail(proc.stdout)
+    stderr_tail = _tail(proc.stderr)
+    combined = f"{proc.stdout}\n{proc.stderr}"
+    combined_lower = combined.lower()
+    markers = [str(item) for item in spec.get("success_markers", []) if str(item).strip()]
+    matched_markers = [marker for marker in markers if marker.lower() in combined_lower]
+    require_markers = bool(spec.get("require_markers")) or bool(markers)
+
+    if proc.returncode == 0 and (not require_markers or bool(matched_markers)):
+        status = "passed"
+    elif proc.returncode == 0:
+        status = "partial"
+    else:
+        status = "failed"
+
+    result.update(
+        {
+            "status": status,
+            "returncode": proc.returncode,
+            "stdout_tail": stdout_tail,
+            "stderr_tail": stderr_tail,
+            "success_markers": markers,
+            "matched_markers": matched_markers,
         }
     )
     return result
@@ -341,7 +476,9 @@ def default_registry() -> ValidatorRegistry:
     registry = ValidatorRegistry()
     registry.register("content_match", content_match_validator)
     registry.register("source_contains", source_contains_validator)
+    registry.register("artifact_exists", artifact_exists_validator)
     registry.register("command", command_validator)
+    registry.register("artifact_exec", artifact_exec_validator)
     registry.register("asan_command", asan_command_validator)
     registry.register("bundle_script", bundle_script_validator)
     return registry
