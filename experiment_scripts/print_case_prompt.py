@@ -70,6 +70,7 @@ def _render_confirmation_contract(case: dict[str, Any]) -> str:
             if run:
                 lines.append("- Be compatible with these run steps:")
                 lines.extend(f"  - `{item}`" for item in run)
+                lines.append("- If you create a wrapper reproduction script around a crashing target, preserve the target exit status (for example: `status=$?; echo \"Exit code: $status\"; exit $status`).")
             if success:
                 lines.append("- Expected success markers:")
                 lines.extend(f"  - `{item}`" for item in success)

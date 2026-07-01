@@ -651,6 +651,7 @@ def test_print_case_prompt_appends_confirmation_contract():
     assert "Confirmation / repro targets:" in prompt
     assert "AddressSanitizer" in prompt
     assert "DumpScreen2RGB" in prompt
+    assert "preserve the target exit status" in prompt
 
 
 def test_print_case_runbook_includes_artifacts_repro_and_commands(tmp_path):
