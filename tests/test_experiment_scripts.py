@@ -329,6 +329,52 @@ def test_attach_skill_injection_updates_final_record_feedback():
     assert updated["skill_injection_history"] == [injection_rows[1]]
     assert updated["skill_relevance"]["status"] == "has_task_relevant_skill"
     assert updated["feedback"]["selected_skills"] == ["source-parser-state-machine-oob"]
+    assert updated["session_id_source"] == "explicit"
+
+
+def test_attach_skill_injection_can_infer_session_id_from_run_window():
+    case = {
+        "case_id": "demo",
+        "target": {"project": "parser", "binary": "demo"},
+        "ground_truth": {
+            "vulnerability_type": "state machine oob",
+            "root_cause": "source parser state machine out-of-bounds read",
+        },
+    }
+    final_record = {
+        "case_id": "demo",
+        "score": 8,
+        "max_score": 10,
+        "validation": {"status": "passed"},
+        "run": {
+            "start": "2026-07-01T12:19:32+00:00",
+            "end": "2026-07-01T12:20:47+00:00",
+        },
+        "skill_injection": None,
+        "skill_relevance": {"status": "no_selected_skills"},
+    }
+    injection_rows = [
+        {"session_id": "old", "timestamp": "2026-07-01 20:00:00", "turn": 8, "selected_skill_names": ["other"]},
+        {
+            "session_id": "target",
+            "timestamp": "2026-07-01 20:20:31",
+            "turn": 7,
+            "injection_mode": "inline",
+            "selected_skill_names": ["source-parser-state-machine-oob"],
+            "available_skill_count": 35,
+        },
+    ]
+
+    updated = attach_injection(
+        final_record=final_record,
+        case=case,
+        injection_value=injection_rows,
+        session_id="",
+    )
+
+    assert updated["session_id"] == "target"
+    assert updated["session_id_source"] == "inferred_from_injection_log"
+    assert updated["skill_injection"]["selected_skill_names"] == ["source-parser-state-machine-oob"]
 
 
 def test_infer_session_id_from_injection_uses_run_window():
