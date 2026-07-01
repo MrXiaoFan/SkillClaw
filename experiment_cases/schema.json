@@ -110,7 +110,7 @@
           "require_markers": { "type": "boolean", "default": false },
           "expect_crash": {
             "type": "boolean",
-            "description": "For asan_command: true means a sanitizer/crash report is expected for vulnerable builds; false means no sanitizer report is expected for fixed builds."
+            "description": "For asan_command or artifact_exec: true means a sanitizer/crash report is expected for vulnerable builds; false means no sanitizer report is expected for fixed builds."
           },
           "sanitizer_markers": {
             "type": "array",

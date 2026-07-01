@@ -220,6 +220,40 @@ def test_run_dynamic_case_artifact_exec(tmp_path):
     assert "TRIGGER_OK" in result["checks"][0]["matched_markers"]
 
 
+def test_run_dynamic_case_artifact_exec_expect_crash(tmp_path):
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir()
+    script = artifacts_dir / "run.py"
+    script.write_text(
+        "import sys\n"
+        "sys.stderr.write('AddressSanitizer: heap-buffer-overflow in DemoFrame\\n')\n"
+        "raise SystemExit(134)\n",
+        encoding="utf-8",
+    )
+    case = {
+        "case_id": "demo-artifact-crash",
+        "validators": [
+            {
+                "name": "artifact-exec-crash",
+                "type": "artifact_exec",
+                "path": "artifacts/run.py",
+                "exec_mode": "python",
+                "success_markers": ["AddressSanitizer", "DemoFrame"],
+                "require_markers": True,
+                "expect_crash": True,
+                "timeout_seconds": 10,
+            }
+        ],
+    }
+
+    result = run_validators(case, tmp_path, skip_commands=False)
+
+    assert result["status"] == "passed"
+    assert result["checks"][0]["status"] == "passed"
+    assert result["checks"][0]["returncode"] == 134
+    assert result["checks"][0]["expect_crash"] is True
+
+
 def test_build_result_record_selects_session_injection():
     rows = [
         {"session_id": "a", "selected_skill_names": ["old"]},

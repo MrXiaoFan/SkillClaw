@@ -302,13 +302,22 @@ def artifact_exec_validator(ctx: ValidationContext, spec: dict[str, Any]) -> dic
     markers = [str(item) for item in spec.get("success_markers", []) if str(item).strip()]
     matched_markers = [marker for marker in markers if marker.lower() in combined_lower]
     require_markers = bool(spec.get("require_markers")) or bool(markers)
+    expect_crash = spec.get("expect_crash")
 
-    if proc.returncode == 0 and (not require_markers or bool(matched_markers)):
-        status = "passed"
-    elif proc.returncode == 0:
-        status = "partial"
+    if expect_crash is True:
+        if proc.returncode != 0 and (not require_markers or bool(matched_markers)):
+            status = "passed"
+        elif proc.returncode != 0:
+            status = "partial"
+        else:
+            status = "failed"
     else:
-        status = "failed"
+        if proc.returncode == 0 and (not require_markers or bool(matched_markers)):
+            status = "passed"
+        elif proc.returncode == 0:
+            status = "partial"
+        else:
+            status = "failed"
 
     result.update(
         {
@@ -318,6 +327,7 @@ def artifact_exec_validator(ctx: ValidationContext, spec: dict[str, Any]) -> dic
             "stderr_tail": stderr_tail,
             "success_markers": markers,
             "matched_markers": matched_markers,
+            "expect_crash": expect_crash,
         }
     )
     return result

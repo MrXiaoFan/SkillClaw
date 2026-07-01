@@ -74,6 +74,29 @@ def _prepare_fixture(case: dict[str, Any], root: Path) -> None:
         _write_libxml2_fixture(root)
     elif "tcpdump" in case_id:
         _write_tcpdump_fixture(root)
+    elif "giflib" in case_id:
+        (root / "util").mkdir(parents=True, exist_ok=True)
+        (root / "artifacts").mkdir(parents=True, exist_ok=True)
+        (root / "util" / "gif2rgb.c").write_text(
+            "\n".join(
+                [
+                    "void DumpScreen2RGB(void) {",
+                    "  /* GifFile->SBackGroundColor */",
+                    "  /* ScreenBuffer[0][i] */",
+                    "  /* ColorMap->Colors[GifRow[j]] */",
+                    "}",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (root / "artifacts" / "poc-cve-2016-3977.gif").write_bytes(b"GIF89a" + b"\x00" * 14)
+        (root / "artifacts" / "run_giflib_poc.sh").write_text(
+            "#!/bin/sh\n"
+            "echo 'AddressSanitizer: heap-buffer-overflow in DumpScreen2RGB' 1>&2\n"
+            "exit 134\n",
+            encoding="utf-8",
+        )
     else:
         truth = case.get("ground_truth", {}) if isinstance(case.get("ground_truth"), dict) else {}
         files = [str(item) for item in truth.get("files", []) if str(item).strip()]
