@@ -1,4 +1,5 @@
 import json
+import subprocess
 import sys
 from argparse import Namespace
 from datetime import datetime, timedelta
@@ -254,6 +255,24 @@ def test_run_dynamic_case_artifact_exec_expect_crash(tmp_path):
     assert result["checks"][0]["status"] == "passed"
     assert result["checks"][0]["returncode"] == 134
     assert result["checks"][0]["expect_crash"] is True
+
+
+def test_tcpdump_frag6_poc_generator_writes_truncated_fragment_header_pcap(tmp_path):
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "experiment_cases"
+        / "pocs"
+        / "tcpdump-4.9.1-cve-2017-13031"
+        / "make_poc.py"
+    )
+    output = tmp_path / "frag6.pcap"
+
+    subprocess.run([sys.executable, str(script), str(output)], check=True)
+
+    blob = output.read_bytes()
+    assert len(blob) >= 64
+    assert blob[:4] == bytes.fromhex("d4c3b2a1")
+    assert bytes.fromhex("86dd") in blob
 
 
 def test_build_result_record_selects_session_injection():

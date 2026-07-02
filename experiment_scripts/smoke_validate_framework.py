@@ -66,6 +66,15 @@ int frag6_print(const struct ip6_frag *dp) {
         + "\n",
         encoding="utf-8",
     )
+    (root / "artifacts").mkdir(parents=True, exist_ok=True)
+    pcap = root / "artifacts" / "poc-cve-2017-13031.pcap"
+    pcap.write_bytes(b"\xd4\xc3\xb2\xa1" + b"\x00" * 92)
+    (root / "artifacts" / "run_tcpdump_frag6_poc.sh").write_text(
+        "#!/bin/sh\n"
+        "echo 'IP6 (hlim 64, next-header Fragment (44) payload length: 8) 2001:db8::1 > 2001:db8::2: [|frag]'\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
 
 
 def _prepare_fixture(case: dict[str, Any], root: Path) -> None:

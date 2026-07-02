@@ -11,7 +11,9 @@ The MVP now has a small validator framework:
 - `ValidatorRegistry`: maps validator types to implementations.
 - `content_match`: checks the final agent answer for ground-truth CVE/file/function/evidence.
 - `source_contains`: checks source files for required symbols or guard patterns.
+- `artifact_exists`: checks whether the agent produced an expected artifact such as a PoC input or wrapper script.
 - `command`: runs a normal shell command.
+- `artifact_exec`: runs an agent-produced artifact and checks its output markers and exit behavior.
 - `asan_command`: runs PoC/ASan/UBSan dynamic execution. For vulnerable
   builds, a non-zero exit can be `passed` when sanitizer/crash markers and the
   expected source file/function appear in output.
@@ -44,6 +46,7 @@ python experiment_scripts/smoke_validate_framework.py
 Expected output:
 
 ```text
+giflib-5.1.2-cve-2016-3977: passed
 libxml2-2.9.4-cve-2017-8872: passed
 tcpdump-4.9.1-cve-2017-13031: passed
 ```
@@ -190,6 +193,11 @@ These fields should be copied into the final experiment result record.
   `gif2rgb`, used to test source-level color-map index validation reasoning.
 - `libxml2-2.9.4-cve-2017-8872.json`: main parser state-machine case.
 - `tcpdump-4.9.1-cve-2017-13031.json`: targeted IPv6 fragmentation parser case.
+
+As of 2026-07-02, the tcpdump case also supports a behavior-backed confirmation
+path: a generated truncated fragment-header pcap plus a wrapper script can be
+validated through `artifact_exists` and `artifact_exec`, even though the full
+tcpdump CLI path does not yet have a stable ASan crash for this CVE.
 
 The tcpdump and giflib cases are intentionally targeted and should not be used
 alone to claim SkillClaw improves broad vulnerability discovery.
