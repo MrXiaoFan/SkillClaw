@@ -1,0 +1,152 @@
+[
+  {
+    "skill": "source-parser-state-machine-oob",
+    "gate_decision": "promote",
+    "selected_count": 3,
+    "positive": 3,
+    "neutral": 0,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 3,
+    "file_hits": 3,
+    "function_hits": 3,
+    "evidence_hits": 3,
+    "root_cause_hits": 3,
+    "validation_passed": 3,
+    "validation_failed": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977, libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "3 positive run(s), mean_score=1, file/function evidence hit",
+      "3 validator-passed run(s)"
+    ],
+    "suggestions": [
+      "candidate for broader benchmark evaluation or default retrieval boost if no later evidence gap is found"
+    ]
+  },
+  {
+    "skill": "vuln-hunting",
+    "gate_decision": "keep",
+    "selected_count": 2,
+    "positive": 2,
+    "neutral": 0,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 2,
+    "file_hits": 2,
+    "function_hits": 2,
+    "evidence_hits": 2,
+    "root_cause_hits": 2,
+    "validation_passed": 2,
+    "validation_failed": 0,
+    "cases": "libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "2 positive run(s), mean_score=1",
+      "2 validator-passed run(s)"
+    ],
+    "suggestions": [
+      "keep enabled, but require more cases before promotion"
+    ]
+  },
+  {
+    "skill": "elf-cwe120-firmware-triage",
+    "gate_decision": "insufficient_evidence",
+    "selected_count": 1,
+    "positive": 1,
+    "neutral": 0,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 1,
+    "file_hits": 1,
+    "function_hits": 1,
+    "evidence_hits": 1,
+    "root_cause_hits": 1,
+    "validation_passed": 1,
+    "validation_failed": 0,
+    "cases": "libxml2-2.9.4-cve-2017-8872",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "only 1 selected run(s); require at least 2",
+      "1 validator-passed run(s)"
+    ],
+    "suggestions": [
+      "collect more benchmark runs before changing publication status"
+    ]
+  },
+  {
+    "skill": "ida-headless-cwe120-sink-analysis",
+    "gate_decision": "insufficient_evidence",
+    "selected_count": 1,
+    "positive": 1,
+    "neutral": 0,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 1,
+    "file_hits": 1,
+    "function_hits": 1,
+    "evidence_hits": 1,
+    "root_cause_hits": 1,
+    "validation_passed": 1,
+    "validation_failed": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "only 1 selected run(s); require at least 2",
+      "1 validator-passed run(s)"
+    ],
+    "suggestions": [
+      "collect more benchmark runs before changing publication status"
+    ]
+  },
+  {
+    "skill": "idalib-headless-batch-diagnosis",
+    "gate_decision": "insufficient_evidence",
+    "selected_count": 1,
+    "positive": 1,
+    "neutral": 0,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 1,
+    "file_hits": 1,
+    "function_hits": 1,
+    "evidence_hits": 1,
+    "root_cause_hits": 1,
+    "validation_passed": 1,
+    "validation_failed": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "only 1 selected run(s); require at least 2",
+      "1 validator-passed run(s)"
+    ],
+    "suggestions": [
+      "collect more benchmark runs before changing publication status"
+    ]
+  },
+  {
+    "skill": "verify-rootfs-full-enumeration",
+    "gate_decision": "insufficient_evidence",
+    "selected_count": 1,
+    "positive": 1,
+    "neutral": 0,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 1,
+    "file_hits": 1,
+    "function_hits": 1,
+    "evidence_hits": 1,
+    "root_cause_hits": 1,
+    "validation_passed": 1,
+    "validation_failed": 0,
+    "cases": "tcpdump-4.9.1-cve-2017-13031",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "only 1 selected run(s); require at least 2",
+      "1 validator-passed run(s)"
+    ],
+    "suggestions": [
+      "collect more benchmark runs before changing publication status"
+    ]
+  }
+]

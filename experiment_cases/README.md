@@ -49,6 +49,7 @@ Expected output:
 giflib-5.1.2-cve-2016-3977: passed
 libxml2-2.9.4-cve-2017-8872: passed
 tcpdump-4.9.1-cve-2017-13031: passed
+tcpdump-4.9.1-cve-2018-14469: passed
 ```
 
 This command does not call an LLM and does not require the real vulnerable
@@ -191,13 +192,36 @@ These fields should be copied into the final experiment result record.
 
 - `giflib-5.1.2-cve-2016-3977.json`: lightweight heap-overflow case in
   `gif2rgb`, used to test source-level color-map index validation reasoning.
+- `libarchive-3.8.0-cve-2025-60753.json`: utility-level substitution-engine
+  denial-of-service case in `bsdtar`, confirmed through a generated empty
+  global-substitution rule plus a timeout-backed wrapper script.
 - `libxml2-2.9.4-cve-2017-8872.json`: main parser state-machine case.
 - `tcpdump-4.9.1-cve-2017-13031.json`: targeted IPv6 fragmentation parser case.
+- `tcpdump-4.9.1-cve-2018-14469.json`: IKEv1 notification parser case in
+  `print-isakmp.c:ikev1_n_print`, confirmed through a generated semantic
+  payload-boundary pcap and runnable wrapper script.
 
 As of 2026-07-02, the tcpdump case also supports a behavior-backed confirmation
 path: a generated truncated fragment-header pcap plus a wrapper script can be
 validated through `artifact_exists` and `artifact_exec`, even though the full
 tcpdump CLI path does not yet have a stable ASan crash for this CVE.
+
+As of 2026-07-05, the second tcpdump case (`CVE-2018-14469`) also supports a
+behavior-backed confirmation path. Its validator first prepares a generated
+IKEv1 notification pcap plus `run_tcpdump_isakmp_poc.sh`, then confirms the
+reproduction markers through `artifact_exists` and `artifact_exec`.
+
+As of 2026-07-07, the libxml2 case also has an artifactized logic-confirmation
+path. Its validator prepares a representative trailing-`<!` input plus
+`run_libxml2_logic_confirm.sh`, then confirms the state-window checks through
+`artifact_exists` and `artifact_exec` while keeping the sanitizer-backed path
+disabled until a stable crash reproducer exists.
+
+As of 2026-07-07, the libarchive case supports a compact behavior-backed
+confirmation path. Its validator prepares a one-line input filename, an empty
+global substitution rule, and `run_libarchive_poc.sh`, then confirms that
+vulnerable `bsdtar` hangs until `timeout(1)` returns exit code `124` with an
+empty output archive.
 
 The tcpdump and giflib cases are intentionally targeted and should not be used
 alone to claim SkillClaw improves broad vulnerability discovery.

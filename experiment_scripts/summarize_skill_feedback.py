@@ -17,6 +17,12 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+try:
+    from experiment_validation.core import classify_skill_role
+except ImportError:  # pragma: no cover - direct script execution.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from experiment_validation.core import classify_skill_role
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
@@ -92,6 +98,9 @@ def _new_bucket(skill: str) -> dict[str, Any]:
         "validation_failed": 0,
         "artifact_generated": 0,
         "artifact_execution_passed": 0,
+        "relevant_selected": 0,
+        "mismatched_selected": 0,
+        "infra_selected": 0,
         "cve_hits": 0,
         "file_hits": 0,
         "function_hits": 0,
@@ -133,9 +142,17 @@ def build_skill_feedback(records: list[tuple[Path, dict[str, Any]]]) -> list[dic
         for skill in skills:
             bucket = buckets.setdefault(skill, _new_bucket(skill))
             bucket["selected_count"] += 1
-            if decision not in {"positive", "neutral", "negative"}:
-                decision = "neutral"
-            bucket[decision] += 1
+            skill_decision = decision if decision in {"positive", "neutral", "negative"} else "neutral"
+            role = classify_skill_role(record.get("skill_relevance"), skill)
+            if role == "relevant":
+                bucket["relevant_selected"] += 1
+            elif role == "mismatched":
+                bucket["mismatched_selected"] += 1
+                skill_decision = "neutral"
+            elif role == "infrastructure":
+                bucket["infra_selected"] += 1
+                skill_decision = "neutral"
+            bucket[skill_decision] += 1
             if normalized is not None:
                 bucket["_scores"].append(normalized)
             if validation == "passed":
@@ -196,6 +213,9 @@ def write_markdown(rows: list[dict[str, Any]], out_path: Path) -> None:
         "validation_failed",
         "artifact_generated",
         "artifact_execution_passed",
+        "relevant_selected",
+        "mismatched_selected",
+        "infra_selected",
         "file_hits",
         "function_hits",
         "cve_hits",
@@ -217,6 +237,7 @@ def write_markdown(rows: list[dict[str, Any]], out_path: Path) -> None:
     lines.append("## Interpretation")
     lines.append("")
     lines.append("- `positive/neutral/negative` comes from the run-level feedback decision.")
+    lines.append("- `mismatched_selected` means the skill was selected in a successful run but was not task-aligned, so it does not receive positive credit.")
     lines.append("- `mean_score` is the mean normalized localization score across selected runs.")
     lines.append("- `artifact_generated` / `artifact_execution_passed` summarize confirmation-oriented artifact checks.")
     lines.append("- A skill with few selections should be treated as anecdotal evidence, not a stable ranking.")
@@ -237,6 +258,9 @@ def write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
         "validation_failed",
         "artifact_generated",
         "artifact_execution_passed",
+        "relevant_selected",
+        "mismatched_selected",
+        "infra_selected",
         "cve_hits",
         "file_hits",
         "function_hits",

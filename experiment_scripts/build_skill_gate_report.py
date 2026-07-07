@@ -58,6 +58,9 @@ def decide_gate(row: dict[str, Any], *, min_samples: int = 2, promote_samples: i
     mean_score = _as_float(row.get("mean_score"))
     validation_failed = _as_int(row.get("validation_failed"))
     validation_passed = _as_int(row.get("validation_passed"))
+    relevant_selected = _as_int(row.get("relevant_selected"))
+    mismatched_selected = _as_int(row.get("mismatched_selected"))
+    infra_selected = _as_int(row.get("infra_selected"))
     cve_hits = _as_int(row.get("cve_hits"))
     file_hits = _as_int(row.get("file_hits"))
     function_hits = _as_int(row.get("function_hits"))
@@ -72,6 +75,10 @@ def decide_gate(row: dict[str, Any], *, min_samples: int = 2, promote_samples: i
         decision = "demote" if selected >= min_samples else "insufficient_evidence"
         reasons.append("infrastructure/self-inspection skill selected during vulnerability-localization runs")
         suggestions.append("tighten retrieval so this skill is not selected unless the user asks about SkillClaw internals")
+    elif mismatched_selected >= min_samples and relevant_selected == 0:
+        decision = "demote"
+        reasons.append(f"{mismatched_selected} mismatched selection(s) and no task-aligned evidence")
+        suggestions.append("tighten retrieval or rename the skill so it is not selected for this task family")
     elif selected < min_samples:
         decision = "insufficient_evidence"
         reasons.append(f"only {selected} selected run(s); require at least {min_samples}")
@@ -114,6 +121,11 @@ def decide_gate(row: dict[str, Any], *, min_samples: int = 2, promote_samples: i
     if selected >= min_samples and root_cause_hits < selected:
         reasons.append("not every selected run explained root cause")
         suggestions.append("require root-cause explanation tied to source-level evidence")
+    if mismatched_selected:
+        reasons.append(f"{mismatched_selected} run(s) selected this skill without task alignment")
+        suggestions.append("reduce over-selection by adding narrower trigger conditions")
+    if infra_selected:
+        reasons.append(f"{infra_selected} run(s) selected this skill as infrastructure/context noise")
     if validation_passed:
         reasons.append(f"{validation_passed} validator-passed run(s)")
 
@@ -133,6 +145,9 @@ def decide_gate(row: dict[str, Any], *, min_samples: int = 2, promote_samples: i
         "root_cause_hits": root_cause_hits,
         "validation_passed": validation_passed,
         "validation_failed": validation_failed,
+        "relevant_selected": relevant_selected,
+        "mismatched_selected": mismatched_selected,
+        "infra_selected": infra_selected,
         "cases": row.get("cases") or "",
         "modes": row.get("modes") or "",
         "reasons": reasons,

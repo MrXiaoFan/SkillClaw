@@ -21,6 +21,7 @@ from experiment_scripts.build_skill_feedback_bundle import (
 )
 from experiment_scripts.print_case_prompt import FINAL_ANSWER_GUARD, get_case_prompt
 from experiment_scripts.print_case_runbook import render_runbook
+from experiment_scripts.refresh_curated_reports import refresh_reports
 from experiment_scripts.skill_bundle_runner import resolve_bundle_script, run_bundle_script
 from experiment_scripts.summarize_research_claims import build_claims, write_markdown as write_claim_markdown
 from experiment_scripts.summarize_results import collect_rows, write_csv, write_markdown
@@ -257,6 +258,28 @@ def test_run_dynamic_case_artifact_exec_expect_crash(tmp_path):
     assert result["checks"][0]["expect_crash"] is True
 
 
+def test_run_dynamic_case_command_validator(tmp_path):
+    code = "print('LOGIC_CONFIRM_OK libxml2-state-machine-window')"
+    case = {
+        "case_id": "demo-command",
+        "validators": [
+            {
+                "name": "logic-confirm",
+                "type": "command",
+                "command": f'"{sys.executable}" -c {json.dumps(code)}',
+                "timeout_seconds": 10,
+            }
+        ],
+    }
+
+    result = run_validators(case, tmp_path, skip_commands=False)
+
+    assert result["status"] == "passed"
+    check = result["checks"][0]
+    assert check["status"] == "passed"
+    assert "LOGIC_CONFIRM_OK" in check["stdout_tail"]
+
+
 def test_tcpdump_frag6_poc_generator_writes_truncated_fragment_header_pcap(tmp_path):
     script = (
         Path(__file__).resolve().parents[1]
@@ -273,6 +296,25 @@ def test_tcpdump_frag6_poc_generator_writes_truncated_fragment_header_pcap(tmp_p
     assert len(blob) >= 64
     assert blob[:4] == bytes.fromhex("d4c3b2a1")
     assert bytes.fromhex("86dd") in blob
+
+
+def test_tcpdump_isakmp_poc_generator_writes_udp500_replay_status_pcap(tmp_path):
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "experiment_cases"
+        / "pocs"
+        / "tcpdump-4.9.1-cve-2018-14469"
+        / "make_poc.py"
+    )
+    output = tmp_path / "isakmp.pcap"
+
+    subprocess.run([sys.executable, str(script), str(output)], check=True)
+
+    blob = output.read_bytes()
+    assert len(blob) >= 80
+    assert blob[:4] == bytes.fromhex("d4c3b2a1")
+    assert bytes.fromhex("0800") in blob
+    assert bytes.fromhex("01f401f4") in blob
 
 
 def test_build_result_record_selects_session_injection():
@@ -464,6 +506,46 @@ def test_summarize_skill_feedback_aggregates_selected_skills(tmp_path):
     assert row["artifact_execution_passed"] == 1
 
 
+def test_summarize_skill_feedback_does_not_credit_mismatched_skill(tmp_path):
+    records = [
+        (
+            tmp_path / "mixed.json",
+            {
+                "case_id": "case-mixed",
+                "mode": "skillclaw-inline",
+                "score": 10,
+                "max_score": 10,
+                "checks": {"file": {"hit": True}, "function": {"hit": True}},
+                "validation": {"status": "passed", "checks": []},
+                "skill_injection": {
+                    "selected_skill_names": [
+                        "source-parser-state-machine-oob",
+                        "ida-headless-cwe120-sink-analysis",
+                    ]
+                },
+                "skill_relevance": {
+                    "status": "mixed_task_relevance",
+                    "relevant_skills": ["source-parser-state-machine-oob"],
+                    "mismatched_skills": ["ida-headless-cwe120-sink-analysis"],
+                    "infra_skills": [],
+                },
+                "feedback": {
+                    "decision": "positive",
+                    "suggested_action": "keep_skill_but_prune_extraneous_selection",
+                },
+            },
+        ),
+    ]
+
+    rows = {row["skill"]: row for row in build_skill_feedback(records)}
+
+    assert rows["source-parser-state-machine-oob"]["positive"] == 1
+    assert rows["source-parser-state-machine-oob"]["relevant_selected"] == 1
+    assert rows["ida-headless-cwe120-sink-analysis"]["positive"] == 0
+    assert rows["ida-headless-cwe120-sink-analysis"]["neutral"] == 1
+    assert rows["ida-headless-cwe120-sink-analysis"]["mismatched_selected"] == 1
+
+
 def test_skill_gate_revises_high_score_without_cve_calibration():
     row = {
         "skill": "source-parser-state-machine-oob",
@@ -501,6 +583,32 @@ def test_skill_gate_demotes_infrastructure_skill():
 
     assert decision["gate_decision"] == "demote"
     assert "infrastructure" in decision["reasons"][0]
+
+
+def test_skill_gate_demotes_repeated_mismatched_skill():
+    row = {
+        "skill": "ida-headless-cwe120-sink-analysis",
+        "selected_count": "2",
+        "positive": "0",
+        "neutral": "2",
+        "negative": "0",
+        "mean_score": "1.0",
+        "validation_passed": "2",
+        "validation_failed": "0",
+        "relevant_selected": "0",
+        "mismatched_selected": "2",
+        "infra_selected": "0",
+        "cve_hits": "0",
+        "file_hits": "2",
+        "function_hits": "2",
+        "evidence_hits": "2",
+        "root_cause_hits": "2",
+    }
+
+    decision = decide_gate(row)
+
+    assert decision["gate_decision"] == "demote"
+    assert "mismatched" in decision["reasons"][0]
 
 
 def test_build_skill_feedback_bundle_tracks_dimension_flags(tmp_path):
@@ -1032,6 +1140,54 @@ def test_build_feedback_does_not_promote_infra_skills():
     assert feedback["suggested_action"] == "inspect_retrieval_before_promoting_skill"
 
 
+def test_build_feedback_marks_mixed_relevance_without_penalizing_relevant_skill():
+    relevance = assess_skill_relevance(
+        case={
+            "target": {"project": "demo-parser", "source_root": "/tmp/demo-parser"},
+            "ground_truth": {"root_cause": "parser state machine out of bounds read"},
+        },
+        selected_skills=["source-parser-state-machine-oob", "ida-headless-cwe120-sink-analysis"],
+    )
+
+    feedback = build_feedback(
+        score_result={"score": 8, "max_score": 10},
+        validation_result={"status": "passed"},
+        skill_injection={
+            "selected_skill_names": ["source-parser-state-machine-oob", "ida-headless-cwe120-sink-analysis"]
+        },
+        skill_relevance=relevance,
+    )
+
+    assert relevance["status"] == "mixed_task_relevance"
+    assert "ida-headless-cwe120-sink-analysis" in relevance["mismatched_skills"]
+    assert feedback["decision"] == "positive"
+    assert feedback["suggested_action"] == "keep_skill_but_prune_extraneous_selection"
+    assert "extraneous_skill_selection" in feedback["quality_flags"]
+
+
+def test_assess_skill_relevance_marks_firmware_skills_mismatched_for_source_parser_case():
+    relevance = assess_skill_relevance(
+        case={
+            "target": {"project": "tcpdump", "binary": "./tcpdump", "source_root": "/tmp/tcpdump"},
+            "ground_truth": {
+                "files": ["print-frag6.c"],
+                "functions": ["frag6_print"],
+                "root_cause": "parser lookahead over-read in IPv6 fragmentation handling",
+            },
+        },
+        selected_skills=[
+            "source-parser-state-machine-oob",
+            "vuln-hunting",
+            "verify-rootfs-full-enumeration",
+        ],
+    )
+
+    assert relevance["status"] == "mixed_task_relevance"
+    assert relevance["relevant_skills"] == ["source-parser-state-machine-oob"]
+    assert "vuln-hunting" in relevance["mismatched_skills"]
+    assert "verify-rootfs-full-enumeration" in relevance["mismatched_skills"]
+
+
 def test_build_feedback_marks_no_skill_as_baseline_positive():
     relevance = assess_skill_relevance(
         case={"target": {"project": "tcpdump"}},
@@ -1215,6 +1371,50 @@ def test_inline_retrieval_ignores_incidental_ssh_noise_in_vulnerability_task(tmp
 
     assert "source-parser-state-machine-oob" in names
     assert "ssh-password-recon-workflow" not in names
+
+
+def test_inline_retrieval_skips_firmware_workflows_for_source_parser_task(tmp_path):
+    skills_dir = tmp_path / "skills"
+    _write_test_skill(
+        skills_dir,
+        "source-parser-state-machine-oob",
+        "Find out-of-bounds reads in C parser state machines by tracing source-level bounds guards.",
+        "Inspect parser source, lookahead reads, fragment headers, ND_TCHECK, and guard dominance.",
+    )
+    _write_test_skill(
+        skills_dir,
+        "vuln-hunting",
+        "Use for firmware, binary, and web-exposed target hunting with IDA-assisted workflows. NOT for pure source-code SAST.",
+    )
+    _write_test_skill(
+        skills_dir,
+        "verify-rootfs-full-enumeration",
+        "Use during extracted firmware or rootfs static analysis before Phase 2 deep dive.",
+    )
+    _write_test_skill(
+        skills_dir,
+        "elf-cwe120-firmware-triage",
+        "Use when analyzing extracted Linux firmware or rootfs ELF binaries for CWE-120 buffer overflow.",
+    )
+    _write_test_skill(
+        skills_dir,
+        "ida-headless-cwe120-sink-analysis",
+        "Use IDA headless triage for ELF binaries and CWE-120 sinks.",
+    )
+
+    manager = SkillManager(str(skills_dir), retrieval_mode="template")
+    prompt = (
+        "Locate a source-level buffer over-read in the tcpdump IPv6 fragmentation parser. "
+        "Analyze C source code, cur/end guards, and ND_TCHECK coverage."
+    )
+
+    names = [skill["name"] for skill in manager._keyword_retrieve_for_inline(prompt, top_k=5)]
+
+    assert "source-parser-state-machine-oob" in names
+    assert "vuln-hunting" not in names
+    assert "verify-rootfs-full-enumeration" not in names
+    assert "elf-cwe120-firmware-triage" not in names
+    assert "ida-headless-cwe120-sink-analysis" not in names
 
 
 def test_run_eval_case_with_existing_agent_output(tmp_path):
@@ -1498,6 +1698,7 @@ def test_smoke_validate_framework_runs_repository_cases():
     statuses = {item["case_id"]: item["status"] for item in results}
     assert statuses["giflib-5.1.2-cve-2016-3977"] == "passed"
     assert statuses["libxml2-2.9.4-cve-2017-8872"] == "passed"
+    assert statuses["libarchive-3.8.0-cve-2025-60753"] == "passed"
     assert statuses["tcpdump-4.9.1-cve-2017-13031"] == "passed"
 
 
@@ -1546,6 +1747,102 @@ def test_summarize_results_writes_matrix(tmp_path):
     assert rows[0]["cve_hit"] == "N"
     assert "only_infra_skills" in md_path.read_text(encoding="utf-8")
     assert "inspect_retrieval_before_promoting_skill" in csv_path.read_text(encoding="utf-8")
+
+
+def test_refresh_curated_reports_rebuilds_outputs_in_order(tmp_path):
+    record_a = tmp_path / "case-a-final.json"
+    record_b = tmp_path / "case-b-final.json"
+    record_a.write_text(
+        json.dumps(
+            {
+                "case_id": "case-a",
+                "mode": "skillclaw-inline",
+                "model": "skillclaw-model",
+                "score": 10,
+                "max_score": 10,
+                "checks": {
+                    "cve": {"hit": True},
+                    "file": {"hit": True},
+                    "function": {"hit": True},
+                    "evidence": {"hit": True},
+                    "root_cause": {"hit": True},
+                },
+                "skill_injection": {"selected_skill_names": ["source-parser-state-machine-oob"]},
+                "skill_relevance": {
+                    "status": "has_task_relevant_skill",
+                    "relevant_skills": ["source-parser-state-machine-oob"],
+                    "mismatched_skills": [],
+                    "infra_skills": [],
+                },
+                "validation": {"status": "passed", "checks": []},
+                "feedback": {"decision": "positive", "suggested_action": "keep_or_promote_skill"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    record_b.write_text(
+        json.dumps(
+            {
+                "case_id": "case-b",
+                "mode": "skillclaw-inline",
+                "model": "skillclaw-model",
+                "score": 10,
+                "max_score": 10,
+                "checks": {
+                    "cve": {"hit": True},
+                    "file": {"hit": True},
+                    "function": {"hit": True},
+                    "evidence": {"hit": True},
+                    "root_cause": {"hit": True},
+                },
+                "skill_injection": {"selected_skill_names": ["vuln-hunting"]},
+                "skill_relevance": {
+                    "status": "mixed_task_relevance",
+                    "relevant_skills": [],
+                    "mismatched_skills": ["vuln-hunting"],
+                    "infra_skills": [],
+                },
+                "validation": {"status": "passed", "checks": []},
+                "feedback": {
+                    "decision": "neutral",
+                    "suggested_action": "keep_skill_but_prune_extraneous_selection",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest = tmp_path / "curated.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "name": "test-runset",
+                "min_samples": 1,
+                "promote_samples": 2,
+                "records": [record_a.name, record_b.name],
+                "outputs": {
+                    "matrix_md": "matrix.md",
+                    "matrix_csv": "matrix.csv",
+                    "feedback_md": "feedback.md",
+                    "feedback_csv": "feedback.csv",
+                    "gate_md": "gate.md",
+                    "gate_json": "gate.json",
+                    "bundle_md": "bundle.md",
+                    "bundle_json": "bundle.json",
+                    "runset_md": "runset.md",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = refresh_reports(manifest)
+    gate = json.loads((tmp_path / "gate.json").read_text(encoding="utf-8"))
+
+    assert Path(result["outputs"]["matrix_md"]).is_file()
+    assert Path(result["outputs"]["runset_md"]).is_file()
+    by_skill = {row["skill"]: row for row in gate}
+    assert by_skill["source-parser-state-machine-oob"]["gate_decision"] == "keep"
+    assert by_skill["vuln-hunting"]["gate_decision"] == "demote"
 
 
 def test_summarize_results_falls_back_for_legacy_skill_relevance(tmp_path):

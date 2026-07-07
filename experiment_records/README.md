@@ -95,6 +95,13 @@ skills are intentionally not stored here.
   SkillClaw injection audit rows back to final records. This is used when a
   remote Claude Code run cannot directly see the proxy's `conversations.jsonl`
   but the local SkillClaw server recorded selected skill metadata.
+- `curated_skillclaw_runset.json` is the canonical manifest for the current
+  five-case SkillClaw confirmation runset.
+- `experiment_scripts/refresh_curated_reports.py` refreshes
+  `experiment_matrix_latest.*`, `skill_feedback_latest.*`,
+  `skill_gate_report_latest.*`, `skill_feedback_bundle_latest.*`, and
+  `curated_runset_latest.md` in one fixed order so the latest outputs stay
+  consistent.
 
 ## Removed As Redundant
 

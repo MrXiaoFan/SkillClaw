@@ -1,211 +1,182 @@
 [
   {
-    "skill": "elf-cwe120-firmware-triage",
-    "gate_decision": "revise",
-    "selected_count": 4,
-    "positive": 2,
+    "skill": "source-parser-state-machine-oob",
+    "gate_decision": "promote",
+    "selected_count": 5,
+    "positive": 3,
     "neutral": 2,
     "negative": 0,
-    "mean_score": 0.725,
-    "cve_hits": 0,
-    "file_hits": 4,
-    "function_hits": 3,
-    "evidence_hits": 4,
-    "root_cause_hits": 4,
-    "validation_passed": 2,
+    "mean_score": 1.0,
+    "cve_hits": 5,
+    "file_hits": 5,
+    "function_hits": 5,
+    "evidence_hits": 5,
+    "root_cause_hits": 5,
+    "validation_passed": 5,
     "validation_failed": 0,
-    "cases": "libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031",
-    "modes": "skillclaw-inline, skillclaw-inline-guarded-clean-budget035, skillclaw-inline-guarded-clean-budget080, skillclaw-inline-rerun",
+    "relevant_selected": 3,
+    "mismatched_selected": 2,
+    "infra_selected": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977, libarchive-3.8.0-cve-2025-60753, libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031, tcpdump-4.9.1-cve-2018-14469",
+    "modes": "skillclaw-inline-guarded",
     "reasons": [
-      "2 positive run(s), mean_score=0.725",
-      "localization evidence exists but exact CVE calibration is absent",
-      "2 validator-passed run(s)"
+      "3 positive run(s), mean_score=1, file/function evidence hit",
+      "2 run(s) selected this skill without task alignment",
+      "5 validator-passed run(s)"
     ],
     "suggestions": [
-      "keep as localization guidance, but revise before promotion",
-      "add guidance to verify exact CVE identity against advisories or patch metadata"
-    ]
-  },
-  {
-    "skill": "source-parser-state-machine-oob",
-    "gate_decision": "revise",
-    "selected_count": 4,
-    "positive": 3,
-    "neutral": 1,
-    "negative": 0,
-    "mean_score": 0.8,
-    "cve_hits": 0,
-    "file_hits": 4,
-    "function_hits": 4,
-    "evidence_hits": 4,
-    "root_cause_hits": 4,
-    "validation_passed": 2,
-    "validation_failed": 0,
-    "cases": "libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031",
-    "modes": "skillclaw-inline, skillclaw-inline-guarded-clean-budget035, skillclaw-inline-guarded-clean-budget080",
-    "reasons": [
-      "3 positive run(s), mean_score=0.8, file/function evidence hit",
-      "localization evidence exists but exact CVE calibration is absent",
-      "2 validator-passed run(s)"
-    ],
-    "suggestions": [
-      "keep as localization guidance, but revise before promotion",
-      "add guidance to verify exact CVE identity against advisories or patch metadata"
+      "candidate for broader benchmark evaluation or default retrieval boost if no later evidence gap is found",
+      "reduce over-selection by adding narrower trigger conditions"
     ]
   },
   {
     "skill": "vuln-hunting",
-    "gate_decision": "revise",
-    "selected_count": 2,
-    "positive": 2,
-    "neutral": 0,
-    "negative": 0,
-    "mean_score": 0.8,
-    "cve_hits": 0,
-    "file_hits": 2,
-    "function_hits": 2,
-    "evidence_hits": 2,
-    "root_cause_hits": 2,
-    "validation_passed": 0,
-    "validation_failed": 0,
-    "cases": "libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031",
-    "modes": "skillclaw-inline-guarded-clean-budget035, skillclaw-inline-guarded-clean-budget080",
-    "reasons": [
-      "2 positive run(s), mean_score=0.8",
-      "localization evidence exists but exact CVE calibration is absent"
-    ],
-    "suggestions": [
-      "keep as localization guidance, but revise before promotion",
-      "add guidance to verify exact CVE identity against advisories or patch metadata"
-    ]
-  },
-  {
-    "skill": "skillclaw-skill-discovery",
     "gate_decision": "demote",
     "selected_count": 3,
-    "positive": 1,
-    "neutral": 2,
+    "positive": 0,
+    "neutral": 3,
     "negative": 0,
-    "mean_score": 0.7,
-    "cve_hits": 0,
+    "mean_score": 1.0,
+    "cve_hits": 3,
     "file_hits": 3,
-    "function_hits": 2,
+    "function_hits": 3,
     "evidence_hits": 3,
     "root_cause_hits": 3,
     "validation_passed": 3,
     "validation_failed": 0,
-    "cases": "libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031",
-    "modes": "skillclaw-inline, skillclaw-inline-rerun",
+    "relevant_selected": 0,
+    "mismatched_selected": 3,
+    "infra_selected": 0,
+    "cases": "libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031, tcpdump-4.9.1-cve-2018-14469",
+    "modes": "skillclaw-inline-guarded",
     "reasons": [
-      "infrastructure/self-inspection skill selected during vulnerability-localization runs",
-      "localization evidence exists but exact CVE calibration is absent",
+      "3 mismatched selection(s) and no task-aligned evidence",
+      "3 run(s) selected this skill without task alignment",
       "3 validator-passed run(s)"
     ],
     "suggestions": [
-      "tighten retrieval so this skill is not selected unless the user asks about SkillClaw internals",
-      "add guidance to verify exact CVE identity against advisories or patch metadata"
+      "tighten retrieval or rename the skill so it is not selected for this task family",
+      "reduce over-selection by adding narrower trigger conditions"
     ]
   },
   {
-    "skill": "skillclaw-proxy-introspection",
+    "skill": "ida-headless-cwe120-sink-analysis",
     "gate_decision": "demote",
     "selected_count": 2,
-    "positive": 1,
-    "neutral": 1,
+    "positive": 0,
+    "neutral": 2,
     "negative": 0,
-    "mean_score": 0.8,
-    "cve_hits": 0,
+    "mean_score": 1.0,
+    "cve_hits": 2,
     "file_hits": 2,
     "function_hits": 2,
     "evidence_hits": 2,
     "root_cause_hits": 2,
     "validation_passed": 2,
     "validation_failed": 0,
-    "cases": "libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031",
-    "modes": "skillclaw-inline",
+    "relevant_selected": 0,
+    "mismatched_selected": 2,
+    "infra_selected": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977, libarchive-3.8.0-cve-2025-60753",
+    "modes": "skillclaw-inline-guarded",
     "reasons": [
-      "infrastructure/self-inspection skill selected during vulnerability-localization runs",
-      "localization evidence exists but exact CVE calibration is absent",
+      "2 mismatched selection(s) and no task-aligned evidence",
+      "2 run(s) selected this skill without task alignment",
       "2 validator-passed run(s)"
     ],
     "suggestions": [
-      "tighten retrieval so this skill is not selected unless the user asks about SkillClaw internals",
-      "add guidance to verify exact CVE identity against advisories or patch metadata"
+      "tighten retrieval or rename the skill so it is not selected for this task family",
+      "reduce over-selection by adding narrower trigger conditions"
     ]
   },
   {
-    "skill": "elf-cwe120-plt-analysis",
+    "skill": "idalib-headless-batch-diagnosis",
+    "gate_decision": "demote",
+    "selected_count": 2,
+    "positive": 0,
+    "neutral": 2,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 2,
+    "file_hits": 2,
+    "function_hits": 2,
+    "evidence_hits": 2,
+    "root_cause_hits": 2,
+    "validation_passed": 2,
+    "validation_failed": 0,
+    "relevant_selected": 0,
+    "mismatched_selected": 2,
+    "infra_selected": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977, libarchive-3.8.0-cve-2025-60753",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "2 mismatched selection(s) and no task-aligned evidence",
+      "2 run(s) selected this skill without task alignment",
+      "2 validator-passed run(s)"
+    ],
+    "suggestions": [
+      "tighten retrieval or rename the skill so it is not selected for this task family",
+      "reduce over-selection by adding narrower trigger conditions"
+    ]
+  },
+  {
+    "skill": "verify-rootfs-full-enumeration",
+    "gate_decision": "demote",
+    "selected_count": 2,
+    "positive": 0,
+    "neutral": 2,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 2,
+    "file_hits": 2,
+    "function_hits": 2,
+    "evidence_hits": 2,
+    "root_cause_hits": 2,
+    "validation_passed": 2,
+    "validation_failed": 0,
+    "relevant_selected": 0,
+    "mismatched_selected": 2,
+    "infra_selected": 0,
+    "cases": "tcpdump-4.9.1-cve-2017-13031, tcpdump-4.9.1-cve-2018-14469",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "2 mismatched selection(s) and no task-aligned evidence",
+      "2 run(s) selected this skill without task alignment",
+      "2 validator-passed run(s)"
+    ],
+    "suggestions": [
+      "tighten retrieval or rename the skill so it is not selected for this task family",
+      "reduce over-selection by adding narrower trigger conditions"
+    ]
+  },
+  {
+    "skill": "elf-cwe120-firmware-triage",
     "gate_decision": "insufficient_evidence",
     "selected_count": 1,
     "positive": 0,
     "neutral": 1,
     "negative": 0,
-    "mean_score": 0.8,
-    "cve_hits": 0,
+    "mean_score": 1.0,
+    "cve_hits": 1,
     "file_hits": 1,
     "function_hits": 1,
     "evidence_hits": 1,
     "root_cause_hits": 1,
     "validation_passed": 1,
     "validation_failed": 0,
+    "relevant_selected": 0,
+    "mismatched_selected": 1,
+    "infra_selected": 0,
     "cases": "libxml2-2.9.4-cve-2017-8872",
-    "modes": "skillclaw-inline",
+    "modes": "skillclaw-inline-guarded",
     "reasons": [
       "only 1 selected run(s); require at least 2",
+      "1 run(s) selected this skill without task alignment",
       "1 validator-passed run(s)"
     ],
     "suggestions": [
-      "collect more benchmark runs before changing publication status"
-    ]
-  },
-  {
-    "skill": "skillclaw-claude-env",
-    "gate_decision": "insufficient_evidence",
-    "selected_count": 1,
-    "positive": 0,
-    "neutral": 1,
-    "negative": 0,
-    "mean_score": 0.8,
-    "cve_hits": 0,
-    "file_hits": 1,
-    "function_hits": 1,
-    "evidence_hits": 1,
-    "root_cause_hits": 1,
-    "validation_passed": 1,
-    "validation_failed": 0,
-    "cases": "tcpdump-4.9.1-cve-2017-13031",
-    "modes": "skillclaw-inline",
-    "reasons": [
-      "infrastructure/self-inspection skill selected during vulnerability-localization runs",
-      "1 validator-passed run(s)"
-    ],
-    "suggestions": [
-      "tighten retrieval so this skill is not selected unless the user asks about SkillClaw internals"
-    ]
-  },
-  {
-    "skill": "ssh-password-recon-workflow",
-    "gate_decision": "insufficient_evidence",
-    "selected_count": 1,
-    "positive": 0,
-    "neutral": 1,
-    "negative": 0,
-    "mean_score": 0.5,
-    "cve_hits": 0,
-    "file_hits": 1,
-    "function_hits": 0,
-    "evidence_hits": 1,
-    "root_cause_hits": 1,
-    "validation_passed": 1,
-    "validation_failed": 0,
-    "cases": "tcpdump-4.9.1-cve-2017-13031",
-    "modes": "skillclaw-inline-rerun",
-    "reasons": [
-      "only 1 selected run(s); require at least 2",
-      "1 validator-passed run(s)"
-    ],
-    "suggestions": [
-      "collect more benchmark runs before changing publication status"
+      "collect more benchmark runs before changing publication status",
+      "reduce over-selection by adding narrower trigger conditions"
     ]
   }
 ]

@@ -168,6 +168,18 @@ _SSH_INTENT_TERMS = {
     "recon",
     "reconnaissance",
 }
+_FIRMWARE_ROOTFS_TASK_TERMS = {
+    "firmware",
+    "rootfs",
+    "extracted",
+    "squashfs",
+    "busybox",
+    "router",
+    "embedded",
+    "iot",
+    "cgi",
+    "webvpn",
+}
 _SKILLCLAW_META_MARKERS = (
     "available skills",
     "list skills",
@@ -206,6 +218,10 @@ def _looks_like_source_parser_task(query_terms: set[str]) -> bool:
         query_terms & {"source", "code", "oob", "overread", "read", "bounds", "guard", "nd_tcheck"}
     )
     return has_parser_context and has_boundary_context
+
+
+def _looks_like_firmware_rootfs_task(query_terms: set[str]) -> bool:
+    return bool(query_terms & _FIRMWARE_ROOTFS_TASK_TERMS)
 
 # ------------------------------------------------------------------ #
 # Frontmatter parser                                                   #
@@ -872,6 +888,7 @@ class SkillManager:
         is_vulnerability_task = bool(query_terms & _VULNERABILITY_TASK_TERMS)
         is_skillclaw_meta_task = _looks_like_skillclaw_meta_task(task_text)
         is_source_parser_task = _looks_like_source_parser_task(query_terms)
+        is_firmware_rootfs_task = _looks_like_firmware_rootfs_task(query_terms)
         has_ida_intent = bool(query_terms & _IDA_INTENT_TERMS)
         ssh_intent_hits = query_terms & _SSH_INTENT_TERMS
 
@@ -888,6 +905,13 @@ class SkillManager:
             if name.startswith("skillclaw-") and (is_vulnerability_task or not is_skillclaw_meta_task):
                 continue
             if is_source_parser_task and name.startswith(("ida-", "idalib-")) and not has_ida_intent:
+                continue
+            if is_source_parser_task and not is_firmware_rootfs_task and name in {
+                "vuln-hunting",
+                "vuln-hunting-claw",
+                "verify-rootfs-full-enumeration",
+                "elf-cwe120-firmware-triage",
+            }:
                 continue
             if name == "ssh-password-recon-workflow" and is_vulnerability_task and len(ssh_intent_hits) < 2:
                 continue

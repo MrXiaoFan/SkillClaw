@@ -33,6 +33,18 @@ def _load_case(path: Path) -> dict[str, Any]:
 def _write_libxml2_fixture(root: Path) -> None:
     (root / ".libs").mkdir(parents=True, exist_ok=True)
     (root / ".libs" / "xmllint").write_text("synthetic xmllint placeholder\n", encoding="utf-8")
+    (root / ".libs" / "xmllint_asan").write_text("synthetic xmllint asan placeholder\n", encoding="utf-8")
+    (root / "artifacts").mkdir(parents=True, exist_ok=True)
+    (root / "artifacts" / "libxml2-cve-2017-8872-input.html").write_text(
+        "<!DOCTYPE html><!\n",
+        encoding="utf-8",
+    )
+    (root / "artifacts" / "run_libxml2_logic_confirm.sh").write_text(
+        "#!/bin/sh\n"
+        "echo 'LOGIC_CONFIRM_OK libxml2-state-machine-window'\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
     (root / "HTMLparser.c").write_text(
         """
 typedef struct { const unsigned char *cur; } input_t;
@@ -77,10 +89,75 @@ int frag6_print(const struct ip6_frag *dp) {
     )
 
 
+def _write_tcpdump_isakmp_fixture(root: Path) -> None:
+    (root / "tcpdump").write_text("synthetic tcpdump placeholder\n", encoding="utf-8")
+    (root / "print-isakmp.c").write_text(
+        """
+#define IPSECDOI_NTYPE_REPLAY_STATUS 24577
+
+int ikev1_n_print(const unsigned char *cp, unsigned int spi_size, const unsigned char *ep) {
+    if (cp < ep) {
+        return (int)spi_size + (int)EXTRACT_32BITS(cp);
+    }
+    return 0;
+}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (root / "artifacts").mkdir(parents=True, exist_ok=True)
+    pcap = root / "artifacts" / "poc-cve-2018-14469.pcap"
+    pcap.write_bytes(b"\xd4\xc3\xb2\xa1" + b"\x00" * 96)
+    (root / "artifacts" / "run_tcpdump_isakmp_poc.sh").write_text(
+        "#!/bin/sh\n"
+        "echo 'isakmp 1.0: (n: doi=ipsec proto=isakmp type=REPLAY-STATUS spi=04 orig=(replay detection enabled)) (len mismatch: isakmp 41/ip 45)'\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+
+
+def _write_libarchive_fixture(root: Path) -> None:
+    (root / "tar").mkdir(parents=True, exist_ok=True)
+    (root / "artifacts").mkdir(parents=True, exist_ok=True)
+    (root / "bsdtar").write_text("synthetic bsdtar placeholder\n", encoding="utf-8")
+    (root / "tar" / "subst.c").write_text(
+        """
+int apply_substitution(void) {
+    /* rule->global */
+    int regexec_status = 0;
+    int rm_eo = 0;
+    if (/* rule->global */ 1 && !regexec_status) {
+        /* matches[0].rm_eo */
+        rm_eo = 0;
+        /* name += matches[0].rm_eo */
+    }
+    /* regexec */
+    return rm_eo;
+}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (root / "artifacts" / "libarchive-cve-2025-60753-input.txt").write_text("f\n", encoding="utf-8")
+    (root / "artifacts" / "libarchive-cve-2025-60753-rule.txt").write_text(",,A,g\n", encoding="utf-8")
+    (root / "artifacts" / "run_libarchive_poc.sh").write_text(
+        "#!/bin/sh\n"
+        "echo 'TIMEOUT_CONFIRM_OK libarchive-empty-global-substitution'\n"
+        "echo 'expected_rc=124'\n"
+        "echo 'out_tar_size=0'\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+
+
 def _prepare_fixture(case: dict[str, Any], root: Path) -> None:
     case_id = str(case.get("case_id", ""))
     if "libxml2" in case_id:
         _write_libxml2_fixture(root)
+    elif "tcpdump-4.9.1-cve-2018-14469" in case_id:
+        _write_tcpdump_isakmp_fixture(root)
+    elif "libarchive" in case_id:
+        _write_libarchive_fixture(root)
     elif "tcpdump" in case_id:
         _write_tcpdump_fixture(root)
     elif "giflib" in case_id:

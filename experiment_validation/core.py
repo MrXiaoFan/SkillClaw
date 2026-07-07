@@ -110,6 +110,64 @@ def _tokens(text: str) -> set[str]:
     }
 
 
+def _case_feature_flags(case: dict[str, Any]) -> dict[str, bool]:
+    case = case or {}
+    target = case.get("target", {}) if isinstance(case.get("target"), dict) else {}
+    truth = case.get("ground_truth", {}) if isinstance(case.get("ground_truth"), dict) else {}
+    text_parts: list[str] = []
+    text_parts.extend(str(target.get(key, "")) for key in ("project", "version", "binary", "build", "source_root"))
+    text_parts.extend(str(truth.get(key, "")) for key in ("vulnerability_type", "root_cause"))
+    for key in ("files", "functions", "required_evidence", "cves"):
+        value = truth.get(key)
+        if isinstance(value, list):
+            text_parts.extend(str(item) for item in value)
+        elif value:
+            text_parts.append(str(value))
+    tokens = set().union(*(_tokens(part) for part in text_parts)) if text_parts else set()
+    files = [str(item).lower() for item in truth.get("files") or [] if str(item).strip()]
+    functions = [str(item).lower() for item in truth.get("functions") or [] if str(item).strip()]
+
+    parser_markers = {
+        "parser", "parse", "parsing", "xml", "html", "fragment", "header",
+        "lookahead", "chunked", "protocol", "state", "machine", "oob",
+    }
+    firmware_markers = {
+        "firmware", "rootfs", "squashfs", "busybox", "router", "embedded",
+        "cgi", "webvpn", "extracted", "iot",
+    }
+    binary_markers = {
+        "elf", "binary", "bsdtar", "xmllint", "tcpdump",
+    }
+    cwe120_markers = {
+        "cwe120", "overflow", "buffer", "strcpy", "strcat", "sprintf", "gets",
+    }
+
+    has_source_tree = bool(target.get("source_root")) or any(name.endswith((".c", ".cc", ".cpp", ".h")) for name in files)
+    has_parser_path = any("parser" in item or "html" in item or "xml" in item or "print-" in item for item in files + functions)
+    return {
+        "source_tree": has_source_tree,
+        "parser_case": bool(tokens & parser_markers) or has_parser_path,
+        "firmware_case": bool(tokens & firmware_markers),
+        "binary_case": bool(tokens & binary_markers) or bool(target.get("binary")),
+        "cwe120_case": bool(tokens & cwe120_markers),
+    }
+
+
+def _skill_profile_relevant(skill: str, flags: dict[str, bool]) -> bool | None:
+    name = str(skill or "").lower()
+    if name == "source-parser-state-machine-oob":
+        return flags["parser_case"] and flags["source_tree"]
+    if name in {"vuln-hunting", "vuln-hunting-claw"}:
+        return flags["firmware_case"] or (flags["binary_case"] and not flags["source_tree"] and not flags["parser_case"])
+    if name == "verify-rootfs-full-enumeration":
+        return flags["firmware_case"]
+    if name == "elf-cwe120-firmware-triage":
+        return flags["firmware_case"] and flags["binary_case"] and flags["cwe120_case"]
+    if name.startswith(("ida-", "idalib-")):
+        return flags["binary_case"] and not flags["source_tree"]
+    return None
+
+
 def assess_skill_relevance(
     *,
     case: dict[str, Any] | None = None,
@@ -145,18 +203,34 @@ def assess_skill_relevance(
         elif value:
             text_parts.append(str(value))
     task_terms = set().union(*(_tokens(part) for part in text_parts)) if text_parts else set()
+    flags = _case_feature_flags(case)
 
     infra_skills = [skill for skill in skills if skill.startswith("skillclaw-")]
     relevant: list[str] = []
     matched_terms: dict[str, list[str]] = {}
     for skill in skills:
+        profile_match = _skill_profile_relevant(skill, flags)
+        if profile_match is True:
+            relevant.append(skill)
+            matched_terms[skill] = ["profile_match"]
+            continue
+        if profile_match is False:
+            continue
         skill_terms = _tokens(skill)
         matches = sorted(skill_terms & task_terms)
         if matches:
             relevant.append(skill)
             matched_terms[skill] = matches
 
-    if relevant:
+    mismatched_skills = [
+        skill
+        for skill in skills
+        if skill not in relevant and skill not in infra_skills
+    ]
+
+    if relevant and mismatched_skills:
+        status = "mixed_task_relevance"
+    elif relevant:
         status = "has_task_relevant_skill"
     elif len(infra_skills) == len(skills):
         status = "only_infra_skills"
@@ -168,8 +242,22 @@ def assess_skill_relevance(
         "selected_skills": skills,
         "relevant_skills": relevant,
         "infra_skills": infra_skills,
+        "mismatched_skills": mismatched_skills,
         "matched_terms": matched_terms,
     }
+
+
+def classify_skill_role(skill_relevance: dict[str, Any] | None, skill: str) -> str:
+    if not isinstance(skill_relevance, dict):
+        return "unknown"
+    name = str(skill)
+    if name in [str(item) for item in skill_relevance.get("infra_skills") or []]:
+        return "infrastructure"
+    if name in [str(item) for item in skill_relevance.get("relevant_skills") or []]:
+        return "relevant"
+    if name in [str(item) for item in skill_relevance.get("mismatched_skills") or []]:
+        return "mismatched"
+    return "unknown"
 
 
 def build_feedback(
@@ -217,6 +305,9 @@ def build_feedback(
     if has_cve_check and not cve_hit and localization_hit:
         quality_flags.append("cve_calibration_miss")
         reasons.append("quality_flag=cve_calibration_miss")
+    if relevance_status == "mixed_task_relevance":
+        quality_flags.append("extraneous_skill_selection")
+        reasons.append("quality_flag=extraneous_skill_selection")
 
     if relevance_status == "no_selected_skills":
         if "cve_calibration_miss" in quality_flags:
@@ -234,6 +325,9 @@ def build_feedback(
     elif "cve_calibration_miss" in quality_flags:
         decision = "neutral"
         action = "revise_cve_calibration_before_promotion"
+    elif relevance_status == "mixed_task_relevance" and normalized is not None and normalized >= 0.8 and validation_status in {"passed", "partial", None}:
+        decision = "positive"
+        action = "keep_skill_but_prune_extraneous_selection"
     elif normalized is not None and normalized >= 0.8 and validation_status in {"passed", "partial", None}:
         decision = "positive"
         action = "keep_or_promote_skill"

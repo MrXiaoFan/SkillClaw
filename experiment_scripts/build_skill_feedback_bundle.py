@@ -15,6 +15,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from experiment_validation.core import classify_skill_role
+except ImportError:  # pragma: no cover - direct script execution.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from experiment_validation.core import classify_skill_role
+
 
 def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
@@ -169,6 +175,9 @@ def _new_bundle(skill: str, gate: dict[str, Any] | None) -> dict[str, Any]:
         "gate_suggestions": list(gate.get("suggestions") or []),
         "summary": {
             "selected_runs": 0,
+            "relevant_selected": 0,
+            "mismatched_selected": 0,
+            "infra_selected": 0,
             "positive": 0,
             "neutral": 0,
             "negative": 0,
@@ -291,7 +300,17 @@ def build_feedback_bundles(
             summary = bundle["summary"]
             dimensions = bundle["dimensions"]
             summary["selected_runs"] += 1
-            summary[decision] += 1
+            role = classify_skill_role(record.get("skill_relevance"), skill)
+            skill_decision = decision
+            if role == "relevant":
+                summary["relevant_selected"] += 1
+            elif role == "mismatched":
+                summary["mismatched_selected"] += 1
+                skill_decision = "neutral"
+            elif role == "infrastructure":
+                summary["infra_selected"] += 1
+                skill_decision = "neutral"
+            summary[skill_decision] += 1
             if isinstance(normalized, (int, float)):
                 bundle["_scores"].append(float(normalized))
             if evidence["hits"]["file"] or evidence["hits"]["function"]:
@@ -360,6 +379,9 @@ def write_markdown(bundles: list[dict[str, Any]], out_path: Path) -> None:
         "skill",
         "gate",
         "runs",
+        "relevant",
+        "mismatched",
+        "infra",
         "mean_score",
         "localization",
         "cve_hit",
@@ -385,6 +407,9 @@ def write_markdown(bundles: list[dict[str, Any]], out_path: Path) -> None:
             "skill": bundle["skill"],
             "gate": bundle["gate_decision"],
             "runs": summary["selected_runs"],
+            "relevant": summary["relevant_selected"],
+            "mismatched": summary["mismatched_selected"],
+            "infra": summary["infra_selected"],
             "mean_score": summary["mean_score"],
             "localization": dimensions["localization_success"],
             "cve_hit": dimensions["cve_success"],
