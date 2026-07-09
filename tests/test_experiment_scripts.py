@@ -1780,6 +1780,39 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         assert "TARGET_EXECUTION_RC=" in helper_text
         assert "behavior" in wrapper_text
         assert "EXIV2_JP2_ICC_PATH_OK" in wrapper_text
+        assert "EXIV2_ICC_SIZE" in wrapper_text
+
+
+def test_exiv2_make_poc_tunable_icc_size(tmp_path):
+    script = (
+        Path("experiment_cases")
+        / "pocs"
+        / "exiv2-0.26-cve-2017-17725"
+        / "make_poc.py"
+    ).resolve()
+    out_default = tmp_path / "default.jp2"
+    out_large = tmp_path / "large.jp2"
+
+    subprocess.run(
+        [sys.executable, str(script), str(out_default)],
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    subprocess.run(
+        [sys.executable, str(script), str(out_large), "--icc-size", "12"],
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    default_bytes = out_default.read_bytes()
+    large_bytes = out_large.read_bytes()
+    assert b"colr" in default_bytes
+    assert b"colr" in large_bytes
+    assert len(large_bytes) > len(default_bytes)
 
 
 def test_run_case_infers_session_id_and_attaches_injection(tmp_path):
