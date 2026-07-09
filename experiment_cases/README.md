@@ -242,7 +242,10 @@ treated as **case adapters**, not as the core method contribution.
 - A case-local `prepare_artifacts.sh`, `make_poc.py`, or wrapper script only
   adapts one benchmark target into that shared pipeline.
 
-As of the Exiv2 scaffold, wrapper marker emission is starting to move into
-shared helpers under `experiment_cases/pocs/common/` so future cases reuse
-common preparation and wrapper conventions instead of inventing a fresh shell
-pattern every time.
+As of the Exiv2 scaffold, wrapper marker emission has started moving into
+shared helpers under `experiment_cases/pocs/common/`.
+
+That shared layer is already reused by multiple existing cases for
+artifact-preparation markers, so the shell side is gradually converging toward
+"generic helper + thin case adapter" instead of a fresh one-off shell pattern
+for each vulnerability.
