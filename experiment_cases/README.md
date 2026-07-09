@@ -249,3 +249,7 @@ That shared layer is already reused by multiple existing cases for
 artifact-preparation markers, so the shell side is gradually converging toward
 "generic helper + thin case adapter" instead of a fresh one-off shell pattern
 for each vulnerability.
+
+For the concrete adapter-side contract, see:
+
+- `experiment_cases/pocs/README.md`
