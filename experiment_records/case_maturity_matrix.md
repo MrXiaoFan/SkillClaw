@@ -94,7 +94,7 @@
 
 ### 3.6 exiv2-0.26 / CVE-2017-17725
 
-- 已启用 validator：9
+- 已启用 validator：10
 - 禁用 validator：3
   - `generated-poc-input-executes`
   - `generated-wrapper-behavior`
