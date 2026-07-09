@@ -1702,6 +1702,10 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         assert poc_path.is_file()
         assert poc_path.stat().st_size >= 32
         assert legacy_alias_path.is_file()
+        poc_bytes = poc_path.read_bytes()
+        assert b"jP  " in poc_bytes
+        assert b"jp2h" in poc_bytes
+        assert b"colr" in poc_bytes
         assert wrapper_path.is_file()
 
         proc = subprocess.run(
@@ -1756,6 +1760,10 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         assert poc_path.is_file()
         assert poc_path.stat().st_size >= 32
         assert not legacy_alias_path.exists()
+        poc_bytes = poc_path.read_bytes()
+        assert b"jP  " in poc_bytes
+        assert b"jp2h" in poc_bytes
+        assert b"colr" in poc_bytes
         wrapper_text = prepare_script.read_text(encoding="utf-8")
         helper_text = (
             Path("experiment_cases")
