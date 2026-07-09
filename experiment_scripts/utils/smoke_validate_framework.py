@@ -168,11 +168,28 @@ static unsigned long getULong(const unsigned char* data, long offset, long bound
         + "\n",
         encoding="utf-8",
     )
+    (root / "src" / "jp2image.cpp").write_text(
+        """
+struct DataBuf {
+    explicit DataBuf(int size) : size_(size) {}
+    int size_;
+};
+
+static void readMetadata(void) {
+    DataBuf rawData(5);
+    (void)rawData.size_;
+}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
     (root / "artifacts" / "poc-cve-2017-17725.tiff").write_bytes(
         b"II" + b"\x2a\x00" + b"\x08\x00\x00\x00" + b"\x00\x00" + b"\x00\x00\x00\x00"
     )
     (root / "artifacts" / "run_exiv2_poc.sh").write_text(
         "#!/bin/sh\n"
+        "echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.tiff' 1>&2\n"
+        "echo 'Jp2Image::readMetadata DataBuf(5)' 1>&2\n"
         "echo 'AddressSanitizer: heap-buffer-overflow in getULong (types.cpp)' 1>&2\n"
         "exit 134\n",
         encoding="utf-8",
