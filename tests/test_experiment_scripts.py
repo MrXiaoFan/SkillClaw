@@ -1728,6 +1728,20 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         assert "RUN_EXIV2_POC" in combined_probe
         assert "WRAPPER_PROBE_OK" in combined_probe
         assert "TARGET_EXECUTION_RC=" in combined_probe
+
+        behavior = subprocess.run(
+            'bash "artifacts/run_exiv2_poc.sh"',
+            cwd=root,
+            shell=True,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        combined_behavior = f"{behavior.stdout}\n{behavior.stderr}"
+        assert "RUN_EXIV2_POC" in combined_behavior
+        assert "TARGET_EXECUTION_RC=" in combined_behavior
+        assert behavior.returncode != 0
     else:
         subprocess.run(
             [sys.executable, str(make_poc_script), str(poc_path)],
@@ -1751,6 +1765,7 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         assert "--probe-only" in wrapper_text
         assert "WRAPPER_PROBE_OK" in wrapper_text
         assert "TARGET_EXECUTION_RC=" in helper_text
+        assert "behavior" in wrapper_text
 
 
 def test_run_case_infers_session_id_and_attaches_injection(tmp_path):
@@ -1867,6 +1882,7 @@ def test_smoke_validate_framework_runs_repository_cases():
     results = smoke_cases(Path("experiment_cases"))
 
     statuses = {item["case_id"]: item["status"] for item in results}
+    assert statuses["exiv2-0.26-cve-2017-17725"] == "passed"
     assert statuses["giflib-5.1.2-cve-2016-3977"] == "passed"
     assert statuses["libxml2-2.9.4-cve-2017-8872"] == "passed"
     assert statuses["libarchive-3.8.0-cve-2025-60753"] == "passed"

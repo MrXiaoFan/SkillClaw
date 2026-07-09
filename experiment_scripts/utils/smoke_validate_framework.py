@@ -157,6 +157,8 @@ def _write_exiv2_fixture(root: Path) -> None:
     (root / "bin" / "exiv2").write_text("synthetic exiv2 placeholder\n", encoding="utf-8")
     (root / "src" / "types.cpp").write_text(
         """
+enum ByteOrder { littleEndian, bigEndian, invalidByteOrder };
+
 static unsigned long getULong(const unsigned char* data, long offset, long bounds) {
     /* TIFF */
     if (offset >= bounds) {
@@ -184,7 +186,7 @@ static void readMetadata(void) {
         encoding="utf-8",
     )
     (root / "artifacts" / "poc-cve-2017-17725.tiff").write_bytes(
-        b"II" + b"\x2a\x00" + b"\x08\x00\x00\x00" + b"\x00\x00" + b"\x00\x00\x00\x00"
+        b"II" + b"\x2a\x00" + b"\x08\x00\x00\x00" + b"\x00\x00" + (b"\x00" * 32)
     )
     (root / "artifacts" / "run_exiv2_poc.sh").write_text(
         "#!/bin/sh\n"
@@ -200,9 +202,10 @@ static void readMetadata(void) {
         "  echo 'TARGET_EXECUTION_RC=1' 1>&2\n"
         "  exit 0\n"
         "fi\n"
-        "echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.tiff' 1>&2\n"
+        "echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.tiff behavior=1' 1>&2\n"
         "echo 'Jp2Image::readMetadata DataBuf(5)' 1>&2\n"
         "echo 'AddressSanitizer: heap-buffer-overflow in getULong (types.cpp)' 1>&2\n"
+        "echo 'TARGET_EXECUTION_RC=134' 1>&2\n"
         "exit 134\n",
         encoding="utf-8",
     )
