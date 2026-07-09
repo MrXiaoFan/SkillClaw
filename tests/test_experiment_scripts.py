@@ -22,6 +22,7 @@ from experiment_scripts.build_skill_feedback_bundle import (
 from experiment_scripts.print_case_prompt import FINAL_ANSWER_GUARD, get_case_prompt
 from experiment_scripts.print_case_runbook import render_runbook
 from experiment_scripts.refresh_curated_reports import refresh_reports
+from experiment_scripts.run_case_batch import run_batch
 from experiment_scripts.skill_bundle_runner import resolve_bundle_script, run_bundle_script
 from experiment_scripts.summarize_research_claims import build_claims, write_markdown as write_claim_markdown
 from experiment_scripts.summarize_results import collect_rows, write_csv, write_markdown
@@ -1580,6 +1581,88 @@ def test_run_eval_case_can_preflight_before_existing_output(tmp_path):
     assert final["preflight"]["status"] == "passed"
     assert final["preflight"]["claude"]["provider"] == "deepseek"
     assert (tmp_path / "results" / "demo-preflight-preflight.json").is_file()
+
+
+def test_run_case_batch_runs_multiple_manifest_entries(tmp_path):
+    root = tmp_path / "target"
+    root.mkdir()
+    (root / "HTMLparser.c").write_text(
+        "static void htmlParseTryOrFinish(void) { if (avail < 2) in->cur[2]; }\n",
+        encoding="utf-8",
+    )
+    case_path = tmp_path / "case.json"
+    case_path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo-case",
+                "target": {"source_root": str(root)},
+                "ground_truth": {
+                    "cves": ["CVE-0000-0001"],
+                    "files": ["HTMLparser.c"],
+                    "functions": ["htmlParseTryOrFinish"],
+                    "root_cause": "weak avail guard before in->cur[2]",
+                    "required_evidence": ["avail", "in->cur[2]"],
+                },
+                "validators": [
+                    {
+                        "name": "source",
+                        "type": "source_contains",
+                        "file": "HTMLparser.c",
+                        "patterns": ["htmlParseTryOrFinish", "avail", "in->cur[2]"],
+                    }
+                ],
+                "scoring": {
+                    "max_score": 10,
+                    "weights": {"cve": 2, "file": 2, "function": 3, "root_cause": 2, "evidence": 1},
+                },
+                "prompt": {
+                    "recommended_direct": "analyze target",
+                    "recommended_skillclaw": "analyze target with skills",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    answer = tmp_path / "answer.txt"
+    answer.write_text(
+        json.dumps(
+            {
+                "predicted_cves": ["CVE-0000-0001"],
+                "predicted_files": ["HTMLparser.c"],
+                "predicted_functions": ["htmlParseTryOrFinish"],
+                "root_cause": "weak avail guard before in->cur[2]",
+                "evidence": ["avail", "in->cur[2]"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest = tmp_path / "batch.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "defaults": {
+                    "output_dir": "batch-results",
+                    "agent_output": "answer.txt",
+                    "skip_commands": False,
+                    "mode": "direct-deepseek",
+                },
+                "runs": [
+                    {"case": "case.json", "run_id": "demo-a"},
+                    {"case": "case.json", "run_id": "demo-b", "mode": "skillclaw-inline"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = run_batch(manifest)
+
+    assert summary["failure_count"] == 0
+    assert summary["run_count"] == 2
+    assert summary["rows"][0]["status"] == "ok"
+    assert summary["rows"][1]["mode"] == "skillclaw-inline"
+    assert (tmp_path / "batch-results" / "demo-a-final.json").is_file()
+    assert (tmp_path / "batch-results" / "demo-b-final.json").is_file()
 
 
 def test_run_case_infers_session_id_and_attaches_injection(tmp_path):

@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from experiment_scripts.feedback.summarize_research_claims import *  # noqa: F401,F403
+from experiment_scripts.execution.run_case_batch import *  # noqa: F401,F403
 
 
 if __name__ == "__main__":

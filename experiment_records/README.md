@@ -74,27 +74,38 @@ skills are intentionally not stored here.
 
 ## Main Runner
 
-- `experiment_scripts/run_eval_case.py` is the current unified entry point for
-  a single case. It can either call Claude Code or reuse an existing agent
-  output, then writes prompt/raw/stderr/meta/score/validation/final artifacts.
-  Use `--preflight` before remote VM runs to verify the target tree, provider,
-  and SkillClaw endpoint before spending a long Claude Code session.
-- `experiment_scripts/summarize_research_claims.py` derives conservative
-  paper-oriented observations from final JSON records, such as low-budget
-  steering gains, high-budget counterexamples, and CVE-calibration failures.
-- `experiment_scripts/summarize_skill_feedback.py` aggregates final records
-  by selected skill. It is the current bridge from case-level validation to
-  skill-level feedback evidence.
-- `experiment_scripts/build_skill_gate_report.py` converts skill-level
-  feedback into conservative gate decisions and revision suggestions. It does
-  not automatically publish, rewrite, or delete any skill.
-- `experiment_scripts/build_skill_feedback_bundle.py` converts final records
-  and gate decisions into structured feedback bundles intended as the next
-  input boundary for skill evolution.
-- `experiment_scripts/attach_skill_injection.py` attaches server-side
-  SkillClaw injection audit rows back to final records. This is used when a
+- `experiment_scripts/run_eval_case.py` is the compatibility entry point for a
+  single case. The current implementation lives in
+  `experiment_scripts/execution/run_eval_case.py`. It can either call Claude
+  Code or reuse an existing agent output, then writes
+  prompt/raw/stderr/meta/score/validation/final artifacts. Use `--preflight`
+  before remote VM runs to verify the target tree, provider, and SkillClaw
+  endpoint before spending a long Claude Code session.
+- `experiment_scripts/run_case_batch.py` is the compatibility entry point for
+  batched runs. The current implementation lives in
+  `experiment_scripts/execution/run_case_batch.py`. It reads a manifest with
+  shared defaults plus a `runs` list, then calls `run_eval_case.py` logic once
+  per item so multi-case experiments do not need ad hoc shell loops.
+- `experiment_scripts/attach_skill_injection.py` is the compatibility entry
+  point for post-run injection backfill. The current implementation lives in
+  `experiment_scripts/postprocess/attach_skill_injection.py`. It attaches
+  server-side SkillClaw injection audit rows back to final records when a
   remote Claude Code run cannot directly see the proxy's `conversations.jsonl`
   but the local SkillClaw server recorded selected skill metadata.
+- `experiment_scripts/summarize_skill_feedback.py` is the compatibility entry
+  point for skill-level aggregation. The current implementation lives in
+  `experiment_scripts/feedback/summarize_skill_feedback.py`. It is the current
+  bridge from case-level validation to skill-level feedback evidence.
+- `experiment_scripts/build_skill_gate_report.py` is the compatibility entry
+  point for conservative gate decisions. The current implementation lives in
+  `experiment_scripts/feedback/build_skill_gate_report.py`. It does not
+  automatically publish, rewrite, or delete any skill.
+- `experiment_scripts/build_skill_feedback_bundle.py` is the compatibility
+  entry point for evolver-ready feedback bundles. The current implementation
+  lives in `experiment_scripts/feedback/build_skill_feedback_bundle.py`.
+- `experiment_scripts/summarize_research_claims.py` is the compatibility entry
+  point for research-facing observations. The current implementation lives in
+  `experiment_scripts/feedback/summarize_research_claims.py`.
 - `curated_skillclaw_runset.json` is the canonical manifest for the current
   five-case SkillClaw confirmation runset.
 - `experiment_scripts/refresh_curated_reports.py` refreshes
@@ -102,6 +113,18 @@ skills are intentionally not stored here.
   `skill_gate_report_latest.*`, `skill_feedback_bundle_latest.*`, and
   `curated_runset_latest.md` in one fixed order so the latest outputs stay
   consistent.
+
+## Framework vs Case Content
+
+- Framework logic now lives mainly in `experiment_scripts/` and
+  `experiment_validation/`.
+- Case-specific data, artifacts, and validator parameters live mainly in
+  `experiment_cases/` and `experiment_records/remote_runs/`.
+
+This split matters because a PoC generator or a case-local shell script is not
+the framework itself; it is one case plugged into the shared execution and
+validation pipeline. See `experiment_scripts/ARCHITECTURE.md` for the current
+module map and end-to-end flow.
 
 ## Removed As Redundant
 
