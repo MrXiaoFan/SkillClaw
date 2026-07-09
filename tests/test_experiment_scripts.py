@@ -1855,6 +1855,83 @@ def test_plan_exiv2_param_sweep_renders_commands(tmp_path):
     assert "EXIV2_JP2_ICC_PATH_OK" in text
 
 
+def test_record_and_summarize_exiv2_sweep(tmp_path):
+    record_script = (
+        Path("experiment_scripts")
+        / "utils"
+        / "record_exiv2_sweep_result.py"
+    ).resolve()
+    summary_script = (
+        Path("experiment_scripts")
+        / "utils"
+        / "summarize_exiv2_sweep.py"
+    ).resolve()
+    stdout_path = tmp_path / "stdout.txt"
+    stderr_path = tmp_path / "stderr.txt"
+    jsonl_path = tmp_path / "sweep.jsonl"
+    summary_path = tmp_path / "summary.md"
+
+    stdout_path.write_text("synthetic stdout\n", encoding="utf-8")
+    stderr_path.write_text(
+        "\n".join(
+            [
+                "Jp2Image::readMetadata DataBuf(5)",
+                "AddressSanitizer: heap-buffer-overflow in getULong (types.cpp)",
+                "EXIV2_JP2_ICC_PATH_OK jp2-readmetadata-getulong",
+                "EXIV2_ASAN_OOB_OK heap-buffer-overflow",
+                "TARGET_EXECUTION_RC=134",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(record_script),
+            "--icc-size",
+            "5",
+            "--colr-method",
+            "2",
+            "--stdout-file",
+            str(stdout_path),
+            "--stderr-file",
+            str(stderr_path),
+            "--returncode",
+            "134",
+            "--label",
+            "combo-5",
+            "--out",
+            str(jsonl_path),
+        ],
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(summary_script),
+            str(jsonl_path),
+            "--out",
+            str(summary_path),
+        ],
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    text = summary_path.read_text(encoding="utf-8")
+    assert "combo-5" in text
+    assert "EXIV2_JP2_ICC_PATH_OK" in text
+    assert "EXIV2_ASAN_OOB_OK" in text
+    assert "134" in text
+
+
 def test_run_case_infers_session_id_and_attaches_injection(tmp_path):
     root = tmp_path / "target"
     root.mkdir()
