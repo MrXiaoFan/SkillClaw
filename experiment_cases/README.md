@@ -194,9 +194,10 @@ These fields should be copied into the final experiment result record.
   `gif2rgb`, used to test source-level color-map index validation reasoning.
 - `exiv2-0.26-cve-2017-17725.json`: draft scaffold for the next non-tcpdump
   confirmation-oriented case. The case schema, prompt contract, artifact
-  layout, and smoke fixture are wired in, but the TIFF PoC and sanitizer-backed
-  confirmation path are not yet stabilized and the case is not part of the
-  curated runset yet.
+  layout, smoke fixture, and `prepare_artifacts + artifact_exists` chain are
+  wired in, but the runtime `artifact_exec` and sanitizer-backed confirmation
+  path are not yet stabilized and the case is not part of the curated runset
+  yet.
 - `libarchive-3.8.0-cve-2025-60753.json`: utility-level substitution-engine
   denial-of-service case in `bsdtar`, confirmed through a generated empty
   global-substitution rule plus a timeout-backed wrapper script.
