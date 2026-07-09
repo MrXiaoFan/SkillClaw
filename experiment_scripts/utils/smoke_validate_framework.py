@@ -150,6 +150,35 @@ int apply_substitution(void) {
     )
 
 
+def _write_exiv2_fixture(root: Path) -> None:
+    (root / "bin").mkdir(parents=True, exist_ok=True)
+    (root / "src").mkdir(parents=True, exist_ok=True)
+    (root / "artifacts").mkdir(parents=True, exist_ok=True)
+    (root / "bin" / "exiv2").write_text("synthetic exiv2 placeholder\n", encoding="utf-8")
+    (root / "src" / "types.cpp").write_text(
+        """
+static unsigned long getULong(const unsigned char* data, long offset, long bounds) {
+    /* TIFF */
+    if (offset >= bounds) {
+        return 0;
+    }
+    return (unsigned long)data[offset];
+}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (root / "artifacts" / "poc-cve-2017-17725.tiff").write_bytes(
+        b"II" + b"\x2a\x00" + b"\x08\x00\x00\x00" + b"\x00\x00" + b"\x00\x00\x00\x00"
+    )
+    (root / "artifacts" / "run_exiv2_poc.sh").write_text(
+        "#!/bin/sh\n"
+        "echo 'AddressSanitizer: heap-buffer-overflow in getULong (types.cpp)' 1>&2\n"
+        "exit 134\n",
+        encoding="utf-8",
+    )
+
+
 def _prepare_fixture(case: dict[str, Any], root: Path) -> None:
     case_id = str(case.get("case_id", ""))
     if "libxml2" in case_id:
@@ -158,6 +187,8 @@ def _prepare_fixture(case: dict[str, Any], root: Path) -> None:
         _write_tcpdump_isakmp_fixture(root)
     elif "libarchive" in case_id:
         _write_libarchive_fixture(root)
+    elif "exiv2" in case_id:
+        _write_exiv2_fixture(root)
     elif "tcpdump" in case_id:
         _write_tcpdump_fixture(root)
     elif "giflib" in case_id:
