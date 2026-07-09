@@ -1714,6 +1714,20 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         combined = f"{proc.stdout}\n{proc.stderr}"
         assert "RUN_EXIV2_POC" in combined
         assert "WRAPPER_SMOKE_OK" in combined
+
+        probe = subprocess.run(
+            'bash "artifacts/run_exiv2_poc.sh" --probe-only',
+            cwd=root,
+            shell=True,
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        combined_probe = f"{probe.stdout}\n{probe.stderr}"
+        assert "RUN_EXIV2_POC" in combined_probe
+        assert "WRAPPER_PROBE_OK" in combined_probe
+        assert "TARGET_EXECUTION_RC=" in combined_probe
     else:
         subprocess.run(
             [sys.executable, str(make_poc_script), str(poc_path)],
@@ -1728,6 +1742,9 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         wrapper_text = prepare_script.read_text(encoding="utf-8")
         assert "--smoke-only" in wrapper_text
         assert "WRAPPER_SMOKE_OK" in wrapper_text
+        assert "--probe-only" in wrapper_text
+        assert "WRAPPER_PROBE_OK" in wrapper_text
+        assert "TARGET_EXECUTION_RC=" in wrapper_text
 
 
 def test_run_case_infers_session_id_and_attaches_injection(tmp_path):
