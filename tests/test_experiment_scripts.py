@@ -1815,6 +1815,46 @@ def test_exiv2_make_poc_tunable_icc_size(tmp_path):
     assert len(large_bytes) > len(default_bytes)
 
 
+def test_plan_exiv2_param_sweep_renders_commands(tmp_path):
+    script = (
+        Path("experiment_scripts")
+        / "utils"
+        / "plan_exiv2_param_sweep.py"
+    ).resolve()
+    case_path = (
+        Path("experiment_cases")
+        / "exiv2-0.26-cve-2017-17725.json"
+    ).resolve()
+    out_path = tmp_path / "sweep.md"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            str(case_path),
+            "--root",
+            "/tmp/exiv2-0.26",
+            "--icc-sizes",
+            "4,5",
+            "--colr-methods",
+            "2,3",
+            "--out",
+            str(out_path),
+        ],
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    text = out_path.read_text(encoding="utf-8")
+    assert "Total combinations: `4`" in text
+    assert "EXIV2_ICC_SIZE=4" in text
+    assert "EXIV2_ICC_SIZE=5" in text
+    assert "EXIV2_COLR_METHOD=3" in text
+    assert "EXIV2_JP2_ICC_PATH_OK" in text
+
+
 def test_run_case_infers_session_id_and_attaches_injection(tmp_path):
     root = tmp_path / "target"
     root.mkdir()
