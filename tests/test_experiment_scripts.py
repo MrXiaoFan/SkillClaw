@@ -1740,11 +1740,17 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         assert poc_path.is_file()
         assert poc_path.stat().st_size >= 32
         wrapper_text = prepare_script.read_text(encoding="utf-8")
+        helper_text = (
+            Path("experiment_cases")
+            / "pocs"
+            / "common"
+            / "wrapper_markers.sh"
+        ).read_text(encoding="utf-8")
         assert "--smoke-only" in wrapper_text
         assert "WRAPPER_SMOKE_OK" in wrapper_text
         assert "--probe-only" in wrapper_text
         assert "WRAPPER_PROBE_OK" in wrapper_text
-        assert "TARGET_EXECUTION_RC=" in wrapper_text
+        assert "TARGET_EXECUTION_RC=" in helper_text
 
 
 def test_run_case_infers_session_id_and_attaches_injection(tmp_path):

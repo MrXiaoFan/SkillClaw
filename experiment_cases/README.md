@@ -231,3 +231,18 @@ empty output archive.
 
 The tcpdump and giflib cases are intentionally targeted and should not be used
 alone to claim SkillClaw improves broad vulnerability discovery.
+
+## Case Adapters vs Framework
+
+The shell scripts and PoC generators under `experiment_cases/pocs/` should be
+treated as **case adapters**, not as the core method contribution.
+
+- The reusable contribution lives in the shared case schema, validator types,
+  result-record path, skill-feedback path, and runner entry points.
+- A case-local `prepare_artifacts.sh`, `make_poc.py`, or wrapper script only
+  adapts one benchmark target into that shared pipeline.
+
+As of the Exiv2 scaffold, wrapper marker emission is starting to move into
+shared helpers under `experiment_cases/pocs/common/` so future cases reuse
+common preparation and wrapper conventions instead of inventing a fresh shell
+pattern every time.
