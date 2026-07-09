@@ -188,6 +188,11 @@ static void readMetadata(void) {
     )
     (root / "artifacts" / "run_exiv2_poc.sh").write_text(
         "#!/bin/sh\n"
+        "if [ \"${1:-}\" = \"--smoke-only\" ]; then\n"
+        "  echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.tiff smoke=1' 1>&2\n"
+        "  echo 'WRAPPER_SMOKE_OK exiv2-artifact-wrapper' 1>&2\n"
+        "  exit 0\n"
+        "fi\n"
         "echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.tiff' 1>&2\n"
         "echo 'Jp2Image::readMetadata DataBuf(5)' 1>&2\n"
         "echo 'AddressSanitizer: heap-buffer-overflow in getULong (types.cpp)' 1>&2\n"

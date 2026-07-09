@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import sys
 from argparse import Namespace
@@ -1663,6 +1664,70 @@ def test_run_case_batch_runs_multiple_manifest_entries(tmp_path):
     assert summary["rows"][1]["mode"] == "skillclaw-inline"
     assert (tmp_path / "batch-results" / "demo-a-final.json").is_file()
     assert (tmp_path / "batch-results" / "demo-b-final.json").is_file()
+
+
+def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
+    root = tmp_path / "exiv2-0.26"
+    (root / "artifacts").mkdir(parents=True)
+    (root / "bin").mkdir(parents=True)
+    (root / "bin" / "exiv2").write_text("placeholder\n", encoding="utf-8")
+
+    prepare_script = (
+        Path("experiment_cases")
+        / "pocs"
+        / "exiv2-0.26-cve-2017-17725"
+        / "prepare_artifacts.sh"
+    ).resolve()
+    make_poc_script = (
+        Path("experiment_cases")
+        / "pocs"
+        / "exiv2-0.26-cve-2017-17725"
+        / "make_poc.py"
+    ).resolve()
+
+    poc_path = root / "artifacts" / "poc-cve-2017-17725.tiff"
+    wrapper_path = root / "artifacts" / "run_exiv2_poc.sh"
+    if shutil.which("bash"):
+        subprocess.run(
+            f'bash "{prepare_script}"',
+            cwd=root,
+            shell=True,
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        assert poc_path.is_file()
+        assert poc_path.stat().st_size >= 32
+        assert wrapper_path.is_file()
+
+        proc = subprocess.run(
+            'bash "artifacts/run_exiv2_poc.sh" --smoke-only',
+            cwd=root,
+            shell=True,
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        combined = f"{proc.stdout}\n{proc.stderr}"
+        assert "RUN_EXIV2_POC" in combined
+        assert "WRAPPER_SMOKE_OK" in combined
+    else:
+        subprocess.run(
+            [sys.executable, str(make_poc_script), str(poc_path)],
+            cwd=root,
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        assert poc_path.is_file()
+        assert poc_path.stat().st_size >= 32
+        wrapper_text = prepare_script.read_text(encoding="utf-8")
+        assert "--smoke-only" in wrapper_text
+        assert "WRAPPER_SMOKE_OK" in wrapper_text
 
 
 def test_run_case_infers_session_id_and_attaches_injection(tmp_path):
