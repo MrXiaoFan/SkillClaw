@@ -102,10 +102,13 @@
 - 已具备：
   - case JSON 与 ground truth
   - `prepare_artifacts`
+  - 以 JP2/ICC-profile 路径为主的 canonical artifact 约定
+  - 保留 `.tiff` 历史别名用于公开 issue 对照
   - wrapper smoke / probe
   - 共享 marker helper
 - 当前判断：
   - 已经不是空 scaffold，而是“可运行 adapter 骨架”
+  - 公开证据歧义已经从“路径不清”收敛到“文件命名历史遗留”
   - 但还不能算完成动态确认闭环
 - 下一步关键点：
   - 找到可稳定触发的真实行为 marker

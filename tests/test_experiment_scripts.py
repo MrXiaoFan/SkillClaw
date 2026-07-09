@@ -1685,7 +1685,8 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         / "make_poc.py"
     ).resolve()
 
-    poc_path = root / "artifacts" / "poc-cve-2017-17725.tiff"
+    poc_path = root / "artifacts" / "poc-cve-2017-17725.jp2"
+    legacy_alias_path = root / "artifacts" / "poc-cve-2017-17725.tiff"
     wrapper_path = root / "artifacts" / "run_exiv2_poc.sh"
     if shutil.which("bash"):
         subprocess.run(
@@ -1700,6 +1701,7 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
 
         assert poc_path.is_file()
         assert poc_path.stat().st_size >= 32
+        assert legacy_alias_path.is_file()
         assert wrapper_path.is_file()
 
         proc = subprocess.run(
@@ -1753,6 +1755,7 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         )
         assert poc_path.is_file()
         assert poc_path.stat().st_size >= 32
+        assert not legacy_alias_path.exists()
         wrapper_text = prepare_script.read_text(encoding="utf-8")
         helper_text = (
             Path("experiment_cases")

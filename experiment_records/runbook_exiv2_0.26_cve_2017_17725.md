@@ -7,8 +7,9 @@
 
 ## Expected Artifacts
 
-- `artifacts/poc-cve-2017-17725.tiff` (binary; A crafted image candidate intended to exercise the vulnerable Exiv2 0.26 metadata parsing path; the current scaffold keeps the public poc_3.tiff naming convention, but the exact format-to-parser mapping still needs confirmation.)
-- `artifacts/run_exiv2_poc.sh` (shell; A runnable helper that invokes bin/exiv2 against the generated TIFF and preserves the target exit status.)
+- `artifacts/poc-cve-2017-17725.jp2` (binary; A crafted JP2-like image candidate intended to exercise the vulnerable Exiv2 0.26 ICC-profile metadata parsing path that reaches Jp2Image::readMetadata and getULong.)
+- `artifacts/poc-cve-2017-17725.tiff` (binary; A legacy alias of the same generated candidate, kept only because the public GitHub issue names the sample poc_3.tiff.)
+- `artifacts/run_exiv2_poc.sh` (shell; A runnable helper that invokes bin/exiv2 against the generated JP2 candidate and preserves the target exit status.)
 
 ## Repro / Confirmation
 
@@ -16,8 +17,8 @@ Build:
 - `test -x ./bin/exiv2 || make -j4`
 
 Run:
-- `python3 ../experiment_cases/pocs/exiv2-0.26-cve-2017-17725/make_poc.py artifacts/poc-cve-2017-17725.tiff`
-- `./bin/exiv2 artifacts/poc-cve-2017-17725.tiff`
+- `python3 ../experiment_cases/pocs/exiv2-0.26-cve-2017-17725/make_poc.py artifacts/poc-cve-2017-17725.jp2`
+- `./bin/exiv2 artifacts/poc-cve-2017-17725.jp2`
 
 Success markers:
 - `RUN_EXIV2_POC`
@@ -33,7 +34,7 @@ Target frames:
 - `src/jp2image.cpp`
 - `readMetadata`
 
-Notes: This case is currently scaffolded as the next Exiv2 confirmation target. The case JSON, prompt contract, and artifact layout are ready, but a stable public PoC and sanitizer-backed confirmation command still need to be finalized. Public references disagree on whether the trigger should be treated as a TIFF-specific path or a crafted-image path that reaches Jp2Image::readMetadata, so the current scaffold intentionally keeps the confirmation wording conservative.
+Notes: This case is now aligned to the stronger public execution-path evidence: GitHub issue #188 names poc_3.tiff, but its published ASan stack reaches Jp2Image::readMetadata and Red Hat describes the trigger as a crafted JP2 image parsed as an ICC profile. The scaffold therefore treats JP2 as the canonical confirmation path while preserving a legacy .tiff alias for traceability.
 
 ## Suggested Guarded Runs
 

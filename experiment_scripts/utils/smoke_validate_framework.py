@@ -185,24 +185,26 @@ static void readMetadata(void) {
         + "\n",
         encoding="utf-8",
     )
-    (root / "artifacts" / "poc-cve-2017-17725.tiff").write_bytes(
+    poc_bytes = (
         b"II" + b"\x2a\x00" + b"\x08\x00\x00\x00" + b"\x00\x00" + (b"\x00" * 32)
     )
+    (root / "artifacts" / "poc-cve-2017-17725.jp2").write_bytes(poc_bytes)
+    (root / "artifacts" / "poc-cve-2017-17725.tiff").write_bytes(poc_bytes)
     (root / "artifacts" / "run_exiv2_poc.sh").write_text(
         "#!/bin/sh\n"
         "if [ \"${1:-}\" = \"--smoke-only\" ]; then\n"
-        "  echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.tiff smoke=1' 1>&2\n"
+        "  echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.jp2 smoke=1' 1>&2\n"
         "  echo 'WRAPPER_SMOKE_OK exiv2-artifact-wrapper' 1>&2\n"
         "  exit 0\n"
         "fi\n"
         "if [ \"${1:-}\" = \"--probe-only\" ]; then\n"
-        "  echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.tiff probe=1' 1>&2\n"
+        "  echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.jp2 probe=1' 1>&2\n"
         "  echo 'synthetic exiv2 probe output'\n"
         "  echo 'WRAPPER_PROBE_OK exiv2-artifact-wrapper' 1>&2\n"
         "  echo 'TARGET_EXECUTION_RC=1' 1>&2\n"
         "  exit 0\n"
         "fi\n"
-        "echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.tiff behavior=1' 1>&2\n"
+        "echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.jp2 behavior=1' 1>&2\n"
         "echo 'Jp2Image::readMetadata DataBuf(5)' 1>&2\n"
         "echo 'AddressSanitizer: heap-buffer-overflow in getULong (types.cpp)' 1>&2\n"
         "echo 'TARGET_EXECUTION_RC=134' 1>&2\n"

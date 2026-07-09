@@ -37,7 +37,7 @@
 - `tcpdump-4.9.1-cve-2018-14469`：可以试  
   PoC 生成和 wrapper 执行已经通了。
 - `exiv2-0.26-cve-2017-17725`：**可以试工程链路，但还不适合拿来下真实漏洞确认结论**  
-  当前已经具备 adapter、smoke、probe、behavior wrapper 标准化，但 PoC 仍未稳定到可宣称“真实确认完成”。
+  当前已经具备 adapter、smoke、probe、behavior wrapper 标准化，并且 canonical 路径已经收敛到 JP2/ICC-profile；但 PoC 仍未稳定到可宣称“真实确认完成”。
 
 ## 2. 当前最推荐的试用顺序
 
