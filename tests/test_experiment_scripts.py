@@ -1746,6 +1746,8 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         )
         combined_behavior = f"{behavior.stdout}\n{behavior.stderr}"
         assert "RUN_EXIV2_POC" in combined_behavior
+        assert "EXIV2_JP2_ICC_PATH_OK" in combined_behavior
+        assert "EXIV2_ASAN_OOB_OK" in combined_behavior
         assert "TARGET_EXECUTION_RC=" in combined_behavior
         assert behavior.returncode != 0
     else:
@@ -1777,6 +1779,7 @@ def test_exiv2_prepare_artifacts_and_wrapper_smoke(tmp_path):
         assert "WRAPPER_PROBE_OK" in wrapper_text
         assert "TARGET_EXECUTION_RC=" in helper_text
         assert "behavior" in wrapper_text
+        assert "EXIV2_JP2_ICC_PATH_OK" in wrapper_text
 
 
 def test_run_case_infers_session_id_and_attaches_injection(tmp_path):

@@ -207,6 +207,8 @@ static void readMetadata(void) {
         "echo 'RUN_EXIV2_POC target=./bin/exiv2 input=artifacts/poc-cve-2017-17725.jp2 behavior=1' 1>&2\n"
         "echo 'Jp2Image::readMetadata DataBuf(5)' 1>&2\n"
         "echo 'AddressSanitizer: heap-buffer-overflow in getULong (types.cpp)' 1>&2\n"
+        "echo 'EXIV2_JP2_ICC_PATH_OK jp2-readmetadata-getulong' 1>&2\n"
+        "echo 'EXIV2_ASAN_OOB_OK heap-buffer-overflow' 1>&2\n"
         "echo 'TARGET_EXECUTION_RC=134' 1>&2\n"
         "exit 134\n",
         encoding="utf-8",
