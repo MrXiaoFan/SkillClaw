@@ -1932,6 +1932,64 @@ def test_record_and_summarize_exiv2_sweep(tmp_path):
     assert "134" in text
 
 
+def test_judge_exiv2_sweep_candidates(tmp_path):
+    judge_script = (
+        Path("experiment_scripts")
+        / "utils"
+        / "judge_exiv2_sweep_candidates.py"
+    ).resolve()
+    jsonl_path = tmp_path / "sweep.jsonl"
+    out_md = tmp_path / "rank.md"
+    out_json = tmp_path / "rank.json"
+
+    rows = [
+        {
+            "label": "weak",
+            "params": {"icc_size": 4, "colr_method": 2, "width": 1, "height": 1},
+            "returncode": 1,
+            "matched_markers": ["Jp2Image::readMetadata"],
+        },
+        {
+            "label": "strong",
+            "params": {"icc_size": 5, "colr_method": 2, "width": 1, "height": 1},
+            "returncode": 134,
+            "matched_markers": [
+                "EXIV2_JP2_ICC_PATH_OK",
+                "EXIV2_ASAN_OOB_OK",
+                "TARGET_EXECUTION_RC=",
+                "AddressSanitizer",
+                "Jp2Image::readMetadata",
+                "getULong",
+            ],
+        },
+    ]
+    with jsonl_path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(judge_script),
+            str(jsonl_path),
+            "--out",
+            str(out_md),
+            "--out-json",
+            str(out_json),
+        ],
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    md_text = out_md.read_text(encoding="utf-8")
+    json_text = out_json.read_text(encoding="utf-8")
+    assert "strong_candidate" in md_text
+    assert "Best Current Candidate" in md_text
+    assert "\"label\": \"strong\"" in json_text
+
+
 def test_run_case_infers_session_id_and_attaches_injection(tmp_path):
     root = tmp_path / "target"
     root.mkdir()

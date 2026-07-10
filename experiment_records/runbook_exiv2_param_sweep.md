@@ -179,6 +179,15 @@ python3 ../experiment_scripts/utils/summarize_exiv2_sweep.py \
   --out ~/skillclaw-eval/runs/exiv2-sweep/exiv2_sweep_summary.md
 ```
 
+再生成候选排序：
+
+```bash
+python3 ../experiment_scripts/utils/judge_exiv2_sweep_candidates.py \
+  ~/skillclaw-eval/runs/exiv2-sweep/exiv2_sweep_results.jsonl \
+  --out ~/skillclaw-eval/runs/exiv2-sweep/exiv2_sweep_ranking.md \
+  --out-json ~/skillclaw-eval/runs/exiv2-sweep/exiv2_sweep_ranking.json
+```
+
 ## 7. 当前判断规则
 
 优先关注下面几类结果：
@@ -202,5 +211,7 @@ python3 ../experiment_scripts/utils/summarize_exiv2_sweep.py \
 
 - `~/skillclaw-eval/runs/exiv2-sweep/exiv2_sweep_results.jsonl`
 - `~/skillclaw-eval/runs/exiv2-sweep/exiv2_sweep_summary.md`
+- `~/skillclaw-eval/runs/exiv2-sweep/exiv2_sweep_ranking.md`
+- `~/skillclaw-eval/runs/exiv2-sweep/exiv2_sweep_ranking.json`
 
 这样后续可以直接把 sweep 结果接入实验记录或论文材料整理。
