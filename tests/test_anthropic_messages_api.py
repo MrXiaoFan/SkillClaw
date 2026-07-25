@@ -1,5 +1,6 @@
 import base64
 import struct
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -175,5 +176,77 @@ async def test_anthropic_messages_preserves_registered_custom_tool_name(anthropi
             "id": "call_read",
             "name": "read",
             "input": {"path": "/tmp/demo.py", "mode": "raw"},
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_forward_to_deepseek_chat_normalizes_multimodal_messages_to_text_only(tmp_path):
+    server = SkillClawAPIServer(
+        SkillClawConfig(
+            proxy_api_key="skillclaw",
+            record_enabled=False,
+            record_dir=str(tmp_path),
+            claw_type="nanoclaw",
+            llm_provider="openai",
+            llm_api_base="https://api.deepseek.com",
+            llm_api_key="test-key",
+            llm_model_id="deepseek-v4-pro",
+        )
+    )
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "id": "chatcmpl_1",
+                "choices": [{"message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1},
+            }
+
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def post(self, url, json, headers):
+            captured["url"] = url
+            captured["json"] = json
+            captured["headers"] = headers
+            return FakeResponse()
+
+    body = {
+        "model": "skillclaw-model",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "inspect this target"},
+                    {"type": "image_url", "image_url": {"url": "data:image/gif;base64,AAAA"}},
+                ],
+            }
+        ],
+    }
+
+    with patch("httpx.AsyncClient", FakeAsyncClient):
+        result = await server._forward_to_llm_openai(body)
+
+    assert result["choices"][0]["message"]["content"] == "ok"
+    assert captured["url"] == "https://api.deepseek.com/chat/completions"
+    assert captured["json"]["messages"] == [
+        {
+            "role": "user",
+            "content": (
+                "inspect this target\n"
+                "[non-text input omitted: image_url; use shell/file tools in the workspace to inspect target files directly]"
+            ),
         }
     ]

@@ -1,0 +1,59 @@
+﻿{
+  "name": "publication-compare-protocol-v1",
+  "source_manifest": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\publication\\runset_manifest.json",
+  "protocol": "paired-publication-compare",
+  "description": "Fixed paired comparison manifest for publication-ready cases. Each case is expanded into one SkillClaw guarded run and one direct guarded baseline run.",
+  "case_count": 2,
+  "mode_count": 2,
+  "comparison_modes": [
+    {
+      "mode": "skillclaw-inline-guarded",
+      "expected_provider": "skillclaw"
+    },
+    {
+      "mode": "direct-deepseek-guarded",
+      "expected_provider": "deepseek"
+    }
+  ],
+  "defaults": {
+    "output_dir": "reports/publication/generated/compare_runs",
+    "final_records": "reports/publication/generated/compare_runs/run_records.jsonl",
+    "timeout_seconds": 2700,
+    "preflight": true,
+    "expected_skill_count": 35
+  },
+  "outputs": {
+    "paired_md": "compare.md",
+    "paired_csv": "compare.csv"
+  },
+  "runs": [
+    {
+      "case": "../benchmarks/cases/giflib-5.1.2-cve-2016-3977.json",
+      "mode": "skillclaw-inline-guarded",
+      "expected_provider": "skillclaw",
+      "run_id": "giflib-5.1.2-cve-2016-3977-skillclaw-inline-guarded-publication-protocol"
+    },
+    {
+      "case": "../benchmarks/cases/giflib-5.1.2-cve-2016-3977.json",
+      "mode": "direct-deepseek-guarded",
+      "expected_provider": "deepseek",
+      "run_id": "giflib-5.1.2-cve-2016-3977-direct-deepseek-guarded-publication-protocol"
+    },
+    {
+      "case": "../benchmarks/cases/libarchive-3.8.0-cve-2025-60753.json",
+      "mode": "skillclaw-inline-guarded",
+      "expected_provider": "skillclaw",
+      "run_id": "libarchive-3.8.0-cve-2025-60753-skillclaw-inline-guarded-publication-protocol"
+    },
+    {
+      "case": "../benchmarks/cases/libarchive-3.8.0-cve-2025-60753.json",
+      "mode": "direct-deepseek-guarded",
+      "expected_provider": "deepseek",
+      "run_id": "libarchive-3.8.0-cve-2025-60753-direct-deepseek-guarded-publication-protocol"
+    }
+  ]
+}
+
+
+
+

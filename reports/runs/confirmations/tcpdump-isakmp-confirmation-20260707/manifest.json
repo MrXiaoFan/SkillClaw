@@ -1,0 +1,42 @@
+﻿{
+  "run_id": "tcpdump-4.9.1-cve-2018-14469-skillclaw-inline-guarded-20260707-151348",
+  "case_id": "tcpdump-4.9.1-cve-2018-14469",
+  "mode": "skillclaw-inline-guarded",
+  "model": "skillclaw-model",
+  "target_root": "/home/li/skillclaw-eval/tcpdump-4.9.1",
+  "status": 0,
+  "agent_ran": true,
+  "start": "2026-07-07T07:13:48.758778+00:00",
+  "end": "2026-07-07T07:17:55.245400+00:00",
+  "score": 10.0,
+  "max_score": 10.0,
+  "validation_status": "passed",
+  "session_id": "51fc43b6-d9c4-41a2-bed8-a79831088f9f",
+  "session_id_source": "explicit",
+  "confirmation_maturity": "",
+  "confirmation_current_claim": "",
+  "skill_relevance": "mixed_task_relevance",
+  "selected_skills": [
+    "source-parser-state-machine-oob",
+    "vuln-hunting",
+    "verify-rootfs-full-enumeration"
+  ],
+  "artifacts": {
+    "prompt": "/home/li/skillclaw-eval/runs/tcpdump-isakmp-20260707/tcpdump-4.9.1-cve-2018-14469-skillclaw-inline-guarded-20260707-151348-prompt.txt",
+    "raw": "/home/li/skillclaw-eval/runs/tcpdump-isakmp-20260707/tcpdump-4.9.1-cve-2018-14469-skillclaw-inline-guarded-20260707-151348-raw.txt",
+    "stderr": "/home/li/skillclaw-eval/runs/tcpdump-isakmp-20260707/tcpdump-4.9.1-cve-2018-14469-skillclaw-inline-guarded-20260707-151348-stderr.txt",
+    "meta": "/home/li/skillclaw-eval/runs/tcpdump-isakmp-20260707/tcpdump-4.9.1-cve-2018-14469-skillclaw-inline-guarded-20260707-151348-run.meta",
+    "agent_json": "/home/li/skillclaw-eval/runs/tcpdump-isakmp-20260707/tcpdump-4.9.1-cve-2018-14469-skillclaw-inline-guarded-20260707-151348-agent.json",
+    "score": "/home/li/skillclaw-eval/runs/tcpdump-isakmp-20260707/tcpdump-4.9.1-cve-2018-14469-skillclaw-inline-guarded-20260707-151348-score.json",
+    "validation": "/home/li/skillclaw-eval/runs/tcpdump-isakmp-20260707/tcpdump-4.9.1-cve-2018-14469-skillclaw-inline-guarded-20260707-151348-validation.json",
+    "preflight": "/home/li/skillclaw-eval/runs/tcpdump-isakmp-20260707/tcpdump-4.9.1-cve-2018-14469-skillclaw-inline-guarded-20260707-151348-preflight.json",
+    "final": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-isakmp-confirmation-20260707\\final-enriched.json",
+    "manifest": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-isakmp-confirmation-20260707\\manifest.json",
+    "run_index": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-isakmp-confirmation-20260707\\run_index.json"
+  }
+}
+
+
+
+
+

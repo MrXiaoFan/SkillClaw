@@ -1,0 +1,29 @@
+﻿{
+  "name": "skillclaw-confirmation-runset-v1",
+  "runset_purpose": "engineering-confirmation-regression",
+  "publication_only": false,
+  "eligibility_note": "这份 runset 目前是工程回归集合，还不是纯论文基准集合。部分收录案例仍停留在 behavior-backed 层级，若进入论文表格，仍需要明确标注证据边界。",
+  "min_samples": 2,
+  "promote_samples": 3,
+  "manifests": [
+    "../runs/confirmations/giflib-confirmation-20260701c/manifest.json",
+    "../runs/confirmations/tcpdump-confirmation-20260702a/manifest.json",
+    "../runs/confirmations/libxml2-logic-confirmation-20260705/manifest.json",
+    "../runs/confirmations/tcpdump-isakmp-confirmation-20260707/manifest.json",
+    "../runs/confirmations/libarchive-confirmation-20260707/manifest.json"
+  ],
+  "outputs": {
+    "matrix_md": "result_matrix.md",
+    "feedback_md": "skill_feedback.md",
+    "gate_md": "skill_gate.md",
+    "gate_json": "skill_gate.json",
+    "bundle_json": "skill_feedback_bundle.json",
+    "runset_md": "runset.md"
+  }
+}
+
+
+
+
+
+

@@ -1,0 +1,44 @@
+﻿[
+  {
+    "run_id": "tcpdump-4.9.1-cve-2017-13031-skillclaw-inline-guarded-20260702-093822",
+    "case_id": "tcpdump-4.9.1-cve-2017-13031",
+    "mode": "skillclaw-inline-guarded",
+    "model": "skillclaw-model",
+    "target_root": "/home/li/skillclaw-eval/tcpdump-4.9.1",
+    "status": 0,
+    "agent_ran": true,
+    "start": "2026-07-02T01:38:22.538609+00:00",
+    "end": "2026-07-02T01:40:51.903901+00:00",
+    "score": 10.0,
+    "max_score": 10.0,
+    "validation_status": "passed",
+    "session_id": "7d4c3cc5-67e8-4765-9fbc-2aeaa10ec832",
+    "session_id_source": "inferred_from_injection_log",
+    "confirmation_maturity": "",
+    "confirmation_current_claim": "",
+    "skill_relevance": "mixed_task_relevance",
+    "selected_skills": [
+      "source-parser-state-machine-oob",
+      "vuln-hunting",
+      "verify-rootfs-full-enumeration"
+    ],
+    "artifacts": {
+      "prompt": "/home/li/skillclaw-eval/runs/tcpdump-confirmation-20260702/tcpdump-4.9.1-cve-2017-13031-skillclaw-inline-guarded-20260702-093822-prompt.txt",
+      "raw": "/home/li/skillclaw-eval/runs/tcpdump-confirmation-20260702/tcpdump-4.9.1-cve-2017-13031-skillclaw-inline-guarded-20260702-093822-raw.txt",
+      "stderr": "/home/li/skillclaw-eval/runs/tcpdump-confirmation-20260702/tcpdump-4.9.1-cve-2017-13031-skillclaw-inline-guarded-20260702-093822-stderr.txt",
+      "meta": "/home/li/skillclaw-eval/runs/tcpdump-confirmation-20260702/tcpdump-4.9.1-cve-2017-13031-skillclaw-inline-guarded-20260702-093822-run.meta",
+      "agent_json": "/home/li/skillclaw-eval/runs/tcpdump-confirmation-20260702/tcpdump-4.9.1-cve-2017-13031-skillclaw-inline-guarded-20260702-093822-agent.json",
+      "score": "/home/li/skillclaw-eval/runs/tcpdump-confirmation-20260702/tcpdump-4.9.1-cve-2017-13031-skillclaw-inline-guarded-20260702-093822-score.json",
+      "validation": "/home/li/skillclaw-eval/runs/tcpdump-confirmation-20260702/tcpdump-4.9.1-cve-2017-13031-skillclaw-inline-guarded-20260702-093822-validation.json",
+      "preflight": "/home/li/skillclaw-eval/runs/tcpdump-confirmation-20260702/tcpdump-4.9.1-cve-2017-13031-skillclaw-inline-guarded-20260702-093822-preflight.json",
+      "final": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-confirmation-20260702a\\final-enriched.json",
+      "manifest": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-confirmation-20260702a\\manifest.json",
+      "run_index": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-confirmation-20260702a\\run_index.json"
+    }
+  }
+]
+
+
+
+
+

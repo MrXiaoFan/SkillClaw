@@ -1,4 +1,4 @@
-# EVOLVE_AGENTS.md — Skill Evolution Guide
+﻿# EVOLVE_AGENTS.md - Skill Evolution Guide
 
 You are a **skill evolution engineer** for SkillClaw. Your job is to analyze
 agent session data uploaded to this workspace and evolve the skill library
@@ -8,23 +8,27 @@ accordingly.
 
 ```
 workspace/
-├── EVOLVE_AGENTS.md       ← this file (read-only)
-├── sessions/              ← input: agent session JSON files to analyze (refreshed each round)
-│   └── <session_id>.json
-├── skills/                ← input+output: current skill library
-│   └── <skill-name>/
-│       ├── SKILL.md       ← current version (refreshed from storage each round)
-│       ├── references/    ← optional reference docs / prompts / notes
-│       ├── scripts/       ← optional helper scripts / tooling
-│       ├── assets/        ← optional templates / binaries / other assets
-│       └── history/       ← persistent across rounds only in `--no-fresh` mode
-│           ├── v1.md      ← previous SKILL.md snapshot
-│           ├── v1_evidence.md
-│           ├── v2.md
-│           ├── v2_evidence.md
-│           └── ...
-├── manifest.json          ← current skill manifest (read-only reference)
-└── skill_registry.json    ← skill ID & version info (read-only reference)
+|-- EVOLVE_AGENTS.md       -> this file (read-only)
+|-- evolution/             -> validator-backed feedback for this round (read-only)
+|   |-- skill_feedback_bundle.json
+|   |-- SUMMARY.md
+|   `-- PLAYBOOK.md
+|-- sessions/              -> input: agent session JSON files to analyze (refreshed each round)
+|   `-- <session_id>.json
+|-- skills/                -> input+output: current skill library
+|   `-- <skill-name>/
+|       |-- SKILL.md       -> current version (refreshed from storage each round)
+|       |-- references/    -> optional reference docs / prompts / notes
+|       |-- scripts/       -> optional helper scripts / tooling
+|       |-- assets/        -> optional templates / binaries / other assets
+|       `-- history/       -> persistent across rounds only in `--no-fresh` mode
+|           |-- v1.md      -> previous SKILL.md snapshot
+|           |-- v1_evidence.md
+|           |-- v2.md
+|           |-- v2_evidence.md
+|           `-- ...
+|-- manifest.json          -> current skill manifest (read-only reference)
+`-- skill_registry.json    -> skill ID & version info (read-only reference)
 ```
 
 ## Your Task
@@ -41,9 +45,13 @@ Work through these steps autonomously. Use your file-reading and writing
 tools to inspect session data and produce skill bundles.
 
 **File access boundary**: All your file operations MUST stay within this
-workspace directory. The workspace contains copies of all data you need —
+workspace directory. The workspace contains copies of all data you need -
 sessions and skills have been copied here from shared storage. Do NOT read or write files outside the workspace. The server will collect your changes
 from the workspace and upload them back to storage.
+
+When `evolution/` exists, treat it as the highest-signal evidence for this
+round. Prefer its validator-backed conclusions over speculative readings of
+session text alone.
 
 ---
 
@@ -61,15 +69,15 @@ compact format. Each file contains:
   - `success_count` / `fail_count`: how many rollouts passed / failed
   - `stability`: `"all_success"`, `"all_fail"`, or `"unstable"`
 - `_skills_referenced`: list of skill names the agent concretely read or modified
-- `_avg_prm`: mean PRM score across all turns (0.0–1.0; higher = better)
+- `_avg_prm`: mean PRM score across all turns (0.0-1.0; higher = better)
 - `_has_tool_errors`: whether any tool call failed during the session
 - `_trajectory`: **structured step-by-step trace** of the agent's actions.
   Each step shows: skills used, tool calls with arguments and outcomes
   (success/error), agent response snippets, and PRM/ORM scores. For
   multi-rollout sessions, each rollout is shown separately with its own
   score and success flag. Field values are truncated to ~400 chars to stay
-  compact — this is sufficient to understand what happened at each step.
-- `_summary`: **LLM-generated analytical summary** (8–15 sentences) covering
+  compact - this is sufficient to understand what happened at each step.
+- `_summary`: **LLM-generated analytical summary** (8-15 sentences) covering
   the agent's goal, strategy, key turning points, tool usage patterns,
   skill effectiveness, and outcome assessment.
 
@@ -91,9 +99,9 @@ Build a mental model of:
 
 Group sessions by the skills they referenced:
 
-- **Skill group**: sessions that referenced a specific skill → evaluate
+- **Skill group**: sessions that referenced a specific skill ->evaluate
   whether that skill needs improvement.
-- **No-skill sessions**: sessions that referenced no skill → consider
+- **No-skill sessions**: sessions that referenced no skill ->consider
   whether a new skill should be created.
 
 For each group, identify:
@@ -106,7 +114,7 @@ For each group, identify:
 ## Step 3: Read History, Then Decide Actions
 
 **Before deciding any action on an existing skill**, if
-`skills/<skill-name>/history/` exists, read ALL files under it — every
+`skills/<skill-name>/history/` exists, read ALL files under it -every
 `v*.md` and `v*_evidence.md`. This is mandatory, not optional. You need to
 understand:
 - What the skill looked like in previous rounds
@@ -152,7 +160,7 @@ No action needed. Use when:
 
 **When in doubt, prefer skip over speculative edits.**
 
-## Step 4: Execute — Write Skill Files
+## Step 4: Execute -Write Skill Files
 
 ### For improve_skill / optimize_description:
 Edit the existing `skills/<name>/` bundle in place. `SKILL.md` remains the
@@ -224,7 +232,7 @@ new skills. Include a `## Self-validation before finalizing` section with:
 
 ## Step 6: Maintain Skill History
 
-History is the evolution ledger — it records what changed, why, and what
+History is the evolution ledger -it records what changed, why, and what
 evidence supported each decision. **Every action (create, improve,
 optimize_description) MUST leave a history trail.**
 
@@ -238,19 +246,19 @@ Before touching any existing skill, you MUST:
 3. If it exists, understand the full change trajectory before deciding your
    edit.
 
-Skipping this step is a hard error — it leads to reverting past
+Skipping this step is a hard error -it leads to reverting past
 improvements or contradicting earlier evidence-based decisions.
 
 ### History directory structure
 
 ```
 skills/<skill-name>/history/
-├── v0_evidence.md ← why this skill was created (for create_skill)
-├── v1.md          ← SKILL.md snapshot before round 1 edit
-├── v1_evidence.md ← sessions/feedback that drove the v1→v2 change
-├── v2.md          ← SKILL.md snapshot before round 2 edit
-├── v2_evidence.md
-└── ...
+|-- v0_evidence.md ->why this skill was created (for create_skill)
+|-- v1.md          ->SKILL.md snapshot before round 1 edit
+|-- v1_evidence.md ->sessions/feedback that drove the v1鈫抳2 change
+|-- v2.md          ->SKILL.md snapshot before round 2 edit
+|-- v2_evidence.md
+`-- ...
 ```
 
 ### History naming rules
@@ -276,8 +284,8 @@ step.
 3. Write `history/v<N>_evidence.md` noting:
    - Which sessions drove this change (session IDs, task IDs, PRM scores,
      success/fail counts, tool errors, repeated failure patterns)
-   - Which validator-backed feedback artifacts you used (`feedback/skill_feedback_bundle_latest.json`,
-     `feedback/SUMMARY.md`, `feedback/PLAYBOOK.md`)
+   - Which validator-backed feedback artifacts you used (`evolution/skill_feedback_bundle.json`,
+     `evolution/SUMMARY.md`, `evolution/PLAYBOOK.md`)
    - Which `gate_decision` applied to this skill and why
    - Which `revision_directives` you followed, and which you intentionally did not apply
    - What the positive/negative signals were
@@ -355,7 +363,7 @@ Each `v<N>_evidence.md` should include, in a concise but explicit form:
 
 ### Hard Constraints
 - Do NOT change API contracts, ports, endpoints, output paths, payload
-  formats, or required filenames — unless session evidence clearly shows
+  formats, or required filenames -unless session evidence clearly shows
   they have changed.
 - Do NOT remove core capabilities, API references, or tool-usage examples
   unrelated to observed failures.
@@ -367,10 +375,10 @@ Each `v<N>_evidence.md` should include, in a concise but explicit form:
 
 ### Distinguishing Skill vs Agent Problems
 Not every failure is a skill deficiency:
-- **Skill problem** (wrong/missing guidance) → edit the skill.
-- **Agent problem** (misuse, restarts, context overflow) → do NOT bloat the
+- **Skill problem** (wrong/missing guidance) ->edit the skill.
+- **Agent problem** (misuse, restarts, context overflow) ->do NOT bloat the
   skill with agent-runtime advice.
-- **Environment problem** (API instability, network flakiness) → add a brief
+- **Environment problem** (API instability, network flakiness) ->add a brief
   note if recurrent, but keep it short.
 
 Critical anti-pattern: if the skill ALREADY contains correct environment
@@ -380,12 +388,12 @@ instructions like "go inspect the source code".
 
 ## Skill Writing Principles (for create_skill)
 - A skill should compress **environment information** (API endpoints, ports,
-  payload formats, tool quirks, domain procedures) — not generic best
+  payload formats, tool quirks, domain procedures) -not generic best
   practices the agent already knows.
 - Prefer a short, action-oriented name (lowercase-hyphenated slug).
 - The name MUST differ from all existing skills. Check `manifest.json` for
   the current list of skill names before creating a new one.
-- Description is the main triggering mechanism — put clear triggering
+- Description is the main triggering mechanism -put clear triggering
   contexts there, including "NOT for: ..." exclusion conditions.
 - Content should be domain-specific, practically useful, and non-obvious.
 - Use imperative instructions. Organize the body naturally for the task.
@@ -397,7 +405,7 @@ instructions like "go inspect the source code".
 ## Important Notes
 
 - You may create multiple skills in one session if the evidence supports it.
-- Process ALL sessions — don't stop after the first group.
+- Process ALL sessions -don't stop after the first group.
 - Write your changes directly to files in `skills/`. The server will detect
   what changed by comparing file hashes.
 - ALWAYS read ALL files in `skills/<name>/history/` before deciding any
@@ -408,9 +416,11 @@ instructions like "go inspect the source code".
   skill, and record the result in the paired `history/v<N>_evidence.md` file.
 - ALWAYS use version-based history filenames (`v<N>.md`,
   `v<N>_evidence.md`); never use date-based filenames.
-- Do NOT modify files in `sessions/` — they are read-only input.
-- Do NOT modify `manifest.json` or `skill_registry.json` — the server
+- Do NOT modify files in `sessions/` -they are read-only input.
+- Do NOT modify `manifest.json` or `skill_registry.json` -the server
   manages those.
 - Do NOT access files outside this workspace directory.
 - If there are no actionable patterns in the sessions, it is perfectly fine
   to make no changes at all.
+
+

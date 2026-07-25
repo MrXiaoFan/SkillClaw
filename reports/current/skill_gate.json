@@ -1,0 +1,182 @@
+[
+  {
+    "skill": "source-parser-state-machine-oob",
+    "gate_decision": "promote",
+    "selected_count": 5,
+    "positive": 3,
+    "neutral": 2,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 5,
+    "file_hits": 5,
+    "function_hits": 5,
+    "evidence_hits": 5,
+    "root_cause_hits": 5,
+    "validation_passed": 5,
+    "validation_failed": 0,
+    "relevant_selected": 3,
+    "mismatched_selected": 2,
+    "infra_selected": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977, libarchive-3.8.0-cve-2025-60753, libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031, tcpdump-4.9.1-cve-2018-14469",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "3 次正向样本，平均分 1，且 file/function 证据均命中",
+      "共有 2 次运行选中了该技能，但与任务并不对齐",
+      "共有 5 次 validator 通过"
+    ],
+    "suggestions": [
+      "可进入更广基准集继续验证；若后续没有明显证据缺口，可考虑提高默认检索优先级",
+      "增加更窄的触发条件，减少过度选中"
+    ]
+  },
+  {
+    "skill": "vuln-hunting",
+    "gate_decision": "demote",
+    "selected_count": 3,
+    "positive": 0,
+    "neutral": 3,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 3,
+    "file_hits": 3,
+    "function_hits": 3,
+    "evidence_hits": 3,
+    "root_cause_hits": 3,
+    "validation_passed": 3,
+    "validation_failed": 0,
+    "relevant_selected": 0,
+    "mismatched_selected": 3,
+    "infra_selected": 0,
+    "cases": "libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2017-13031, tcpdump-4.9.1-cve-2018-14469",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "共有 3 次错配选中，且没有任务对齐证据",
+      "共有 3 次运行选中了该技能，但与任务并不对齐",
+      "共有 3 次 validator 通过"
+    ],
+    "suggestions": [
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选",
+      "增加更窄的触发条件，减少过度选中"
+    ]
+  },
+  {
+    "skill": "ida-headless-cwe120-sink-analysis",
+    "gate_decision": "demote",
+    "selected_count": 2,
+    "positive": 0,
+    "neutral": 2,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 2,
+    "file_hits": 2,
+    "function_hits": 2,
+    "evidence_hits": 2,
+    "root_cause_hits": 2,
+    "validation_passed": 2,
+    "validation_failed": 0,
+    "relevant_selected": 0,
+    "mismatched_selected": 2,
+    "infra_selected": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977, libarchive-3.8.0-cve-2025-60753",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "共有 2 次错配选中，且没有任务对齐证据",
+      "共有 2 次运行选中了该技能，但与任务并不对齐",
+      "共有 2 次 validator 通过"
+    ],
+    "suggestions": [
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选",
+      "增加更窄的触发条件，减少过度选中"
+    ]
+  },
+  {
+    "skill": "idalib-headless-batch-diagnosis",
+    "gate_decision": "demote",
+    "selected_count": 2,
+    "positive": 0,
+    "neutral": 2,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 2,
+    "file_hits": 2,
+    "function_hits": 2,
+    "evidence_hits": 2,
+    "root_cause_hits": 2,
+    "validation_passed": 2,
+    "validation_failed": 0,
+    "relevant_selected": 0,
+    "mismatched_selected": 2,
+    "infra_selected": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977, libarchive-3.8.0-cve-2025-60753",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "共有 2 次错配选中，且没有任务对齐证据",
+      "共有 2 次运行选中了该技能，但与任务并不对齐",
+      "共有 2 次 validator 通过"
+    ],
+    "suggestions": [
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选",
+      "增加更窄的触发条件，减少过度选中"
+    ]
+  },
+  {
+    "skill": "verify-rootfs-full-enumeration",
+    "gate_decision": "demote",
+    "selected_count": 2,
+    "positive": 0,
+    "neutral": 2,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 2,
+    "file_hits": 2,
+    "function_hits": 2,
+    "evidence_hits": 2,
+    "root_cause_hits": 2,
+    "validation_passed": 2,
+    "validation_failed": 0,
+    "relevant_selected": 0,
+    "mismatched_selected": 2,
+    "infra_selected": 0,
+    "cases": "tcpdump-4.9.1-cve-2017-13031, tcpdump-4.9.1-cve-2018-14469",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "共有 2 次错配选中，且没有任务对齐证据",
+      "共有 2 次运行选中了该技能，但与任务并不对齐",
+      "共有 2 次 validator 通过"
+    ],
+    "suggestions": [
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选",
+      "增加更窄的触发条件，减少过度选中"
+    ]
+  },
+  {
+    "skill": "elf-cwe120-firmware-triage",
+    "gate_decision": "insufficient_evidence",
+    "selected_count": 1,
+    "positive": 0,
+    "neutral": 1,
+    "negative": 0,
+    "mean_score": 1.0,
+    "cve_hits": 1,
+    "file_hits": 1,
+    "function_hits": 1,
+    "evidence_hits": 1,
+    "root_cause_hits": 1,
+    "validation_passed": 1,
+    "validation_failed": 0,
+    "relevant_selected": 0,
+    "mismatched_selected": 1,
+    "infra_selected": 0,
+    "cases": "libxml2-2.9.4-cve-2017-8872",
+    "modes": "skillclaw-inline-guarded",
+    "reasons": [
+      "仅有 1 次样本，低于最少要求 2",
+      "共有 1 次运行选中了该技能，但与任务并不对齐",
+      "共有 1 次 validator 通过"
+    ],
+    "suggestions": [
+      "先补更多 benchmark 运行，再决定是否调整其状态",
+      "增加更窄的触发条件，减少过度选中"
+    ]
+  }
+]

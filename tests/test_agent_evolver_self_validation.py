@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 from evolve_server.engines import agent_workspace
 
@@ -14,7 +14,7 @@ def test_evolve_agents_md_requires_center_harness_self_validation():
     assert "Do NOT read or write files outside the workspace" in text
     assert "gate_decision" in text
     assert "revision_directives" in text
-    assert "feedback/PLAYBOOK.md" in text
+    assert "evolution/PLAYBOOK.md" in text
 
 
 def test_agent_workspace_bootstrap_mentions_self_validation():

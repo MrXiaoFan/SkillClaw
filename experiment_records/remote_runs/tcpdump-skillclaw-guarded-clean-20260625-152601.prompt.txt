@@ -1,9 +1,0 @@
-Do not use WebSearch. The current working directory is tcpdump-4.9.1 and the target program is ./tcpdump. Use SkillClaw server-side skills to locate a known buffer over-read vulnerability related to the IPv6 fragmentation header parser. Do not invoke Claude Code local Skill(...). Analyze source code and build artifacts. Finish with a single JSON object containing predicted_cves, predicted_files, predicted_functions, root_cause, evidence, and confidence.
-
-Experiment execution constraints:
-- Do not use TodoWrite or other task-list tools.
-- Use at most 8 tool calls. Prefer targeted Grep/Read/Bash commands over broad full-project scans.
-- Do not read previous experiment outputs, notes, result files, or JSON files. Use only source files and build artifacts from the target project.
-- As soon as you have a plausible file, function, root cause, and evidence, stop calling tools and produce the final answer.
-- If you are uncertain, still output the best-supported JSON instead of continuing tool use.
-- The final response must be exactly one JSON object with keys: predicted_cves, predicted_files, predicted_functions, root_cause, evidence, confidence.

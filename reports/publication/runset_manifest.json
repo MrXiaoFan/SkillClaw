@@ -1,0 +1,28 @@
+﻿{
+  "name": "skillclaw-confirmation-runset-v1-publication",
+  "source_manifest": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\current\\runset_manifest.json",
+  "runset_purpose": "publication-facing-benchmark-subset",
+  "publication_only": true,
+  "eligibility_note": "This runset is automatically derived from the broader current engineering runset. Only cases whose case JSON declares `benchmark.publication_ready = true` are included.",
+  "min_samples": 2,
+  "promote_samples": 3,
+  "records": [],
+  "manifests": [
+    "../runs/confirmations/giflib-confirmation-20260701c/manifest.json",
+    "../runs/confirmations/libarchive-confirmation-20260707/manifest.json"
+  ],
+  "run_indexes": [],
+  "outputs": {
+    "matrix_md": "result_matrix.md",
+    "feedback_md": "skill_feedback.md",
+    "gate_md": "skill_gate.md",
+    "gate_json": "skill_gate.json",
+    "bundle_json": "skill_feedback_bundle.json",
+    "runset_md": "runset.md"
+  }
+}
+
+
+
+
+

@@ -1,238 +1,137 @@
 # Local Changes From SkillClaw
 
-This package is based on SkillClaw with local engineering and research changes
-for remote Claude Code usage, server-side skill injection, vulnerability
-localization experiments, and dynamic-validation prototyping.
+这份说明只回答四个问题：
 
-## 1. Remote Claude Code And Server-Side Skill Visibility
+1. 相比原生 SkillClaw，我们额外开发了什么
+2. 这些扩展现在放在哪里
+3. 当前主流程是什么
+4. 当前能力边界在哪里
 
-The original SkillClaw workflow mainly stores, shares, and injects skills inside
-the proxy process. Remote Claude Code clients that only use a SkillClaw API key
-cannot automatically see these skills as Claude Code local skills.
+## 1. 额外开发了什么
 
-Local changes added:
+原生 SkillClaw 主要提供两层能力：
 
-- Server-side skill catalog endpoints:
-  - `GET /v1/skills`
-  - `GET /v1/skills/{skill_name}`
-- Authentication through the same SkillClaw API key used by the proxy.
-- Skill catalog output designed for remote agents to distinguish SkillClaw
-  server-side skills from Claude Code local skills.
-- Prompt wording that tells remote Claude Code not to search local project
-  paths for SkillClaw skills.
+- `skillclaw/`
+  - 本地代理
+  - 技能注入
+  - 会话采集
+- `evolve_server/`
+  - 技能演化
+  - 反馈消费
+  - 技能发布
 
-Main files:
+在此基础上，本仓库新增了一套面向漏洞分析实验的扩展层，分成三块。
 
-- `skillclaw/api_server.py`
-- `skillclaw/skill_manager.py`
+### 1.1 基准案例层
 
-## 2. Inline Skill Injection
+目录：`benchmarks/`
 
-Original catalog-style injection can tell the LLM that a skill exists, but a
-remote machine may not have the corresponding `SKILL.md` path. Inline injection
-solves this by selecting relevant server-side skills and inserting their full
-content directly into the system prompt.
+作用：
 
-Local changes added:
+- 定义可重复执行的漏洞分析案例
+- 保存案例级确认适配器
+- 保存面向漏洞分析任务的本地技能包
 
-- `skills.injection_mode: inline`
-- Server-side inline selection and prompt construction.
-- Full `<available_server_skills>` catalog plus `<loaded_skills>` content.
-- Metadata recording for injected skills:
-  - selected skill names
-  - injection mode
-  - top-k
-  - prompt hash
-  - available skill count
+### 1.2 执行与验证层
 
-Main files:
+目录：`evaluation/`
 
-- `skillclaw/config.py`
-- `skillclaw/config_store.py`
-- `skillclaw/api_server.py`
-- `skillclaw/skill_manager.py`
+作用：
 
-## 3. Skill Path And Persistence Fixes
+- 运行单案例或批量案例
+- 对模型输出评分
+- 执行静态或动态确认
+- 合并成统一 `final.json`
+- 产出技能反馈与技能门控输入
 
-Local deployment exposed Windows/Linux path and restart persistence issues.
+### 1.3 结果与说明层
 
-Local changes include:
+目录：
 
-- Avoid overwriting conversation and PRM record files on restart.
-- Fix public skill path formatting when a Windows server serves Linux remote
-  clients.
-- Add or expose configuration fields for sharing, skill reload, dashboard, and
-  evolve-server integration.
+- `reports/`
+- `docs/`
+- `runtime/`
+- `scripts/`
 
-Main files:
+作用：
 
-- `skillclaw/api_server.py`
-- `skillclaw/skill_manager.py`
-- `skillclaw/config.py`
-- `skillclaw/config_store.py`
+- 统一保存当前结果、证据和归档
+- 保存工程说明、计划、周报、运维记录
+- 收纳本地运行期输出
+- 保留安装、运维、演示辅助脚本
 
-## 4. Inline Retrieval Bias Fix
+## 2. 这些扩展现在放在哪里
 
-Remote experiment prompts often include framework wording such as
-`SkillClaw server-side skills`, `Claude Code`, `JSON`, and `Do not WebSearch`.
-The previous lightweight keyword retrieval treated these as task terms, causing
-SkillClaw self-inspection skills to outrank vulnerability-analysis skills.
+当前正式结构只认下面几块：
 
-Local changes added:
+- `benchmarks/`
+- `evaluation/`
+- `reports/`
+- `docs/`
+- `runtime/`
+- `scripts/`
 
-- Query stopwords for framework/plumbing terms.
-- Vulnerability-task markers such as `cve`, `cwe`, `overflow`, `oob`,
-  `parser`, `firmware`, `binary`, `elf`, and `source`.
-- SkillClaw-meta-task markers such as `skill count`, `skill catalog`,
-  `/v1/skills`, and `proxy api`.
-- Rule: for vulnerability tasks, do not let `skillclaw-*` self-inspection
-  skills consume inline top-k slots unless the task is actually about SkillClaw
-  itself.
-- Rule: for source-level parser boundary tasks, prefer
-  `source-parser-state-machine-oob` and exclude IDA/idalib skills unless the
-  user explicitly asks for IDA, Hex-Rays, headless, or decompiler analysis.
-- Rule: for vulnerability tasks, ignore incidental SSH/remote-execution words
-  unless the request has explicit SSH password/login/reconnaissance intent.
-
-Observed effect:
-
-- Before fix, the tcpdump case selected:
-  - `ida-headless-cwe120-sink-analysis`
-  - `elf-cwe120-firmware-triage`
-  - `skillclaw-proxy-introspection`
-- After fix, the first turn selected:
-  - `source-parser-state-machine-oob`
-  - `elf-cwe120-firmware-triage`
-  - `vuln-hunting`
-
-Main file:
-
-- `skillclaw/skill_manager.py`
-
-## 5. Session-Stable Inline Skill Injection
-
-After inline retrieval was improved, multi-turn experiments still exposed
-another issue: the first turn could select a relevant vulnerability skill, while
-later tool-result turns re-selected unrelated skills because the latest context
-contained words such as `ssh`, `SkillClaw`, or `server-side skills`.
-
-Local changes added:
-
-- `_handle_openclaw_request()` passes `session_id` into `_inject_skills()`.
-- Inline/server-inline mode pins the first task-oriented skill set for the
-  session.
-- Later main turns reuse the pinned skill bodies if the local skill generation
-  has not changed.
-- Pure SkillClaw meta tasks, such as querying skill count or catalog, are not
-  pinned.
-- Session close removes the inline skill cache.
-- Injection metadata now records:
-  - `stable_session`
-  - `stable_action` (`pin`, `reuse`, or `none`)
-  - `stable_generation`
-
-Main files:
-
-- `skillclaw/api_server.py`
-- `tests/test_inline_skill_session_cache.py`
-- `experiment_records/inline_skill_session_stability_fix_20260625.md`
-
-## 6. Experiment And Dynamic Validation Framework
-
-A lightweight experiment framework was added outside the original SkillClaw
-core. Its purpose is to evaluate whether evolved or injected skills actually
-improve vulnerability localization.
-
-Added directories:
+已经退出正式结构的旧命名包括：
 
 - `experiment_cases/`
 - `experiment_scripts/`
 - `experiment_validation/`
+- `experiment_records/`
 
-Core capabilities:
+这些旧目录名现在只应出现在：
 
-- Case definitions with target, ground truth, scoring, validators, and prompts.
-- Direct DeepSeek vs SkillClaw key comparison.
-- Unified runner for Claude Code experiments.
-- Output scoring against CVE, file, function, evidence, and root cause.
-- Validation modes:
-  - `content_match`
-  - `source_contains`
-  - `command`
-  - `bundle_script`
-  - `asan_command`
-- Result record builder and experiment matrix summarizer.
-- Injection-history tracking to detect skill drift inside a multi-turn session.
+- 迁移说明
+- 历史归档
+- 已冻结的运行证据
 
-Key scripts:
+不应再作为活跃工程结构继续扩展。
 
-- `experiment_scripts/run_eval_case.py`
-- `experiment_scripts/build_result_record.py`
-- `experiment_scripts/score_agent_output.py`
-- `experiment_scripts/run_dynamic_case.py`
-- `experiment_scripts/extract_skill_injection.py`
-- `experiment_scripts/summarize_results.py`
-- `experiment_scripts/package_experiment_framework.py`
-- `experiment_scripts/send_remote_tmux.ps1`
+## 3. 当前主流程是什么
 
-Remote experiment operation note:
+当前主链路是：
 
-- `send_remote_tmux.ps1` sends command blocks to a watched VM `tmux`
-  session through UTF-8 base64 transport. This avoids Windows PowerShell /
-  SSH encoding issues where Chinese prompts were converted to `???`.
+`benchmark case -> runs -> validation -> postprocess -> reporting -> evolve`
 
-## 7. Current Research Observations
+对应入口：
 
-Current evidence from tcpdump and libxml2 experiments suggests:
+- 案例定义：`benchmarks/cases/*.json`
+- 执行入口：`evaluation/runs/`
+- 验证入口：`evaluation/validation/`
+- 结果整形：`evaluation/postprocess/`
+- 汇总与反馈：`evaluation/reporting/`
+- 技能演化消费：`evolve_server/`
 
-- SkillClaw can improve localization when a task-relevant skill is selected.
-- SkillClaw is not automatically better than a direct LLM baseline.
-- Skill quality and retrieval quality must be evaluated separately.
-- Text-only skill evolution is not enough to prove improvement.
-- Dynamic validation and injection-history-aware evaluation are needed.
-- Multi-turn sessions can suffer from skill injection drift.
+最小闭环可以理解为：
 
-This motivates the next engineering direction:
+1. 从 `benchmarks/cases/` 读取案例
+2. 运行模型分析，得到原始输出
+3. 对输出做评分与确认
+4. 合并成 `final.json`
+5. 生成技能反馈 bundle 和技能门控报告
+6. 由 `evolve_server` 消费这些反馈
 
-- Session-stable skill injection.
-- Stronger final-output schema enforcement.
-- More realistic dynamic validators using sanitizer/crash evidence.
-- Skill bundle support for scripts and executable checks.
+## 4. 当前能力边界
 
-## 8. Upload Package And Repository Layout Notes
+当前已经具备：
 
-The repository upload package should include:
+- 案例级漏洞分析评测
+- 静态 / 动态确认
+- 统一 `final.json`
+- 技能反馈 bundle
+- 技能门控报告
+- `evolve_server` 读取 validator 支持的反馈输入
 
-- `skillclaw/` source changes listed above.
-- `experiment_cases/` benchmark definitions and skill-bundle examples.
-- `experiment_scripts/` experiment, scoring, packaging, and remote-tmux helper scripts.
-- `experiment_validation/` validator framework.
-- `experiment_records/` experiment reports, raw/final outputs, score JSON/JSONL,
-  validation JSON, matrices, and remote run artifacts.
-- `tests/test_experiment_scripts.py`.
-- `tests/test_inline_skill_session_cache.py`.
-- `LOCAL_CHANGES_FROM_SKILLCLAW.md`.
-- `REPOSITORY_UPLOAD_GUIDE.md`.
+但它还不是：
 
-The generated upload archive may also include a `Skills/` snapshot copied from
-the sibling directory `../Skills`, because this project keeps generated
-SkillClaw skills outside the Python package checkout.
+`对未知漏洞自动生成 PoC 并自动完成技能演化的通用系统`
 
-## 9. Files Deliberately Not Included In Source Packages
+更准确的定位是：
 
-Source packages should not include runtime/private artifacts such as:
+`挂接在 SkillClaw 之上的、面向漏洞分析实验的 confirmation-aware 执行与反馈框架`
 
-- `.venv/`
-- `records/conversations.jsonl` (large full session history; 600MB+ in the current workspace)
-- `records/prm_scores.jsonl`
-- `.local-share/`
-- dashboard SQLite databases
-- local API-key backups
-- model/cache directories
-- `logs/`
-- `__pycache__/`
-- `.pytest_cache/`
-- old generated `.zip` packages under `experiment_records/`
+当前仍然存在的边界：
 
-These files are environment-specific and may contain large logs or sensitive
-data.
+- 新案例接入仍需要案例级适配器
+- “skill 被选中”不等于“skill 真正起作用”，还缺更强的归因层
+- 对未知新目标的泛化能力，还需要更多真实案例验证
+

@@ -1,1 +1,0 @@
-The analysis is complete. The vulnerability is in `print-frag6.c:43` where `ND_TCHECK(dp->ip6f_offlg)` only checks 2 bytes (offset 2-3) of the 8-byte `struct ip6_frag`, but the code subsequently reads 4 bytes at offset 4 (`ip6f_ident`) via `EXTRACT_32BITS(&dp->ip6f_ident)` at line 47 without bounds validation — a classic buffer over-read when the capture snapshot is truncated.

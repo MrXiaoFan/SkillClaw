@@ -1,5 +1,0 @@
-case_id,target,confirmation_type,validator_status,executable_evidence,final_agent_record
-giflib-5.1.2-cve-2016-3977,gif2rgb,crash-backed,passed,generated GIF + ASan/crash path,yes
-tcpdump-4.9.1-cve-2017-13031,"tcpdump / frag6_print",behavior-backed,passed,generated frag6 pcap + wrapper + marker validation,yes
-tcpdump-4.9.1-cve-2018-14469,"tcpdump / ikev1_n_print",behavior-backed,passed,generated IKEv1 notification pcap + wrapper + marker validation,no
-libxml2-2.9.4-cve-2017-8872,"xmllint / htmlParseTryOrFinish",logic-backed,passed,source match + local-lib binding + push-harness confirmation,yes

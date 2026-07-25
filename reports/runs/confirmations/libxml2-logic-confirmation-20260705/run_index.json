@@ -1,0 +1,44 @@
+﻿[
+  {
+    "run_id": "libxml2-2.9.4-cve-2017-8872-skillclaw-inline-guarded-20260702-084959",
+    "case_id": "libxml2-2.9.4-cve-2017-8872",
+    "mode": "skillclaw-inline-guarded",
+    "model": "skillclaw-model",
+    "target_root": "/home/li/skillclaw-eval/libxml2-2.9.4",
+    "status": 0,
+    "agent_ran": true,
+    "start": "2026-07-02T00:49:59.763957+00:00",
+    "end": "2026-07-02T00:54:41.195100+00:00",
+    "score": 10.0,
+    "max_score": 10.0,
+    "validation_status": "passed",
+    "session_id": "d5384b3c-9ca4-44f4-b098-dcc838c2c32c",
+    "session_id_source": "inferred_from_injection_log",
+    "confirmation_maturity": "",
+    "confirmation_current_claim": "",
+    "skill_relevance": "mixed_task_relevance",
+    "selected_skills": [
+      "source-parser-state-machine-oob",
+      "vuln-hunting",
+      "elf-cwe120-firmware-triage"
+    ],
+    "artifacts": {
+      "prompt": "/home/li/skillclaw-eval/runs/libxml2-revision-20260702b/libxml2-2.9.4-cve-2017-8872-skillclaw-inline-guarded-20260702-084959-prompt.txt",
+      "raw": "/home/li/skillclaw-eval/runs/libxml2-revision-20260702b/libxml2-2.9.4-cve-2017-8872-skillclaw-inline-guarded-20260702-084959-raw.txt",
+      "stderr": "/home/li/skillclaw-eval/runs/libxml2-revision-20260702b/libxml2-2.9.4-cve-2017-8872-skillclaw-inline-guarded-20260702-084959-stderr.txt",
+      "meta": "/home/li/skillclaw-eval/runs/libxml2-revision-20260702b/libxml2-2.9.4-cve-2017-8872-skillclaw-inline-guarded-20260702-084959-run.meta",
+      "agent_json": "/home/li/skillclaw-eval/runs/libxml2-revision-20260702b/libxml2-2.9.4-cve-2017-8872-skillclaw-inline-guarded-20260702-084959-agent.json",
+      "score": "/home/li/skillclaw-eval/runs/libxml2-revision-20260702b/libxml2-2.9.4-cve-2017-8872-skillclaw-inline-guarded-20260702-084959-score.json",
+      "validation": "/home/li/skillclaw-eval/runs/libxml2-revision-20260702b/libxml2-2.9.4-cve-2017-8872-skillclaw-inline-guarded-20260702-084959-validation.json",
+      "preflight": "/home/li/skillclaw-eval/runs/libxml2-revision-20260702b/libxml2-2.9.4-cve-2017-8872-skillclaw-inline-guarded-20260702-084959-preflight.json",
+      "final": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libxml2-logic-confirmation-20260705\\final-enriched.json",
+      "manifest": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libxml2-logic-confirmation-20260705\\manifest.json",
+      "run_index": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libxml2-logic-confirmation-20260705\\run_index.json"
+    }
+  }
+]
+
+
+
+
+

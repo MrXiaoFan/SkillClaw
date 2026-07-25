@@ -14,9 +14,11 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import logging
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 from skillclaw.skill_bundle import bundle_tree_sha256
@@ -89,6 +91,46 @@ class EvolveServer(EvolveEngineMixin):
         set_summarizer_debug_dir(config.debug_dump_dir)
         if not self._uses_nacos_skill_registry():
             self._id_registry.load_from_oss(self._bucket, self._prefix)
+
+    def _load_feedback_bundle(self) -> list[dict[str, Any]] | None:
+        raw_path = str(self.config.feedback_bundle_path or "").strip()
+        if not raw_path:
+            return None
+        path = Path(raw_path)
+        if not path.is_file():
+            logger.info(
+                "[EvolveServer] feedback bundle not found at %s; continuing without it",
+                path,
+            )
+            return None
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.warning(
+                "[EvolveServer] failed to parse feedback bundle %s: %s",
+                path,
+                exc,
+            )
+            return None
+        if not isinstance(payload, list):
+            logger.warning("[EvolveServer] feedback bundle %s is not a list; ignoring", path)
+            return None
+        logger.info(
+            "[EvolveServer] loaded validator-backed feedback bundle: %d skill record(s) from %s",
+            len(payload),
+            path,
+        )
+        return [item for item in payload if isinstance(item, dict)]
+
+    @staticmethod
+    def _feedback_map(feedback_bundle: list[dict[str, Any]] | None) -> dict[str, dict[str, Any]]:
+        if not isinstance(feedback_bundle, list):
+            return {}
+        return {
+            str(item.get("skill") or "").strip(): item
+            for item in feedback_bundle
+            if str(item.get("skill") or "").strip()
+        }
 
     def _uses_nacos_skill_registry(self) -> bool:
         return str(getattr(self.config, "skill_storage_backend", "") or "").strip().lower() == "nacos"
@@ -830,6 +872,8 @@ class EvolveServer(EvolveEngineMixin):
         skill_name: str,
         sessions: list[dict],
         existing_skill_names: list[str],
+        *,
+        feedback_context: Optional[dict[str, Any]] = None,
     ) -> Optional[dict]:
         current_md = await self._call_storage(self._fetch_skill, skill_name)
         current_skill = parse_skill_content(skill_name, current_md) if current_md else None
@@ -844,6 +888,7 @@ class EvolveServer(EvolveEngineMixin):
             sessions,
             current_skill,
             existing_skill_names,
+            feedback_context=feedback_context,
         )
         if not result or result.get("action") == DecisionAction.SKIP:
             logger.info("[EvolveServer] skill '%s': LLM decided to skip", skill_name)
@@ -901,6 +946,8 @@ class EvolveServer(EvolveEngineMixin):
         no_skill_sessions: list[dict] = []
         evolution_records: list[dict] = []
         had_processing_error = False
+        feedback_bundle = self._load_feedback_bundle()
+        feedback_by_skill = self._feedback_map(feedback_bundle)
 
         if sessions:
             logger.info("[EvolveServer] summarizing %d sessions", len(sessions))
@@ -918,12 +965,23 @@ class EvolveServer(EvolveEngineMixin):
                 logger.info("[EvolveServer] evolving %d skill group(s)", skill_group_count)
             for skill_name, skill_sessions in grouped_sessions.items():
                 try:
-                    record = await self._evolve_skill_group(skill_name, skill_sessions, existing_skill_names)
+                    record = await self._evolve_skill_group(
+                        skill_name,
+                        skill_sessions,
+                        existing_skill_names,
+                        feedback_context=feedback_by_skill.get(skill_name),
+                    )
                 except Exception as exc:
                     logger.error("[EvolveServer] skill '%s' evolve failed: %s", skill_name, exc)
                     had_processing_error = True
                     continue
                 if record:
+                    if feedback_by_skill.get(skill_name):
+                        record["feedback_context"] = {
+                            "skill": feedback_by_skill[skill_name].get("skill"),
+                            "gate_decision": feedback_by_skill[skill_name].get("gate_decision"),
+                            "revision_directives": list(feedback_by_skill[skill_name].get("revision_directives") or []),
+                        }
                     evolution_records.append(record)
 
             if no_skill_sessions:
@@ -973,6 +1031,8 @@ class EvolveServer(EvolveEngineMixin):
             "session_judge": judge_summary,
             "skill_verifier": skill_verifier_summary,
             "validation_publish": validation_publish_summary,
+            "feedback_bundle_loaded": bool(feedback_bundle),
+            "feedback_bundle_skill_count": len(feedback_by_skill),
             "had_processing_error": had_processing_error,
         }
         self._append_history(summary)

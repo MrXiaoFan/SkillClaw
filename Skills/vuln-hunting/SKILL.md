@@ -1,6 +1,6 @@
 ---
 name: vuln-hunting
-description: "Orchestrated vulnerability hunting for firmware, binary, and web-exposed targets using specialist routing, IDA MCP-assisted static analysis, and structured evidence chains. Use when the task requires deep binary/firmware audit (e.g., firmware images, ELF binaries, WebVPN Lua, web-exposed CGI binaries, embedded scripts within firmware/IoT devices), IDA Pro MCP integration, or structured vulnerability candidate documentation. NOT for: live web application or API penetration testing without binary artifacts, pure source-code SAST, network service fuzzing without binary context, or generic CVE lookups."
+description: "Orchestrated vulnerability hunting for firmware, binary, and web-exposed binary targets (e.g., firmware images, ELF executables, compiled CGI binaries, embedded Lua bytecode) using specialist routing, IDA MCP-assisted static analysis, and structured evidence chains. Use only when the task provides a binary artifact and requires IDA Pro MCP reverse engineering. NOT for: source-code-only audits (e.g., reviewing C source files without binary artifacts), live web/API penetration testing without binary artifacts, network service fuzzing without binary context, generic CVE lookups, or any vulnerability hunting that does not involve reverse engineering a compiled binary artifact."
 category: general
 ---
 
@@ -53,4 +53,3 @@ entry or exposed interface
 -> validation or missing validation
 -> sink or security decision
 -> output, privilege, data exposure, or other security effect
-

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Workspace management for the agent engine under ``evolve_server``.
 
 Handles preparing the local workspace directory that OpenClaw operates on,
@@ -7,8 +7,8 @@ snapshotting skill state before agent execution, and collecting changes
 
 Key design note on OpenClaw bootstrap integration:
   OpenClaw's ``ensureAgentWorkspace()`` creates template bootstrap files
-  (AGENTS.md, SOUL.md, USER.md, IDENTITY.md, …) using ``writeFileIfMissing``
-  with ``flag: 'wx'`` — it will NOT overwrite files that already exist.
+  (AGENTS.md, SOUL.md, USER.md, IDENTITY.md, 鈥? using ``writeFileIfMissing``
+  with ``flag: 'wx'`` 鈥?it will NOT overwrite files that already exist.
   We exploit this by pre-writing our own versions of these files during
   ``prepare()`` so OpenClaw picks them up as-is.
 """
@@ -66,7 +66,7 @@ def _format_feedback_bundle_summary(records: list[dict[str, Any]]) -> str:
                 mean=float(summary.get("mean_score", 0.0) or 0.0),
                 loc=int(dims.get("localization_success", 0) or 0),
                 cve=int(dims.get("cve_success", 0) or 0),
-                cve_miss=int(dims.get("cve_calibration_miss", 0) or 0),
+                cve_miss=int(dims.get("cve_identity_miss", 0) or 0),
                 validator=int(dims.get("validator_passed", 0) or 0),
                 artifact=int(dims.get("artifact_generated", 0) or 0),
                 artifact_exec=int(dims.get("artifact_execution_passed", 0) or 0),
@@ -78,7 +78,7 @@ def _format_feedback_bundle_summary(records: list[dict[str, Any]]) -> str:
             "## How To Use",
             "",
             "- Treat `gate_decision=revise` as evidence that the skill is useful but incomplete.",
-            "- Treat `cve_calibration_miss>0` as a sign that localization and exact CVE identity must be separated.",
+            "- Treat `cve_identity_miss>0` as a sign that localization and exact CVE identity must be separated.",
             "- Treat `artifact_generated` and `artifact_execution_passed` as confirmation-oriented signals, not just analysis signals.",
             "- Read `revision_directives` in the JSON before editing any selected skill.",
         ]
@@ -114,7 +114,7 @@ def _format_feedback_gate_playbook(records: list[dict[str, Any]]) -> str:
         "",
         "## Built-in Revision Templates",
         "",
-        "- `cve_calibration_miss`: use when localization/root-cause evidence is strong but exact CVE attribution is wrong or unstable. Preserve localization guidance, add explicit CVE-evidence requirements, and add an uncertainty fallback instead of guessing a CVE.",
+        "- `cve_identity_miss`: use when localization/root-cause evidence is strong but exact CVE attribution is wrong or unstable. Preserve localization guidance, add explicit CVE-evidence requirements, and add an uncertainty fallback instead of guessing a CVE.",
         "",
     ]
     for decision in ("revise", "demote", "keep", "promote", "insufficient_evidence"):
@@ -137,7 +137,7 @@ def _format_feedback_gate_playbook(records: list[dict[str, Any]]) -> str:
                     mean=float(summary.get("mean_score", 0.0) or 0.0),
                     loc=int(dims.get("localization_success", 0) or 0),
                     cve=int(dims.get("cve_success", 0) or 0),
-                    cve_miss=int(dims.get("cve_calibration_miss", 0) or 0),
+                    cve_miss=int(dims.get("cve_identity_miss", 0) or 0),
                     validator=int(dims.get("validator_passed", 0) or 0),
                 )
             )
@@ -168,13 +168,13 @@ def _augment_agents_md_with_feedback(agents_md: str, feedback_rel_path: str) -> 
         + "## Validator-backed feedback available in this workspace\n\n"
         + f"A structured validator-backed feedback bundle is available at `{feedback_rel_path}`.\n"
         + "Before changing a skill, read this bundle and prefer its evidence over session-text impressions alone.\n"
-        + "Also read `feedback/PLAYBOOK.md` and follow its gate-specific editing behavior.\n"
+        + "Also read `evolution/PLAYBOOK.md` and follow its gate-specific editing behavior.\n"
         + "Pay special attention to:\n"
         + "- `gate_decision`\n"
         + "- `revision_directives`\n"
         + "- `dimensions.localization_success`\n"
         + "- `dimensions.cve_success`\n"
-        + "- `dimensions.cve_calibration_miss`\n"
+        + "- `dimensions.cve_identity_miss`\n"
         + "- per-case `validator_checks`\n"
     )
 
@@ -206,7 +206,7 @@ _EVOLVE_AGENTS_MD = """\
 You are a **skill evolution engineer**. Your sole task is to analyze agent
 session data in this workspace and evolve the skill library.
 
-## First Step — ALWAYS
+## First Step 鈥?ALWAYS
 
 Read `EVOLVE_AGENTS.md` in this workspace **before doing anything else**.
 It contains the full methodology, workspace layout, editing principles,
@@ -220,43 +220,44 @@ cat EVOLVE_AGENTS.md
 
 ```
 workspace/
-├── EVOLVE_AGENTS.md   ← full evolution methodology (READ THIS FIRST)
-├── feedback/          ← validator-backed skill feedback bundle (if present)
-│   ├── skill_feedback_bundle_latest.json
-│   └── SUMMARY.md
-├── sessions/          ← agent session JSON files to analyze
-├── skills/            ← current skill library (read + write)
-│   └── <name>/
-│       ├── SKILL.md
-│       ├── references/
-│       ├── scripts/
-│       ├── assets/
-│       └── history/
-├── manifest.json      ← skill manifest (read-only)
-└── skill_registry.json
+鈹溾攢鈹€ EVOLVE_AGENTS.md   鈫?full evolution methodology (READ THIS FIRST)
+鈹溾攢鈹€ evolution/          鈫?validator-backed skill feedback bundle (if present)
+鈹?  鈹溾攢鈹€ skill_feedback_bundle.json
+鈹?  鈹斺攢鈹€ SUMMARY.md
+鈹?  鈹斺攢鈹€ PLAYBOOK.md
+鈹溾攢鈹€ sessions/          鈫?agent session JSON files to analyze
+鈹溾攢鈹€ skills/            鈫?current skill library (read + write)
+鈹?  鈹斺攢鈹€ <name>/
+鈹?      鈹溾攢鈹€ SKILL.md
+鈹?      鈹溾攢鈹€ references/
+鈹?      鈹溾攢鈹€ scripts/
+鈹?      鈹溾攢鈹€ assets/
+鈹?      鈹斺攢鈹€ history/
+鈹溾攢鈹€ manifest.json      鈫?skill manifest (read-only)
+鈹斺攢鈹€ skill_registry.json
 ```
 
 ## Constraints
 
 - **All file operations** stay within this workspace directory.
 - Do NOT modify `sessions/`, `manifest.json`, or `skill_registry.json`.
-- Do NOT modify `feedback/` artifacts; they are read-only evidence for this round.
+- Do NOT modify `evolution/` artifacts; they are read-only evidence for this round.
 - Write changes only inside `skills/<name>/` bundles.
 - You may inspect and edit `SKILL.md`, `references/`, `scripts/`, `assets/`,
   `history/`, and other supporting files that belong to a skill.
-- If there are no actionable patterns, make no changes — that is fine.
+- If there are no actionable patterns, make no changes 鈥?that is fine.
 - Before finalizing any changed skill, complete the self-validation required
   by `EVOLVE_AGENTS.md`; if validation fails, keep editing or revert the
   change rather than leaving a known-failing skill in `skills/`.
 - Record self-validation results in the paired `history/v<N>_evidence.md` file.
-- When `feedback/` exists, every changed skill's `history/v<N>_evidence.md`
+- When `evolution/` exists, every changed skill's `history/v<N>_evidence.md`
   must cite the applicable `gate_decision` and the `revision_directives` it followed.
 
 ## Memory
 
 You may use `memory/` and `MEMORY.md` for long-term notes across rounds.
 Append daily observations to `memory/YYYY-MM-DD.md`. Keep `MEMORY.md` for
-curated, high-level summaries of skill evolution decisions.
+current, high-level summaries of skill evolution decisions.
 """
 
 _EVOLVE_SOUL_MD = """\
@@ -266,7 +267,7 @@ changes. Prefer conservative edits over rewrites. Skip when evidence is weak.
 """
 
 _EVOLVE_IDENTITY_MD = """\
-Skill Evolution Agent — SkillClaw
+Skill Evolution Agent 鈥?SkillClaw
 """
 
 _EVOLVE_USER_MD = """\
@@ -365,9 +366,9 @@ class AgentWorkspace:
 
         # Write optional validator-backed feedback bundle for this round.
         if feedback_bundle:
-            feedback_dir = self.root / "feedback"
+            feedback_dir = self.root / "evolution"
             feedback_dir.mkdir(parents=True, exist_ok=True)
-            feedback_json_path = feedback_dir / "skill_feedback_bundle_latest.json"
+            feedback_json_path = feedback_dir / "skill_feedback_bundle.json"
             feedback_json_path.write_text(
                 json.dumps(feedback_bundle, ensure_ascii=False, indent=2),
                 encoding="utf-8",
@@ -382,7 +383,7 @@ class AgentWorkspace:
             )
             agents_md = _augment_agents_md_with_feedback(
                 agents_md,
-                "feedback/skill_feedback_bundle_latest.json",
+                "evolution/skill_feedback_bundle.json",
             )
 
         # Write EVOLVE_AGENTS.md (the detailed methodology the agent follows)
@@ -489,7 +490,7 @@ class AgentWorkspace:
         deleted = set(before_snapshot) - set(after_snapshot)
         for name in sorted(deleted):
             logger.warning(
-                "[AgentWorkspace] skill '%s' was deleted by agent — ignoring deletion",
+                "[AgentWorkspace] skill '%s' was deleted by agent 鈥?ignoring deletion",
                 name,
             )
 
@@ -500,3 +501,4 @@ class AgentWorkspace:
         if self.sessions_dir.exists():
             shutil.rmtree(self.sessions_dir)
             self.sessions_dir.mkdir(parents=True, exist_ok=True)
+

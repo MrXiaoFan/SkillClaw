@@ -349,6 +349,62 @@ def _build_session_evidence(sessions: list[dict], max_sessions: int = 30) -> str
     return "\n\n---\n\n".join(blocks)
 
 
+def _build_feedback_context(feedback_context: dict | None) -> str:
+    if not isinstance(feedback_context, dict):
+        return ""
+    skill = str(feedback_context.get("skill") or "").strip()
+    if not skill:
+        return ""
+    lines = [
+        "## Validator-backed feedback for this skill",
+        "",
+        f"- Skill: {skill}",
+        f"- Gate decision: {str(feedback_context.get('gate_decision') or 'unknown')}",
+    ]
+    summary = feedback_context.get("summary")
+    if isinstance(summary, dict):
+        selected_runs = summary.get("selected_runs")
+        mean_score = summary.get("mean_score")
+        mismatched = summary.get("mismatched_selected")
+        relevant = summary.get("relevant_selected")
+        lines.append(
+            "- Summary: selected_runs={runs}, mean_score={score}, relevant_selected={relevant}, mismatched_selected={mismatched}".format(
+                runs=selected_runs,
+                score=mean_score,
+                relevant=relevant,
+                mismatched=mismatched,
+            )
+        )
+    reasons = [str(item).strip() for item in feedback_context.get("gate_reasons") or [] if str(item).strip()]
+    if reasons:
+        lines.extend(["- Gate reasons:"] + [f"  - {item}" for item in reasons[:5]])
+    directives = [str(item).strip() for item in feedback_context.get("revision_directives") or [] if str(item).strip()]
+    if directives:
+        lines.extend(["- Revision directives:"] + [f"  - {item}" for item in directives[:8]])
+    dimensions = feedback_context.get("dimensions")
+    if isinstance(dimensions, dict):
+        lines.append(
+            "- Dimensions: localization_success={loc}, cve_success={cve}, cve_identity_miss={miss}, "
+            "validator_passed={vp}, validator_failed={vf}".format(
+                loc=dimensions.get("localization_success"),
+                cve=dimensions.get("cve_success"),
+                miss=dimensions.get("cve_identity_miss"),
+                vp=dimensions.get("validator_passed"),
+                vf=dimensions.get("validator_failed"),
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "Use this feedback conservatively:",
+            "- If gate_decision is revise, prefer narrow edits that follow revision_directives.",
+            "- If gate_decision is demote or insufficient_evidence, avoid broad promotion claims.",
+            "- Do not erase source-validated working guidance unless the feedback explicitly contradicts it.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def _write_debug_dump(stem: str, system: str, user_msg: str, raw: str | None = None) -> None:
     debug_dir = _get_evolve_debug_dir()
     if not debug_dir:
@@ -369,13 +425,16 @@ async def evolve_skill_from_sessions(
     sessions: list[dict],
     current_skill: Optional[dict],
     existing_skill_names: list[str],
+    feedback_context: Optional[dict] = None,
 ) -> Optional[dict]:
     """Combined decision + execution for one existing-skill session group."""
     system = _EVOLVE_FROM_SESSIONS_SYSTEM.replace("{skill_name}", skill_name)
     skill_section = _build_skill_block(current_skill) if current_skill else ""
     evidence = _build_session_evidence(sessions)
+    feedback_section = _build_feedback_context(feedback_context)
     user_msg = (
         f"{skill_section}"
+        f"{feedback_section}"
         f"## Session evidence ({len(sessions)} sessions)\n\n"
         f"{evidence}\n\n"
         f"## Existing skill names in the library\n\n"

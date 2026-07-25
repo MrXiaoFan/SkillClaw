@@ -1,4 +1,4 @@
-# Adapted from MetaClaw
+﻿# Adapted from MetaClaw
 """
 FastAPI proxy server for SkillClaw.
 
@@ -605,7 +605,7 @@ def _normalize_messages_for_template(messages: list[dict]) -> list[dict]:
             m["role"] = "system"
             role = "system"
 
-        # OpenClaw tool result message → OpenAI tool message
+        # OpenClaw tool result message 鈫?OpenAI tool message
         if role == "toolResult":
             tool_msg: dict[str, Any] = {
                 "role": "tool",
@@ -1111,6 +1111,73 @@ def _anthropic_to_openai_body(body: dict[str, Any]) -> dict[str, Any]:
     return anthropic_protocol.to_openai_body(body)
 
 
+def _upstream_prefers_text_only(api_base: str) -> bool:
+    base = str(api_base or "").strip().lower()
+    if not base:
+        return False
+    if str(os.environ.get("SKILLCLAW_FORCE_TEXT_ONLY_INPUT", "")).strip().lower() in _TRUE_STRINGS:
+        return True
+    return "api.deepseek.com" in base
+
+
+def _text_only_notice_for_part(item_type: str) -> str:
+    label = str(item_type or "non-text").strip() or "non-text"
+    return (
+        f"[non-text input omitted: {label}; "
+        "use shell/file tools in the workspace to inspect target files directly]"
+    )
+
+
+def _stringify_text_only_content(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, dict):
+                item_type = str(item.get("type") or "").strip().lower()
+                if item_type in {"text", "input_text", "output_text"} and isinstance(item.get("text"), str):
+                    parts.append(item["text"])
+                elif item_type in {"image", "image_url", "input_image"}:
+                    parts.append(_text_only_notice_for_part(item_type))
+                elif "content" in item:
+                    nested = _stringify_text_only_content(item.get("content"))
+                    if nested:
+                        parts.append(nested)
+                else:
+                    text = _token_estimate_text(item).strip()
+                    if text:
+                        parts.append(text)
+            elif item is not None:
+                parts.append(str(item))
+        return "\n".join(part for part in parts if part).strip()
+    if isinstance(content, dict):
+        item_type = str(content.get("type") or "").strip().lower()
+        if item_type in {"image", "image_url", "input_image"}:
+            return _text_only_notice_for_part(item_type)
+        if item_type in {"text", "input_text", "output_text"} and isinstance(content.get("text"), str):
+            return content["text"]
+        if "content" in content:
+            nested = _stringify_text_only_content(content.get("content"))
+            if nested:
+                return nested
+        return _token_estimate_text(content).strip()
+    return str(content) if content is not None else ""
+
+
+def _coerce_messages_to_text_only(messages: Any) -> list[dict[str, Any]]:
+    if not isinstance(messages, list):
+        return []
+    normalized: list[dict[str, Any]] = []
+    for msg in messages:
+        if not isinstance(msg, dict):
+            continue
+        updated = dict(msg)
+        updated["content"] = _stringify_text_only_content(msg.get("content"))
+        normalized.append(updated)
+    return normalized
+
+
 def _anthropic_request_tool_names(body: dict[str, Any]) -> set[str]:
     tool_names: set[str] = set()
     tools = body.get("tools")
@@ -1471,8 +1538,8 @@ class SkillClawAPIServer:
         # State machines
         self._turn_counts: dict[str, int] = {}
         self._user_turn_counts: dict[str, int] = {}
-        self._pending_turn_data: dict[str, dict[int, dict]] = {}  # session → {turn → data}
-        self._prm_tasks: dict[str, dict[int, asyncio.Task]] = {}  # session → {turn → task}
+        self._pending_turn_data: dict[str, dict[int, dict]] = {}  # session 鈫?{turn 鈫?data}
+        self._prm_tasks: dict[str, dict[int, asyncio.Task]] = {}  # session 鈫?{turn 鈫?task}
         self._pending_records: dict[str, dict] = {}  # for record logging
         self._session_scored_turns: dict[str, int] = {}  # session -> finalized PRM turn count
         self._session_turns: dict[str, list] = {}
@@ -1503,7 +1570,7 @@ class SkillClawAPIServer:
         # Session boundary detection for non-OpenClaw agents (QwenPaw, IronClaw, etc.)
         # Maps pseudo-session key (e.g. "tui-model") to tracking metadata.
         self._tui_session_meta: dict[str, dict] = {}
-        _INACTIVITY_TIMEOUT = 300  # seconds — treat as new session after 5 min idle
+        _INACTIVITY_TIMEOUT = 300  # seconds 鈥?treat as new session after 5 min idle
         self._tui_inactivity_timeout = _INACTIVITY_TIMEOUT
 
         # Record files
@@ -1675,7 +1742,7 @@ class SkillClawAPIServer:
                 body["messages"] = rewritten_messages
             _raw_sid = x_session_id or body.get("session_id") or ""
             # OpenClaw sends X-Session-Id/X-Turn-Type on every request.
-            # Non-OpenClaw agents (QwenPaw, IronClaw, etc.) don't — detect
+            # Non-OpenClaw agents (QwenPaw, IronClaw, etc.) don't 鈥?detect
             # session boundaries heuristically so session upload and state
             # cleanup still work correctly.
             if _raw_sid:
@@ -1689,7 +1756,7 @@ class SkillClawAPIServer:
                 )
                 turn_type = _resolve_turn_type(x_turn_type, body.get("turn_type"), default="main")
             session_done = _resolve_session_done(x_session_done, body.get("session_done"))
-            # Do not infer session_done from bootstrap text — only explicit
+            # Do not infer session_done from bootstrap text 鈥?only explicit
             # X-Session-Done or body session_done trigger session close.
 
             stream = bool(body.get("stream", False))
@@ -1887,7 +1954,7 @@ class SkillClawAPIServer:
             return JSONResponse(content={"deleted": True, "session_id": session_id})
 
         # ---------------------------------------------------------------- #
-        # Anthropic-compatible endpoint — used by NanoClaw (credential proxy
+        # Anthropic-compatible endpoint 鈥?used by NanoClaw (credential proxy
         # forwards container Anthropic SDK calls to ANTHROPIC_BASE_URL).
         # ---------------------------------------------------------------- #
 
@@ -2002,8 +2069,8 @@ class SkillClawAPIServer:
         """Return a session_id for agents that don't send X-Session-Id.
 
         Detects new-conversation boundaries by two heuristics:
-          1. Message count dropped — the client started a fresh conversation.
-          2. Inactivity timeout — the user was idle for >N seconds.
+          1. Message count dropped 鈥?the client started a fresh conversation.
+          2. Inactivity timeout 鈥?the user was idle for >N seconds.
 
         When a boundary is detected the old session is flushed (session data
         uploaded, state dicts cleaned up) and a new unique id is assigned.
@@ -2015,7 +2082,7 @@ class SkillClawAPIServer:
         meta = self._tui_session_meta.get(tui_key)
 
         if meta is None:
-            # First request for this model — start a fresh session.
+            # First request for this model 鈥?start a fresh session.
             sid = f"tui-{model}-{uuid.uuid4().hex[:8]}"
             self._tui_session_meta[tui_key] = {
                 "session_id": sid,
@@ -2027,10 +2094,10 @@ class SkillClawAPIServer:
 
         new_session = False
         if msg_count < meta["last_msg_count"]:
-            # Message count dropped → client started a new conversation.
+            # Message count dropped 鈫?client started a new conversation.
             new_session = True
             logger.info(
-                "[SessionDetect] msg count dropped %d → %d — new session",
+                "[SessionDetect] msg count dropped %d 鈫?%d 鈥?new session",
                 meta["last_msg_count"],
                 msg_count,
             )
@@ -2038,7 +2105,7 @@ class SkillClawAPIServer:
             new_session = True
             idle_sec = int(now - meta["last_request_time"])
             logger.info(
-                "[SessionDetect] inactivity %ds > %ds — new session",
+                "[SessionDetect] inactivity %ds > %ds 鈥?new session",
                 idle_sec,
                 self._tui_inactivity_timeout,
             )
@@ -2055,7 +2122,7 @@ class SkillClawAPIServer:
             logger.info("[SessionDetect] new TUI session %s (replacing %s)", sid, old_sid)
             return sid
 
-        # Same session — update tracking.
+        # Same session 鈥?update tracking.
         meta["last_msg_count"] = msg_count
         meta["last_request_time"] = now
         return meta["session_id"]
@@ -2425,7 +2492,7 @@ class SkillClawAPIServer:
             pending_turn["prm_result"] = prm_result
 
     def _on_prm_done(self, session_id: str, turn_num: int, task: asyncio.Task):
-        """Callback after PRM scoring completes — write score back and update skill stats."""
+        """Callback after PRM scoring completes 鈥?write score back and update skill stats."""
         if task.cancelled():
             return
         try:
@@ -2516,7 +2583,7 @@ class SkillClawAPIServer:
                         cached_system = (cached_system or raw_system).strip()
                     except Exception as e:
                         logger.warning(
-                            "[OpenClaw] system prompt compression failed: %s — using raw system prompt",
+                            "[OpenClaw] system prompt compression failed: %s 鈥?using raw system prompt",
                             e,
                         )
                         cached_system = raw_system.strip()
@@ -2722,9 +2789,9 @@ class SkillClawAPIServer:
         """Forward to a real LLM API.
 
         Supports providers:
-          - ``"openai"`` (default) — any OpenAI-compatible ``/v1/chat/completions`` endpoint.
-          - ``"openrouter"`` — OpenRouter gateway (OpenAI-compatible + routing extensions).
-          - ``"bedrock"`` — AWS Bedrock Converse API via :class:`BedrockChatClient`.
+          - ``"openai"`` (default) 鈥?any OpenAI-compatible ``/v1/chat/completions`` endpoint.
+          - ``"openrouter"`` 鈥?OpenRouter gateway (OpenAI-compatible + routing extensions).
+          - ``"bedrock"`` 鈥?AWS Bedrock Converse API via :class:`BedrockChatClient`.
         """
         if self.config.llm_provider == "bedrock":
             return await self._forward_to_llm_bedrock(body)
@@ -3066,6 +3133,16 @@ class SkillClawAPIServer:
         send_body = {k: v for k, v in body.items() if k not in {"logprobs", "top_logprobs", "stream_options"}}
         send_body["model"] = self.config.llm_model_id or body.get("model", "")
         send_body["stream"] = False
+        if _upstream_prefers_text_only(api_base):
+            original_messages = send_body.get("messages")
+            normalized_messages = _coerce_messages_to_text_only(original_messages)
+            if normalized_messages:
+                send_body["messages"] = normalized_messages
+            if normalized_messages != original_messages:
+                logger.info(
+                    "[OpenClaw] normalized upstream request to text-only messages for api_base=%s",
+                    api_base,
+                )
 
         headers: dict[str, str] = {}
         if self.config.llm_api_key:
@@ -3143,7 +3220,7 @@ class SkillClawAPIServer:
                             status_code=502,
                             detail=f"Upstream LLM SSE retry failed: {stream_error}",
                         ) from stream_error
-                # Retryable upstream error — retry if attempts remain
+                # Retryable upstream error 鈥?retry if attempts remain
                 if attempt < max_retries - 1:
                     wait = min(2**attempt + random.uniform(0, 1), 30)
                     logger.warning(
@@ -3329,7 +3406,7 @@ class SkillClawAPIServer:
     async def _pull_skills_from_cloud(self, skip_names: Optional[set[str]] = None) -> None:
         """Pull latest skills from cloud storage and reload the skill manager.
 
-        This is a *read-only* operation — local skills are never pushed
+        This is a *read-only* operation 鈥?local skills are never pushed
         automatically.  Use ``skillclaw skills push`` for explicit uploads.
         """
         try:
@@ -3577,7 +3654,7 @@ class SkillClawAPIServer:
         """Finalize a turn after optional PRM scoring.
 
         SkillClaw acts as an external-agent proxy, so finalization keeps only
-        feedback/record side effects that are consumed by the framework.
+        evolution/record side effects that are consumed by the framework.
         """
         score = prm_result.get("score", 0.0) if prm_result else 0.0
         if prm_result:
@@ -3670,7 +3747,7 @@ class SkillClawAPIServer:
         banner = (
             f"\n{'=' * 70}\n"
             f"  SkillClaw proxy ready\n"
-            f"  proxy {self.config.proxy_host}:{self.config.proxy_port} → {backend}\n"
+            f"  proxy {self.config.proxy_host}:{self.config.proxy_port} 鈫?{backend}\n"
             f"  Claw agent has been configured to use this proxy automatically.\n"
             f"{'=' * 70}\n"
         )

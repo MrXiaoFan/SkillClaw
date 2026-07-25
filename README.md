@@ -2,11 +2,11 @@
 
 <img src="assets/skillclaw_logo.png" alt="SkillClaw" width="150">
 
-# ✨ SkillClaw: Let Skills Evolve Collectively with Agentic Evolver ✨
+# SkillClaw: Let Skills Evolve Collectively with Agentic Evolver
 
-<h3>AI agent skills that evolve from every real interaction — just talk.<br>Across sessions, agents, devices, and users. Experience compounds. Skills keep growing.</h3>
+<h3>AI agent skills that evolve from every real interaction, just talk.<br>Across sessions, agents, devices, and users. Experience compounds. Skills keep growing.</h3>
 
-| 🚀 Quick Install | 💬 Just Chat | 🔌 Broad Compatibility | 🧬 Collective Skill Evolution |
+| Quick Install | Just Chat | Broad Compatibility | Collective Skill Evolution |
 |:-:|:-:|:-:|:-:|
 
 [![Hermes](https://img.shields.io/badge/Hermes-supported-ff6b6b?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyTDIgN2wxMCA1IDEwLTV6TTIgMTdsOSA1VjEyTDIgN3pNMTMgMjJsOS01VjdMMTMgMTJ6Ii8+PC9zdmc+)](https://github.com/NousResearch/hermes-agent)
@@ -18,7 +18,7 @@
 [![Paper](https://img.shields.io/badge/Paper-PDF-red?style=flat-square&logo=adobeacrobatreader)](https://arxiv.org/pdf/2604.08377)
 [![Paper](https://img.shields.io/badge/Paper-Hugging%20Face-yellow?style=flat-square&logo=huggingface)](https://huggingface.co/papers/2604.08377)
 [![WeChat](https://img.shields.io/badge/WeChat-Group-07C160?style=flat-square&logo=wechat&logoColor=white)](assets/image.png)
-[![Docs](https://img.shields.io/badge/Docs-中文版-orange?style=flat-square)](assets/README_ZH.md)
+[![Docs](https://img.shields.io/badge/Docs-Chinese-orange?style=flat-square)](assets/README_ZH.md)
 
 <br>
 
@@ -32,20 +32,20 @@
 
 <table>
 <tr>
-<td>🚀 <b>Quick Install</b></td>
+<td><b>Quick Install</b></td>
 <td>Shell installer for macOS/Linux, plus a manual Python install path for Windows. Then run <code>skillclaw setup</code> and <code>skillclaw start --daemon</code>.</td>
 </tr>
 <tr>
-<td>💬 <b>Just Chat</b></td>
-<td>Just talk to your agent as usual — skill evolution happens silently in the background. Zero extra effort.</td>
+<td><b>Just Chat</b></td>
+<td>Just talk to your agent as usual; skill evolution happens silently in the background. Zero extra effort.</td>
 </tr>
 <tr>
-<td>🔌 <b>Broad Compatibility</b></td>
+<td><b>Broad Compatibility</b></td>
 <td>Natively integrates with <a href="https://github.com/NousResearch/hermes-agent">Hermes</a>, <a href="https://github.com/openai/codex">Codex</a>, <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://github.com/openclaw/openclaw">OpenClaw</a>, <a href="https://github.com/agentscope-ai/QwenPaw">QwenPaw</a>, <a href="https://github.com/nearai/ironclaw">IronClaw</a>, <a href="https://github.com/sipeed/picoclaw">PicoClaw</a>, <a href="https://github.com/zeroclaw-labs/zeroclaw">ZeroClaw</a>, <a href="https://github.com/qwibitai/NanoClaw">NanoClaw</a>, <a href="https://github.com/NVIDIA/NemoClaw">NemoClaw</a>, and any OpenAI-compatible API.</td>
 </tr>
 <tr>
-<td>🧬 <b>Collective Skill Evolution</b></td>
-<td>Skills evolve from every session, every agent, every context. Solo or team — the loop is the same. Every experience compounds.</td>
+<td><b>Collective Skill Evolution</b></td>
+<td>Skills evolve from every session, every agent, every context. Solo or team - the loop is the same. Every experience compounds.</td>
 </tr>
 </table>
 
@@ -57,11 +57,11 @@
 
 </div>
 
-Been using Hermes for a while — is your skill library still a mess? Duplicates, outdated ones, half-baked ones all piled together like an unsorted loot box. The problem isn't that Hermes doesn't learn enough — it's that nobody helps it **digest**.
+Been using Hermes for a while - is your skill library still a mess? Duplicates, outdated ones, half-baked ones all piled together like an unsorted loot box. The problem isn't that Hermes doesn't learn enough - it's that nobody helps it **digest**.
 
-**SkillClaw is built for this.** Auto-evolve, auto-deduplicate, auto-improve quality. It won't change how you work or interrupt your flow — it just quietly rewrites your agent's growth curve.
+**SkillClaw is built for this.** Auto-evolve, auto-deduplicate, auto-improve quality. It won't change how you work or interrupt your flow - it just quietly rewrites your agent's growth curve.
 
-SkillClaw doesn't make Hermes learn more — it makes everything Hermes has learned actually count.
+SkillClaw doesn't make Hermes learn more - it makes everything Hermes has learned actually count.
 
 <div align="center">
 
@@ -69,7 +69,7 @@ SkillClaw doesn't make Hermes learn more — it makes everything Hermes has lear
 
 </div>
 
-That's just one user's story. One user can also run multiple agents or use multiple devices — SkillClaw unifies them all:
+That's just one user's story. One user can also run multiple agents or use multiple devices - SkillClaw unifies them all:
 
 <div align="center">
 
@@ -79,7 +79,7 @@ That's just one user's story. One user can also run multiple agents or use multi
 
 </div>
 
-Running multiple Hermes agents for different tasks? Without SkillClaw, each builds its own isolated skill silo. With SkillClaw, skills are **merged, deduplicated, and cross-pollinated** into a unified library, then distributed back to all agents. Your Frontend agent's React patterns make the Backend agent's API design better — and vice versa.
+Running multiple Hermes agents for different tasks? Without SkillClaw, each builds its own isolated skill silo. With SkillClaw, skills are **merged, deduplicated, and cross-pollinated** into a unified library, then distributed back to all agents. Your Frontend agent's React patterns make the Backend agent's API design better - and vice versa.
 
 <div align="center">
 
@@ -89,7 +89,7 @@ Running multiple Hermes agents for different tasks? Without SkillClaw, each buil
 
 </div>
 
-Same user, different machines. Your Home Hermes learns React; your School Hermes learns ML; your Work Hermes learns K8s. Without SkillClaw, each starts from scratch. With it, **skills unify across all environments** — every Hermes instance benefits from every other's experience, regardless of where you are.
+Same user, different machines. Your Home Hermes learns React; your School Hermes learns ML; your Work Hermes learns K8s. Without SkillClaw, each starts from scratch. With it, **skills unify across all environments** - every Hermes instance benefits from every other's experience, regardless of where you are.
 
 ---
 
@@ -99,7 +99,7 @@ Same user, different machines. Your Home Hermes learns React; your School Hermes
 
 </div>
 
-Everything above is what one user gets. Now scale it up: when you join a shared group, **every team member's real-world experience feeds into the same evolution loop**. User A debugs a database issue — the skill evolves. User B, C, D benefit instantly without ever hitting the same problem. N users, one Skill, continuous evolution.
+Everything above is what one user gets. Now scale it up: when you join a shared group, **every team member's real-world experience feeds into the same evolution loop**. User A debugs a database issue - the skill evolves. User B, C, D benefit instantly without ever hitting the same problem. N users, one Skill, continuous evolution.
 
 <div align="center">
 
@@ -123,31 +123,63 @@ Everything above is what one user gets. Now scale it up: when you join a shared 
 
 ## News
 
-- **2026/04/22** — Added a bilingual dashboard with `skillclaw dashboard sync` and `skillclaw dashboard serve` for inspecting local/shared skills, validation progress, version history, and session traces.
-- **2026/04/20** — Added [Codex](https://github.com/openai/codex) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code) integration with proxy auto-configuration, native skills-directory defaults, and `doctor` / `restore` commands.
-- **2026/04/17** — Added [QwenPaw](https://github.com/agentscope-ai/QwenPaw) integration and updated the docs for broader multi-agent compatibility.
-- **2026/04/17** — Added full [Hermes](https://github.com/NousResearch/hermes-agent) integration, per-turn skill tracking, `doctor hermes`, `skillclaw skills *` management commands, and a major docs overhaul.
-- **2026/04/14** — WeChat discussion group is live! [Join the group](assets/image.png) to chat with us.
-- **2026/04/14** — Initial [Hermes](https://github.com/NousResearch/hermes-agent) support landed together with the first README refresh.
-- **2026/04/12** — Active discussion with [Deer-Flow](https://github.com/bytedance/deer-flow/discussions/2133) on cross-framework skill sharing.
-- **2026/04/11** — SkillClaw ranked **#2 Paper of the Day** on [Hugging Face Daily Papers](https://huggingface.co/papers/2604.08377)!
-- **2026/04/10** — SkillClaw is now open source! Code released on [GitHub](https://github.com/AMAP-ML/SkillClaw).
+- **2026/04/22** - Added a bilingual dashboard with `skillclaw dashboard sync` and `skillclaw dashboard serve` for inspecting local/shared skills, validation progress, version history, and session traces.
+- **2026/04/20** - Added [Codex](https://github.com/openai/codex) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code) integration with proxy auto-configuration, native skills-directory defaults, and `doctor` / `restore` commands.
+- **2026/04/17** - Added [QwenPaw](https://github.com/agentscope-ai/QwenPaw) integration and updated the docs for broader multi-agent compatibility.
+- **2026/04/17** - Added full [Hermes](https://github.com/NousResearch/hermes-agent) integration, per-turn skill tracking, `doctor hermes`, `skillclaw skills *` management commands, and a major docs overhaul.
+- **2026/04/14** - WeChat discussion group is live! [Join the group](assets/image.png) to chat with us.
+- **2026/04/14** - Initial [Hermes](https://github.com/NousResearch/hermes-agent) support landed together with the first README refresh.
+- **2026/04/12** - Active discussion with [Deer-Flow](https://github.com/bytedance/deer-flow/discussions/2133) on cross-framework skill sharing.
+- **2026/04/11** - SkillClaw ranked **#2 Paper of the Day** on [Hugging Face Daily Papers](https://huggingface.co/papers/2604.08377)!
+- **2026/04/10** - SkillClaw is now open source! Code released on [GitHub](https://github.com/AMAP-ML/SkillClaw).
 
 ---
 
 ## Overview
 
-SkillClaw makes LLM agents progressively better by **evolving reusable skills** from real session data. A single user already benefits — skills are automatically deduplicated, improved, and verified across sessions. Scale up when you're ready: multiple agents, multiple devices, or multiple users can all feed the same evolution loop.
+SkillClaw makes LLM agents progressively better by **evolving reusable skills** from real session data. A single user already benefits - skills are automatically deduplicated, improved, and verified across sessions. Scale up when you're ready: multiple agents, multiple devices, or multiple users can all feed the same evolution loop.
 
 The system has two components:
 
-1. **Client Proxy** — A local API proxy (`/v1/chat/completions`, `/v1/messages`) that intercepts agent requests, records session artifacts, and manages your local skill library. This is all you need to get started.
+1. **Client Proxy** - A local API proxy (`/v1/chat/completions`, `/v1/messages`) that intercepts agent requests, records session artifacts, and manages your local skill library. This is all you need to get started.
 
-2. **Evolve Server** (`evolve_server`) — An optional service that reads session data from shared storage, evolves or creates skills, and writes them back. Add it when you want automatic evolution or team-wide sharing. It supports two engines:
-   - `workflow`: fixed 3-stage LLM pipeline (Summarize → Aggregate → Execute)
+2. **Evolve Server** (`evolve_server`) - An optional service that reads session data from shared storage, evolves or creates skills, and writes them back. Add it when you want automatic evolution or team-wide sharing. It supports two engines:
+   - `workflow`: fixed 3-stage LLM pipeline (Summarize -> Aggregate -> Execute)
    - `agent`: OpenClaw-driven agent workspace with direct skill editing
 
 Both components share the same storage layer (Alibaba OSS / S3 / local filesystem) and skill format (`SKILL.md`).
+
+---
+
+## Repository Layout for This Fork
+
+This repository still contains the original SkillClaw client and evolve server, but the active extension work in this fork is organized as a vulnerability-analysis evaluation layer.
+
+Read it as two layers:
+
+1. **Original SkillClaw**
+   - `skillclaw/`: proxy, skill injection, session capture
+   - `evolve_server/`: evolution backend
+2. **Extension Layer in This Fork**
+   - `benchmarks/`: benchmark cases, confirmation adapters, local skill bundles
+   - `evaluation/`: execution, validation, postprocess, reporting
+   - `docs/`: architecture notes, plans, case notes, ops logs, weekly summaries
+   - `reports/`: generated results, evidence, archives, current summaries
+   - `runtime/`: local runtime outputs
+   - `scripts/`: install / ops / demo helpers
+
+If you want to understand what was added beyond upstream SkillClaw, start with:
+
+- [`LOCAL_CHANGES_FROM_SKILLCLAW.md`](./LOCAL_CHANGES_FROM_SKILLCLAW.md)
+- [`benchmarks/README.md`](./benchmarks/README.md)
+- [`evaluation/README.md`](./evaluation/README.md)
+- [`reports/README.md`](./reports/README.md)
+
+The extension's main loop is:
+
+`benchmark case -> agent run -> validation -> final record -> feedback bundle -> evolve server`
+
+So this fork is not just "extra scripts". It is a thin confirmation-aware evaluation framework attached to the original SkillClaw runtime.
 
 ---
 
@@ -186,7 +218,7 @@ macOS / Linux:
 
 ```bash
 git clone https://github.com/AMAP-ML/SkillClaw.git && cd SkillClaw
-bash scripts/install_skillclaw.sh
+bash scripts/install/install_skillclaw.sh
 source .venv/bin/activate
 ```
 
@@ -401,7 +433,7 @@ macOS / Linux:
 
 ```bash
 git clone https://github.com/AMAP-ML/SkillClaw.git && cd SkillClaw
-bash scripts/install_skillclaw_server.sh
+bash scripts/install/install_skillclaw_server.sh
 source .venv-server/bin/activate
 cp evolve_server/evolve_server.env.example evolve_server/.env
 ```
@@ -461,7 +493,7 @@ Only the server operator needs `openclaw` for `--engine agent`.
 
 ## Quick Reference
 
-**Operational model** — Every user has their own `skillclaw` process and `~/.skillclaw/config.yaml`. Each group maps to a `group_id`; one evolve server watches that namespace, turns sessions into skills, and writes them back. Joining a group only requires the correct sharing config on the client side.
+**Operational model** - Every user has their own `skillclaw` process and `~/.skillclaw/config.yaml`. Each group maps to a `group_id`; one evolve server watches that namespace, turns sessions into skills, and writes them back. Joining a group only requires the correct sharing config on the client side.
 
 **First-run checks**
 
@@ -485,13 +517,20 @@ skillclaw skills list-remote   # browse shared skills
 - Client config: `~/.skillclaw/config.yaml` (created by `skillclaw setup`)
 - Server template: [`evolve_server/evolve_server.env.example`](./evolve_server/evolve_server.env.example) (copy to `.env` to use)
 - Inspect / update config: `skillclaw config show` | `skillclaw config <key> <value>`
-- Repo entry points for contributors: `skillclaw/` (client), `evolve_server/` (backend), `scripts/` (installers)
+- Repo entry points for contributors:
+  - `skillclaw/` client and proxy
+  - `evolve_server/` evolution backend
+  - `benchmarks/` benchmark and confirmation definitions
+  - `evaluation/` execution, validation, and reporting extension
+  - `docs/` human-facing notes, plans, and weekly summaries
+  - `reports/` generated results and evidence artifacts
+  - `scripts/` install, ops, and demo helpers
 
 
 ## Acknowledgement
 The repo is built upon these open-source repos.
 
-[MetaClaw](https://github.com/aiming-lab/MetaClaw) - Just talk to your agent — it learns and evolves
+[MetaClaw](https://github.com/aiming-lab/MetaClaw) - Just talk to your agent - it learns and evolves
 
 [WildClawBench](https://github.com/InternLM/WildClawBench) - Can an AI agent do real work, end-to-end, without hand-holding
 
@@ -499,7 +538,7 @@ The repo is built upon these open-source repos.
 
 ## Contributing
 
-SkillClaw is a community-driven project. We welcome contributions of all kinds — bug reports, feature requests, new skills, documentation improvements, and more. Feel free to open an issue or submit a pull request!
+SkillClaw is a community-driven project. We welcome contributions of all kinds - bug reports, feature requests, new skills, documentation improvements, and more. Feel free to open an issue or submit a pull request!
 
 ## Citation
 
@@ -517,3 +556,4 @@ If you find SkillClaw useful in your research, please consider citing our paper:
 ## License
 
 See [LICENSE](./LICENSE) for details.
+

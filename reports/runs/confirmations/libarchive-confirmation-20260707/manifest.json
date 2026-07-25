@@ -1,0 +1,42 @@
+﻿{
+  "run_id": "libarchive-3.8.0-cve-2025-60753-skillclaw-inline-guarded-20260707-160936",
+  "case_id": "libarchive-3.8.0-cve-2025-60753",
+  "mode": "skillclaw-inline-guarded",
+  "model": "skillclaw-model",
+  "target_root": ".",
+  "status": 0,
+  "agent_ran": true,
+  "start": "2026-07-07T08:09:36.866789+00:00",
+  "end": "2026-07-07T08:13:21.481304+00:00",
+  "score": 10.0,
+  "max_score": 10.0,
+  "validation_status": "passed",
+  "session_id": "802edf30-f922-45cd-8327-3172331b4efd",
+  "session_id_source": "explicit",
+  "confirmation_maturity": "",
+  "confirmation_current_claim": "",
+  "skill_relevance": "no_task_relevant_skill",
+  "selected_skills": [
+    "source-parser-state-machine-oob",
+    "idalib-headless-batch-diagnosis",
+    "ida-headless-cwe120-sink-analysis"
+  ],
+  "artifacts": {
+    "prompt": "/home/li/skillclaw-eval/runs/libarchive-confirmation-20260707-skillclaw/libarchive-3.8.0-cve-2025-60753-skillclaw-inline-guarded-20260707-160936-prompt.txt",
+    "raw": "/home/li/skillclaw-eval/runs/libarchive-confirmation-20260707-skillclaw/libarchive-3.8.0-cve-2025-60753-skillclaw-inline-guarded-20260707-160936-raw.txt",
+    "stderr": "/home/li/skillclaw-eval/runs/libarchive-confirmation-20260707-skillclaw/libarchive-3.8.0-cve-2025-60753-skillclaw-inline-guarded-20260707-160936-stderr.txt",
+    "meta": "/home/li/skillclaw-eval/runs/libarchive-confirmation-20260707-skillclaw/libarchive-3.8.0-cve-2025-60753-skillclaw-inline-guarded-20260707-160936-run.meta",
+    "agent_json": "/home/li/skillclaw-eval/runs/libarchive-confirmation-20260707-skillclaw/libarchive-3.8.0-cve-2025-60753-skillclaw-inline-guarded-20260707-160936-agent.json",
+    "score": "/home/li/skillclaw-eval/runs/libarchive-confirmation-20260707-skillclaw/libarchive-3.8.0-cve-2025-60753-skillclaw-inline-guarded-20260707-160936-score.json",
+    "validation": "/home/li/skillclaw-eval/runs/libarchive-confirmation-20260707-skillclaw/libarchive-3.8.0-cve-2025-60753-skillclaw-inline-guarded-20260707-160936-validation.json",
+    "preflight": "/home/li/skillclaw-eval/runs/libarchive-confirmation-20260707-skillclaw/libarchive-3.8.0-cve-2025-60753-skillclaw-inline-guarded-20260707-160936-preflight.json",
+    "final": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libarchive-confirmation-20260707\\final-enriched.json",
+    "manifest": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libarchive-confirmation-20260707\\manifest.json",
+    "run_index": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libarchive-confirmation-20260707\\run_index.json"
+  }
+}
+
+
+
+
+

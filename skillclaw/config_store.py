@@ -378,7 +378,7 @@ class ConfigStore:
             session_idle_close_seconds=int(data.get("session_idle_close_seconds", 1800) or 1800),
             # Record
             record_enabled=bool(data.get("record_enabled", True)),
-            record_dir=str(data.get("record_dir", "records/") or "records/"),
+            record_dir=str(data.get("record_dir", "runtime/records/") or "runtime/records/"),
             # PRM
             use_prm=bool(prm.get("enabled", True)),
             prm_provider=prm_provider,

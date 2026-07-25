@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkillClaw vulnerability localization benchmark case",
+  "type": "object",
+  "required": ["case_id", "target", "ground_truth"],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Stable identifier used in result records."
+    },
+    "target": {
+      "type": "object",
+      "required": ["project", "version"],
+      "properties": {
+        "project": { "type": "string" },
+        "version": { "type": "string" },
+        "source_root": {
+          "type": "string",
+          "description": "Default source root. Can be overridden by --root."
+        },
+        "source_root_candidates": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional fallback roots for other machines or mounts. The loader prefers the first existing path."
+        },
+        "source_root_by_profile": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Optional named roots keyed by environment profile. Set SKILLCLAW_PATH_PROFILE to prefer one."
+        },
+        "binary": {
+          "type": "string",
+          "description": "Path to the target binary relative to source_root."
+        },
+        "build": {
+          "type": "string",
+          "description": "Human-readable build notes."
+        }
+      },
+      "additionalProperties": true
+    },
+    "ground_truth": {
+      "type": "object",
+      "required": ["files", "functions", "vulnerability_type"],
+      "properties": {
+        "cves": { "type": "array", "items": { "type": "string" } },
+        "files": { "type": "array", "items": { "type": "string" } },
+        "functions": { "type": "array", "items": { "type": "string" } },
+        "vulnerability_type": { "type": "string" },
+        "root_cause": { "type": "string" },
+        "required_evidence": { "type": "array", "items": { "type": "string" } },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "url"],
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "expected_artifacts": {
+      "type": "array",
+      "description": "Optional artifacts that the agent should generate for vulnerability confirmation or PoC validation.",
+      "items": {
+        "type": "object",
+        "required": ["name", "path"],
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string" },
+          "type": { "type": "string", "enum": ["text", "binary", "python", "shell", "directory", "other"] },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "repro": {
+      "type": "object",
+      "description": "Optional reproducibility harness describing how to build, run, and recognize a successful trigger.",
+      "properties": {
+        "build": { "type": "array", "items": { "type": "string" } },
+        "run": { "type": "array", "items": { "type": "string" } },
+        "success_markers": { "type": "array", "items": { "type": "string" } },
+        "target_frames": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "confirmation": {
+      "type": "object",
+      "description": "Optional confirmation-state metadata that distinguishes the currently confirmed runtime path from the final target evidence path.",
+      "properties": {
+        "maturity": {
+          "type": "string",
+          "description": "Current confirmation layer for this case, such as scaffold, artifact, behavior-backed, asan-backed, or intermediate-confirmed-path."
+        },
+        "current_claim": {
+          "type": "string",
+          "description": "What the project can truthfully claim today about this case."
+        },
+        "target_claim": {
+          "type": "string",
+          "description": "What stronger evidence would justify final promotion."
+        },
+        "accepted_runtime_claim": {
+          "type": "string",
+          "description": "Optional currently accepted runtime confirmation claim, used when the stable runtime path is weaker than the final publication claim."
+        },
+        "confirmed_path": {
+          "type": "object",
+          "properties": {
+            "summary": { "type": "string" },
+            "markers": { "type": "array", "items": { "type": "string" } },
+            "stack_frames": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        },
+        "promotion_blockers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Reasons the case should not yet be promoted to its target claim."
+        },
+        "promotion_targets": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Signals or conditions required before promotion."
+        }
+      },
+      "additionalProperties": true
+    },
+    "benchmark": {
+      "type": "object",
+      "description": "Optional benchmark-policy metadata that states whether this case is exploratory, runnable, confirmed, or suitable for current-runset or publication-facing statistics.",
+      "properties": {
+        "maturity": {
+          "type": "string",
+          "enum": ["exploratory", "runnable", "confirmed", "current"],
+          "description": "Engineering maturity of this case as an evaluation object."
+        },
+        "benchmark_tier": {
+          "type": "string",
+          "enum": ["engineering-only", "candidate", "current-confirmation", "publication-ready"],
+          "description": "Current benchmark tier for this case."
+        },
+        "include_in_current_runs": {
+          "type": "boolean",
+          "description": "Whether this case may be included in the current engineering runset."
+        },
+        "publication_ready": {
+          "type": "boolean",
+          "description": "Whether this case is strong enough to be counted in a publication-facing benchmark table without an extra maturity caveat."
+        },
+        "primary_evidence": {
+          "type": "string",
+          "enum": ["static-only", "artifact", "behavior-backed", "asan-backed", "intermediate-confirmed-path"],
+          "description": "Strongest current evidence backing this case."
+        },
+        "promotion_requirements": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "blind_workspace": {
+      "type": "object",
+      "description": "Optional blind-test workspace policy. Agent-visible runs should use agent_root and avoid oracle-only paths or CVE-labeled artifacts.",
+      "properties": {
+        "agent_root": {
+          "type": "string",
+          "description": "Default root to use for blind-* modes. Can still be overridden by --root."
+        },
+        "agent_root_candidates": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional fallback blind workspaces for other machines or mounts. The loader prefers the first existing path."
+        },
+        "agent_root_by_profile": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Optional named blind workspaces keyed by environment profile. Set SKILLCLAW_PATH_PROFILE to prefer one."
+        },
+        "validator_root": {
+          "type": "string",
+          "description": "Optional oracle/root path used by validators during blind-* modes. Defaults to target.source_root."
+        },
+        "validator_root_candidates": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional fallback validator roots for other machines or mounts. The loader prefers the first existing path."
+        },
+        "validator_root_by_profile": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Optional named validator roots keyed by environment profile. Set SKILLCLAW_PATH_PROFILE to prefer one."
+        },
+        "oracle_only_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths under source_root that should not be exposed to the agent during blind runs."
+        },
+        "neutral_artifacts": {
+          "type": "array",
+          "description": "Optional neutralized files that may be created in the blind workspace for agent-visible analysis.",
+          "items": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string" },
+              "description": { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "setup_commands": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Commands executed after copying source_root into agent_root to prepare a blind workspace."
+        }
+      },
+      "additionalProperties": true
+    },
+    "validators": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["content_match", "source_contains", "artifact_exists", "command", "artifact_exec", "asan_command", "bundle_script"]
+          },
+          "source": { "type": "string", "default": "agent_output" },
+          "match": { "type": "string", "enum": ["any", "all"], "default": "any" },
+          "use_ground_truth": { "type": "boolean", "default": true },
+          "file": { "type": "string" },
+          "patterns": { "type": "array", "items": { "type": "string" } },
+          "path": { "type": "string" },
+          "artifact_type": {
+            "type": "string",
+            "enum": ["file", "directory"],
+            "description": "Optional for artifact_exists. When omitted and min_size_bytes is set, the loader treats it as a file check."
+          },
+          "min_size_bytes": { "type": "integer", "minimum": 0 },
+          "command": { "type": "string" },
+          "exec_mode": { "type": "string", "enum": ["python", "bash", "sh", "direct"] },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "success_markers": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "For artifact_exec: output markers that should appear when the generated artifact runs correctly."
+          },
+          "require_markers": { "type": "boolean", "default": false },
+          "expect_crash": {
+            "type": "boolean",
+            "default": true,
+            "description": "For asan_command or artifact_exec: true means a sanitizer/crash report is expected for vulnerable builds; false means no sanitizer report is expected for fixed builds."
+          },
+          "sanitizer_markers": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "For asan_command: output markers that identify sanitizer or crash evidence."
+          },
+          "expected_stack_patterns": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "For asan_command: source files, functions, or stack substrings expected in the sanitizer report."
+          },
+          "stack_match": { "type": "string", "enum": ["any", "all"], "default": "any" },
+          "skill_name": { "type": "string" },
+          "bundle_root": { "type": "string" },
+          "skills_dir": { "type": "string" },
+          "script": { "type": "string" },
+          "enabled": { "type": "boolean", "default": true },
+          "allow_failure": { "type": "boolean", "default": false },
+          "timeout_seconds": { "type": "integer", "minimum": 1 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "required": ["max_score", "weights"],
+      "description": "Optional scoring policy. When omitted, code-level defaults are used.",
+      "default": {
+        "max_score": 10,
+        "weights": {
+          "cve": 2,
+          "file": 2,
+          "function": 3,
+          "root_cause": 2,
+          "evidence": 1
+        }
+      },
+      "properties": {
+        "max_score": { "type": "number" },
+        "weights": {
+          "type": "object",
+          "properties": {
+            "cve": { "type": "number" },
+            "file": { "type": "number" },
+            "function": { "type": "number" },
+            "root_cause": { "type": "number" },
+            "evidence": { "type": "number" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "prompt": {
+      "type": "object",
+      "properties": {
+        "recommended_skillclaw": { "type": "string" },
+        "recommended_direct": { "type": "string" },
+        "recommended_blind_skillclaw": { "type": "string" },
+        "recommended_blind_direct": { "type": "string" }
+      }
+    },
+    "notes": { "type": "string" },
+    "notes_ref": {
+      "type": "string",
+      "description": "Optional pointer to a longer case dossier under docs/cases/."
+    }
+  },
+  "additionalProperties": true
+}
+
+

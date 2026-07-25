@@ -1,6 +1,0 @@
-cd lib; make static shared
-make[1]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
-make[1]: Entering directory '/home/li/skillclaw-eval/giflib-5.1.2/lib'
-make[1]: *** No rule to make target 'static'.  Stop.
-make[1]: Leaving directory '/home/li/skillclaw-eval/giflib-5.1.2/lib'
-make: *** [Makefile.unx:9: all] Error 2

@@ -1,5 +1,0 @@
-﻿Jp2Image::readMetadata DataBuf(5)
-AddressSanitizer: heap-buffer-overflow in getULong (types.cpp)
-EXIV2_JP2_ICC_PATH_OK jp2-readmetadata-getulong
-EXIV2_ASAN_OOB_OK heap-buffer-overflow
-TARGET_EXECUTION_RC=134

@@ -52,7 +52,7 @@ class SkillClawConfig:
     served_model_name: str = "skillclaw-model"
     proxy_api_key: str = ""
     record_enabled: bool = True
-    record_dir: str = "records/"
+    record_dir: str = "runtime/records/"
     session_idle_close_seconds: int = 1800  # auto-close after 30min idle
 
     # Which CLI agent to auto-configure on startup.

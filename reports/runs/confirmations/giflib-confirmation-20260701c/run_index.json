@@ -1,0 +1,44 @@
+﻿[
+  {
+    "run_id": "giflib-5.1.2-cve-2016-3977-skillclaw-inline-guarded-20260701-201932",
+    "case_id": "giflib-5.1.2-cve-2016-3977",
+    "mode": "skillclaw-inline-guarded",
+    "model": "skillclaw-model",
+    "target_root": "/home/li/skillclaw-eval/giflib-5.1.2",
+    "status": 0,
+    "agent_ran": true,
+    "start": "2026-07-01T12:19:32.534624+00:00",
+    "end": "2026-07-01T12:20:47.174437+00:00",
+    "score": 10.0,
+    "max_score": 10.0,
+    "validation_status": "passed",
+    "session_id": "445d3d13-a9ab-4690-acae-e2bde9c89b4d",
+    "session_id_source": "missing",
+    "confirmation_maturity": "",
+    "confirmation_current_claim": "",
+    "skill_relevance": "no_task_relevant_skill",
+    "selected_skills": [
+      "source-parser-state-machine-oob",
+      "ida-headless-cwe120-sink-analysis",
+      "idalib-headless-batch-diagnosis"
+    ],
+    "artifacts": {
+      "prompt": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701c/giflib-5.1.2-cve-2016-3977-skillclaw-inline-guarded-20260701-201932-prompt.txt",
+      "raw": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701c/giflib-5.1.2-cve-2016-3977-skillclaw-inline-guarded-20260701-201932-raw.txt",
+      "stderr": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701c/giflib-5.1.2-cve-2016-3977-skillclaw-inline-guarded-20260701-201932-stderr.txt",
+      "meta": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701c/giflib-5.1.2-cve-2016-3977-skillclaw-inline-guarded-20260701-201932-run.meta",
+      "agent_json": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701c/giflib-5.1.2-cve-2016-3977-skillclaw-inline-guarded-20260701-201932-agent.json",
+      "score": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701c/giflib-5.1.2-cve-2016-3977-skillclaw-inline-guarded-20260701-201932-score.json",
+      "validation": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701c/giflib-5.1.2-cve-2016-3977-skillclaw-inline-guarded-20260701-201932-validation.json",
+      "preflight": "/home/li/skillclaw-eval/runs/giflib-confirmation-20260701c/giflib-5.1.2-cve-2016-3977-skillclaw-inline-guarded-20260701-201932-preflight.json",
+      "final": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\giflib-confirmation-20260701c\\final-enriched.json",
+      "manifest": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\giflib-confirmation-20260701c\\manifest.json",
+      "run_index": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\giflib-confirmation-20260701c\\run_index.json"
+    }
+  }
+]
+
+
+
+
+

@@ -22,6 +22,28 @@ def test_injected_skill_catalog_does_not_count_as_skill_reference():
     assert grouped == {NO_SKILL_KEY: [session]}
 
 
+def test_selected_skill_names_count_as_skill_references():
+    session = {
+        "session_id": "s2",
+        "turns": [
+            {
+                "selected_skill_names": ["source-parser-state-machine-oob"],
+                "skill_injection": {
+                    "selected_skill_names": ["source-parser-state-machine-oob"],
+                    "injection_mode": "inline",
+                },
+                "injected_skills": ["catalog-only"],
+            }
+        ],
+    }
+
+    _extract_session_metadata(session)
+    grouped = aggregate_sessions_by_skill([session])
+
+    assert session["_skills_referenced"] == {"source-parser-state-machine-oob"}
+    assert set(grouped) == {"source-parser-state-machine-oob"}
+
+
 def test_read_or_modified_skills_count_as_skill_references():
     session = {
         "session_id": "s1",

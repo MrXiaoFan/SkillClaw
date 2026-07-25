@@ -350,9 +350,10 @@ def _extract_session_metadata(session: dict) -> None:
     """Extract skill references and compute aggregate metrics for a session.
 
     Attaches the following keys directly to the session dict:
-    - ``_skills_referenced``: set of skill names explicitly read or modified
-      by any interaction. Prompt-time injection alone is not treated as
-      evidence that the session actually used that skill.
+    - ``_skills_referenced``: set of skill names explicitly read, modified,
+      or selected by SkillClaw inline injection. Generic injected skill
+      catalogs are ignored; only the server-tracked ``selected_skill_names``
+      metadata is treated as a concrete session-level reference.
     - ``_prm_scores``: list of all non-None PRM scores
     - ``_avg_prm``: mean PRM (or None if no scores)
     - ``_has_tool_errors``: True if any interaction had tool errors
@@ -370,6 +371,16 @@ def _extract_session_metadata(session: dict) -> None:
             name = item.get("skill_name", "").strip() if isinstance(item, dict) else str(item or "").strip()
             if name:
                 skills.add(name)
+        for item in turn.get("selected_skill_names") or []:
+            name = str(item or "").strip()
+            if name:
+                skills.add(name)
+        injection = turn.get("skill_injection")
+        if isinstance(injection, dict):
+            for item in injection.get("selected_skill_names") or []:
+                name = str(item or "").strip()
+                if name:
+                    skills.add(name)
         prm = turn.get("prm_score")
         if prm is not None:
             prm_scores.append(prm)

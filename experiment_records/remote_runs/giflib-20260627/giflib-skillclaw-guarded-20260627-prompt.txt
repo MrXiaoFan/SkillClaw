@@ -1,8 +1,0 @@
-Do not use WebSearch. The current working directory is giflib-5.1.2 and the target utility is util/gif2rgb. Use SkillClaw server-side skills, but do not invoke Claude Code local Skill(...). Analyze this giflib version for a known heap-based buffer overflow involving the GIF background color index and color-map lookup. Inspect source code and build artifacts. Finish with exactly one JSON object containing predicted_cves, predicted_files, predicted_functions, root_cause, evidence, and confidence.
-
-Experiment execution constraints:
-- Do not use TodoWrite or other task-list tools.
-- Use at most 8 tool calls. Prefer targeted Grep/Read/Bash commands over broad full-project scans.
-- As soon as you have a plausible file, function, root cause, and evidence, stop calling tools and produce the final answer.
-- If you are uncertain, still output the best-supported JSON instead of continuing tool use.
-- The final response must be exactly one JSON object with keys: predicted_cves, predicted_files, predicted_functions, root_cause, evidence, confidence.

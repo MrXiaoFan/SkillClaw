@@ -131,7 +131,7 @@ class EvolveServerConfig:
     http_port: int = 8787
 
     # Local persistence
-    history_path: str = "evolve_history.jsonl"
+    history_path: str = "runtime/evolve/evolve_history.jsonl"
     processed_log_path: str = "evolve_processed.json"
 
     # Agent engine
@@ -161,6 +161,10 @@ class EvolveServerConfig:
             min(1.0, float(self.validation_min_mean_score or 0.0)),
         )
         self.validation_max_rejections = max(1, int(self.validation_max_rejections or 1))
+        if not self.feedback_bundle_path:
+            self.feedback_bundle_path = str(
+                _REPO_ROOT / "reports" / "current" / "skill_feedback_bundle.json"
+            )
         if self.engine == "agent":
             if not self.llm_model or self.llm_model == "gpt-4o":
                 self.llm_model = _DEFAULT_AGENT_EVOLVE_MODEL
@@ -168,10 +172,6 @@ class EvolveServerConfig:
                 self.openclaw_home = str(_PACKAGE_DIR / ".openclaw_home")
             if not self.workspace_root:
                 self.workspace_root = str(_PACKAGE_DIR / "agent_workspace")
-            if not self.feedback_bundle_path:
-                self.feedback_bundle_path = str(
-                    _REPO_ROOT / "experiment_records" / "skill_feedback_bundle_latest.json"
-                )
 
     @classmethod
     def from_env(cls) -> "EvolveServerConfig":
@@ -264,7 +264,7 @@ class EvolveServerConfig:
             proxy_reload_api_key=os.environ.get("EVOLVE_PROXY_RELOAD_API_KEY", ""),
             interval_seconds=int(os.environ.get("EVOLVE_INTERVAL", "600")),
             http_port=int(os.environ.get("EVOLVE_PORT", "8787")),
-            history_path=os.environ.get("EVOLVE_HISTORY_LOG", "evolve_history.jsonl"),
+            history_path=os.environ.get("EVOLVE_HISTORY_LOG", "runtime/evolve/evolve_history.jsonl"),
             processed_log_path=os.environ.get("EVOLVE_PROCESSED_LOG", "evolve_processed.json"),
             openclaw_bin=os.environ.get("AGENT_EVOLVE_OPENCLAW_BIN", "openclaw"),
             openclaw_home=os.environ.get("AGENT_EVOLVE_OPENCLAW_HOME", ""),

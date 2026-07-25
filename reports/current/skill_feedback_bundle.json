@@ -1,0 +1,1628 @@
+[
+  {
+    "skill": "vuln-hunting",
+    "generated_at": "2026-07-25T07:16:57.591709+00:00",
+    "gate_decision": "demote",
+    "gate_reasons": [
+      "共有 3 次错配选中，且没有任务对齐证据",
+      "共有 3 次运行选中了该技能，但与任务并不对齐",
+      "共有 3 次 validator 通过"
+    ],
+    "gate_suggestions": [
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选",
+      "增加更窄的触发条件，减少过度选中"
+    ],
+    "summary": {
+      "selected_runs": 3,
+      "relevant_selected": 0,
+      "mismatched_selected": 3,
+      "infra_selected": 0,
+      "positive": 0,
+      "neutral": 3,
+      "negative": 0,
+      "mean_score": 1.0
+    },
+    "dimensions": {
+      "localization_success": 3,
+      "cve_success": 3,
+      "cve_identity_miss": 0,
+      "evidence_success": 3,
+      "root_cause_success": 3,
+      "validator_passed": 3,
+      "validator_failed": 0,
+      "dynamic_or_bundle_validation_passed": 1,
+      "artifact_generated": 2,
+      "artifact_execution_passed": 2
+    },
+    "revision_directives": [
+      "增加更窄的触发条件，减少过度选中",
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选"
+    ],
+    "revision_templates": [],
+    "cases": [
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libxml2-logic-confirmation-20260705\\final-enriched.json",
+        "case_id": "libxml2-2.9.4-cve-2017-8872",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "d5384b3c-9ca4-44f4-b098-dcc838c2c32c",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "positive",
+        "suggested_action": "keep_skill_but_prune_extraneous_selection",
+        "quality_flags": [
+          "extraneous_skill_selection"
+        ],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2017-8872"
+          ],
+          "files": [
+            "HTMLparser.c"
+          ],
+          "functions": [
+            "htmlParseTryOrFinish"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2017-8872"
+          ],
+          "files": [
+            "HTMLparser.c"
+          ],
+          "functions": [
+            "htmlParseTryOrFinish"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2017-8872"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "skipped",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-links-local-libxml2",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "push-harness-logic-confirmation",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libxml2-input-exists",
+            "type": "artifact_exists",
+            "status": "skipped",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libxml2-input-executes",
+            "type": "artifact_exec",
+            "status": "skipped",
+            "allow_failure": false
+          },
+          {
+            "name": "bundle-avail-lookahead-check",
+            "type": "bundle_script",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "asan-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      },
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-confirmation-20260702a\\final-enriched.json",
+        "case_id": "tcpdump-4.9.1-cve-2017-13031",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "7d4c3cc5-67e8-4765-9fbc-2aeaa10ec832",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "positive",
+        "suggested_action": "keep_skill_but_prune_extraneous_selection",
+        "quality_flags": [
+          "extraneous_skill_selection"
+        ],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2017-13031"
+          ],
+          "files": [
+            "print-frag6.c"
+          ],
+          "functions": [
+            "frag6_print"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2017-13031"
+          ],
+          "files": [
+            "print-frag6.c"
+          ],
+          "functions": [
+            "frag6_print"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2017-13031"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "generated-poc-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "pcap-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      },
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-isakmp-confirmation-20260707\\final-enriched.json",
+        "case_id": "tcpdump-4.9.1-cve-2018-14469",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "51fc43b6-d9c4-41a2-bed8-a79831088f9f",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "positive",
+        "suggested_action": "keep_skill_but_prune_extraneous_selection",
+        "quality_flags": [
+          "extraneous_skill_selection"
+        ],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2018-14469"
+          ],
+          "files": [
+            "print-isakmp.c"
+          ],
+          "functions": [
+            "ikev1_n_print"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2018-14469"
+          ],
+          "files": [
+            "print-isakmp.c"
+          ],
+          "functions": [
+            "ikev1_n_print"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2018-14469"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "prepare-confirmation-artifacts",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "pcap-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "skill": "ida-headless-cwe120-sink-analysis",
+    "generated_at": "2026-07-25T07:16:57.591617+00:00",
+    "gate_decision": "demote",
+    "gate_reasons": [
+      "共有 2 次错配选中，且没有任务对齐证据",
+      "共有 2 次运行选中了该技能，但与任务并不对齐",
+      "共有 2 次 validator 通过"
+    ],
+    "gate_suggestions": [
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选",
+      "增加更窄的触发条件，减少过度选中"
+    ],
+    "summary": {
+      "selected_runs": 2,
+      "relevant_selected": 0,
+      "mismatched_selected": 2,
+      "infra_selected": 0,
+      "positive": 0,
+      "neutral": 2,
+      "negative": 0,
+      "mean_score": 1.0
+    },
+    "dimensions": {
+      "localization_success": 2,
+      "cve_success": 2,
+      "cve_identity_miss": 0,
+      "evidence_success": 2,
+      "root_cause_success": 2,
+      "validator_passed": 2,
+      "validator_failed": 0,
+      "dynamic_or_bundle_validation_passed": 1,
+      "artifact_generated": 2,
+      "artifact_execution_passed": 2
+    },
+    "revision_directives": [
+      "增加更窄的触发条件，减少过度选中",
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选"
+    ],
+    "revision_templates": [],
+    "cases": [
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\giflib-confirmation-20260701c\\final-enriched.json",
+        "case_id": "giflib-5.1.2-cve-2016-3977",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "445d3d13-a9ab-4690-acae-e2bde9c89b4d",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "neutral",
+        "suggested_action": "inspect_retrieval_before_promoting_skill",
+        "quality_flags": [],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2016-3977"
+          ],
+          "files": [
+            "util/gif2rgb.c"
+          ],
+          "functions": [
+            "DumpScreen2RGB"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2016-3977"
+          ],
+          "files": [
+            "util/gif2rgb.c"
+          ],
+          "functions": [
+            "DumpScreen2RGB"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2016-3977"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "gif2rgb-binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "generated-poc-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "asan-poc-cve-2016-3977",
+            "type": "asan_command",
+            "status": "passed",
+            "allow_failure": false
+          }
+        ]
+      },
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libarchive-confirmation-20260707\\final-enriched.json",
+        "case_id": "libarchive-3.8.0-cve-2025-60753",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "802edf30-f922-45cd-8327-3172331b4efd",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "neutral",
+        "suggested_action": "inspect_retrieval_before_promoting_skill",
+        "quality_flags": [],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2025-60753"
+          ],
+          "files": [
+            "tar/subst.c"
+          ],
+          "functions": [
+            "apply_substitution"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2025-60753"
+          ],
+          "files": [
+            "tar/subst.c"
+          ],
+          "functions": [
+            "apply_substitution"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2025-60753"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "bsdtar-binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "prepare-confirmation-artifacts",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-rule-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-wrapper-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "skill": "idalib-headless-batch-diagnosis",
+    "generated_at": "2026-07-25T07:16:57.591627+00:00",
+    "gate_decision": "demote",
+    "gate_reasons": [
+      "共有 2 次错配选中，且没有任务对齐证据",
+      "共有 2 次运行选中了该技能，但与任务并不对齐",
+      "共有 2 次 validator 通过"
+    ],
+    "gate_suggestions": [
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选",
+      "增加更窄的触发条件，减少过度选中"
+    ],
+    "summary": {
+      "selected_runs": 2,
+      "relevant_selected": 0,
+      "mismatched_selected": 2,
+      "infra_selected": 0,
+      "positive": 0,
+      "neutral": 2,
+      "negative": 0,
+      "mean_score": 1.0
+    },
+    "dimensions": {
+      "localization_success": 2,
+      "cve_success": 2,
+      "cve_identity_miss": 0,
+      "evidence_success": 2,
+      "root_cause_success": 2,
+      "validator_passed": 2,
+      "validator_failed": 0,
+      "dynamic_or_bundle_validation_passed": 1,
+      "artifact_generated": 2,
+      "artifact_execution_passed": 2
+    },
+    "revision_directives": [
+      "增加更窄的触发条件，减少过度选中",
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选"
+    ],
+    "revision_templates": [],
+    "cases": [
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\giflib-confirmation-20260701c\\final-enriched.json",
+        "case_id": "giflib-5.1.2-cve-2016-3977",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "445d3d13-a9ab-4690-acae-e2bde9c89b4d",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "neutral",
+        "suggested_action": "inspect_retrieval_before_promoting_skill",
+        "quality_flags": [],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2016-3977"
+          ],
+          "files": [
+            "util/gif2rgb.c"
+          ],
+          "functions": [
+            "DumpScreen2RGB"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2016-3977"
+          ],
+          "files": [
+            "util/gif2rgb.c"
+          ],
+          "functions": [
+            "DumpScreen2RGB"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2016-3977"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "gif2rgb-binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "generated-poc-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "asan-poc-cve-2016-3977",
+            "type": "asan_command",
+            "status": "passed",
+            "allow_failure": false
+          }
+        ]
+      },
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libarchive-confirmation-20260707\\final-enriched.json",
+        "case_id": "libarchive-3.8.0-cve-2025-60753",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "802edf30-f922-45cd-8327-3172331b4efd",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "neutral",
+        "suggested_action": "inspect_retrieval_before_promoting_skill",
+        "quality_flags": [],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2025-60753"
+          ],
+          "files": [
+            "tar/subst.c"
+          ],
+          "functions": [
+            "apply_substitution"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2025-60753"
+          ],
+          "files": [
+            "tar/subst.c"
+          ],
+          "functions": [
+            "apply_substitution"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2025-60753"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "bsdtar-binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "prepare-confirmation-artifacts",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-rule-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-wrapper-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "skill": "verify-rootfs-full-enumeration",
+    "generated_at": "2026-07-25T07:16:57.591747+00:00",
+    "gate_decision": "demote",
+    "gate_reasons": [
+      "共有 2 次错配选中，且没有任务对齐证据",
+      "共有 2 次运行选中了该技能，但与任务并不对齐",
+      "共有 2 次 validator 通过"
+    ],
+    "gate_suggestions": [
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选",
+      "增加更窄的触发条件，减少过度选中"
+    ],
+    "summary": {
+      "selected_runs": 2,
+      "relevant_selected": 0,
+      "mismatched_selected": 2,
+      "infra_selected": 0,
+      "positive": 0,
+      "neutral": 2,
+      "negative": 0,
+      "mean_score": 1.0
+    },
+    "dimensions": {
+      "localization_success": 2,
+      "cve_success": 2,
+      "cve_identity_miss": 0,
+      "evidence_success": 2,
+      "root_cause_success": 2,
+      "validator_passed": 2,
+      "validator_failed": 0,
+      "dynamic_or_bundle_validation_passed": 0,
+      "artifact_generated": 2,
+      "artifact_execution_passed": 2
+    },
+    "revision_directives": [
+      "增加更窄的触发条件，减少过度选中",
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选"
+    ],
+    "revision_templates": [],
+    "cases": [
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-confirmation-20260702a\\final-enriched.json",
+        "case_id": "tcpdump-4.9.1-cve-2017-13031",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "7d4c3cc5-67e8-4765-9fbc-2aeaa10ec832",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "positive",
+        "suggested_action": "keep_skill_but_prune_extraneous_selection",
+        "quality_flags": [
+          "extraneous_skill_selection"
+        ],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2017-13031"
+          ],
+          "files": [
+            "print-frag6.c"
+          ],
+          "functions": [
+            "frag6_print"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2017-13031"
+          ],
+          "files": [
+            "print-frag6.c"
+          ],
+          "functions": [
+            "frag6_print"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2017-13031"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "generated-poc-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "pcap-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      },
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-isakmp-confirmation-20260707\\final-enriched.json",
+        "case_id": "tcpdump-4.9.1-cve-2018-14469",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "51fc43b6-d9c4-41a2-bed8-a79831088f9f",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "positive",
+        "suggested_action": "keep_skill_but_prune_extraneous_selection",
+        "quality_flags": [
+          "extraneous_skill_selection"
+        ],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2018-14469"
+          ],
+          "files": [
+            "print-isakmp.c"
+          ],
+          "functions": [
+            "ikev1_n_print"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2018-14469"
+          ],
+          "files": [
+            "print-isakmp.c"
+          ],
+          "functions": [
+            "ikev1_n_print"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2018-14469"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "prepare-confirmation-artifacts",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "pcap-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "skill": "elf-cwe120-firmware-triage",
+    "generated_at": "2026-07-25T07:16:57.591716+00:00",
+    "gate_decision": "insufficient_evidence",
+    "gate_reasons": [
+      "仅有 1 次样本，低于最少要求 2",
+      "共有 1 次运行选中了该技能，但与任务并不对齐",
+      "共有 1 次 validator 通过"
+    ],
+    "gate_suggestions": [
+      "先补更多 benchmark 运行，再决定是否调整其状态",
+      "增加更窄的触发条件，减少过度选中"
+    ],
+    "summary": {
+      "selected_runs": 1,
+      "relevant_selected": 0,
+      "mismatched_selected": 1,
+      "infra_selected": 0,
+      "positive": 0,
+      "neutral": 1,
+      "negative": 0,
+      "mean_score": 1.0
+    },
+    "dimensions": {
+      "localization_success": 1,
+      "cve_success": 1,
+      "cve_identity_miss": 0,
+      "evidence_success": 1,
+      "root_cause_success": 1,
+      "validator_passed": 1,
+      "validator_failed": 0,
+      "dynamic_or_bundle_validation_passed": 1,
+      "artifact_generated": 0,
+      "artifact_execution_passed": 0
+    },
+    "revision_directives": [
+      "先补更多 benchmark 运行，再决定是否调整其状态",
+      "增加更窄的触发条件，减少过度选中"
+    ],
+    "revision_templates": [],
+    "cases": [
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libxml2-logic-confirmation-20260705\\final-enriched.json",
+        "case_id": "libxml2-2.9.4-cve-2017-8872",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "d5384b3c-9ca4-44f4-b098-dcc838c2c32c",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "positive",
+        "suggested_action": "keep_skill_but_prune_extraneous_selection",
+        "quality_flags": [
+          "extraneous_skill_selection"
+        ],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2017-8872"
+          ],
+          "files": [
+            "HTMLparser.c"
+          ],
+          "functions": [
+            "htmlParseTryOrFinish"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2017-8872"
+          ],
+          "files": [
+            "HTMLparser.c"
+          ],
+          "functions": [
+            "htmlParseTryOrFinish"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2017-8872"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "skipped",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-links-local-libxml2",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "push-harness-logic-confirmation",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libxml2-input-exists",
+            "type": "artifact_exists",
+            "status": "skipped",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libxml2-input-executes",
+            "type": "artifact_exec",
+            "status": "skipped",
+            "allow_failure": false
+          },
+          {
+            "name": "bundle-avail-lookahead-check",
+            "type": "bundle_script",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "asan-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "skill": "source-parser-state-machine-oob",
+    "generated_at": "2026-07-25T07:16:57.591591+00:00",
+    "gate_decision": "promote",
+    "gate_reasons": [
+      "3 次正向样本，平均分 1，且 file/function 证据均命中",
+      "共有 2 次运行选中了该技能，但与任务并不对齐",
+      "共有 5 次 validator 通过"
+    ],
+    "gate_suggestions": [
+      "可进入更广基准集继续验证；若后续没有明显证据缺口，可考虑提高默认检索优先级",
+      "增加更窄的触发条件，减少过度选中"
+    ],
+    "summary": {
+      "selected_runs": 5,
+      "relevant_selected": 3,
+      "mismatched_selected": 2,
+      "infra_selected": 0,
+      "positive": 3,
+      "neutral": 2,
+      "negative": 0,
+      "mean_score": 1.0
+    },
+    "dimensions": {
+      "localization_success": 5,
+      "cve_success": 5,
+      "cve_identity_miss": 0,
+      "evidence_success": 5,
+      "root_cause_success": 5,
+      "validator_passed": 5,
+      "validator_failed": 0,
+      "dynamic_or_bundle_validation_passed": 2,
+      "artifact_generated": 4,
+      "artifact_execution_passed": 4
+    },
+    "revision_directives": [
+      "可进入更广基准集继续验证；若后续没有明显证据缺口，可考虑提高默认检索优先级",
+      "增加更窄的触发条件，减少过度选中"
+    ],
+    "revision_templates": [],
+    "cases": [
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\giflib-confirmation-20260701c\\final-enriched.json",
+        "case_id": "giflib-5.1.2-cve-2016-3977",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "445d3d13-a9ab-4690-acae-e2bde9c89b4d",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "neutral",
+        "suggested_action": "inspect_retrieval_before_promoting_skill",
+        "quality_flags": [],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2016-3977"
+          ],
+          "files": [
+            "util/gif2rgb.c"
+          ],
+          "functions": [
+            "DumpScreen2RGB"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2016-3977"
+          ],
+          "files": [
+            "util/gif2rgb.c"
+          ],
+          "functions": [
+            "DumpScreen2RGB"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2016-3977"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "gif2rgb-binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "generated-poc-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "asan-poc-cve-2016-3977",
+            "type": "asan_command",
+            "status": "passed",
+            "allow_failure": false
+          }
+        ]
+      },
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libarchive-confirmation-20260707\\final-enriched.json",
+        "case_id": "libarchive-3.8.0-cve-2025-60753",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "802edf30-f922-45cd-8327-3172331b4efd",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "neutral",
+        "suggested_action": "inspect_retrieval_before_promoting_skill",
+        "quality_flags": [],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2025-60753"
+          ],
+          "files": [
+            "tar/subst.c"
+          ],
+          "functions": [
+            "apply_substitution"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2025-60753"
+          ],
+          "files": [
+            "tar/subst.c"
+          ],
+          "functions": [
+            "apply_substitution"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2025-60753"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "bsdtar-binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "prepare-confirmation-artifacts",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-rule-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-wrapper-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libarchive-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          }
+        ]
+      },
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\libxml2-logic-confirmation-20260705\\final-enriched.json",
+        "case_id": "libxml2-2.9.4-cve-2017-8872",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "d5384b3c-9ca4-44f4-b098-dcc838c2c32c",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "positive",
+        "suggested_action": "keep_skill_but_prune_extraneous_selection",
+        "quality_flags": [
+          "extraneous_skill_selection"
+        ],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2017-8872"
+          ],
+          "files": [
+            "HTMLparser.c"
+          ],
+          "functions": [
+            "htmlParseTryOrFinish"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2017-8872"
+          ],
+          "files": [
+            "HTMLparser.c"
+          ],
+          "functions": [
+            "htmlParseTryOrFinish"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2017-8872"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "skipped",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-links-local-libxml2",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "push-harness-logic-confirmation",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libxml2-input-exists",
+            "type": "artifact_exists",
+            "status": "skipped",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-libxml2-input-executes",
+            "type": "artifact_exec",
+            "status": "skipped",
+            "allow_failure": false
+          },
+          {
+            "name": "bundle-avail-lookahead-check",
+            "type": "bundle_script",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "asan-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      },
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-confirmation-20260702a\\final-enriched.json",
+        "case_id": "tcpdump-4.9.1-cve-2017-13031",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "7d4c3cc5-67e8-4765-9fbc-2aeaa10ec832",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "positive",
+        "suggested_action": "keep_skill_but_prune_extraneous_selection",
+        "quality_flags": [
+          "extraneous_skill_selection"
+        ],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2017-13031"
+          ],
+          "files": [
+            "print-frag6.c"
+          ],
+          "functions": [
+            "frag6_print"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2017-13031"
+          ],
+          "files": [
+            "print-frag6.c"
+          ],
+          "functions": [
+            "frag6_print"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2017-13031"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "generated-poc-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "pcap-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      },
+      {
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\reports\\runs\\confirmations\\tcpdump-isakmp-confirmation-20260707\\final-enriched.json",
+        "case_id": "tcpdump-4.9.1-cve-2018-14469",
+        "mode": "skillclaw-inline-guarded",
+        "model": "skillclaw-model",
+        "session_id": "51fc43b6-d9c4-41a2-bed8-a79831088f9f",
+        "score": 10.0,
+        "max_score": 10.0,
+        "normalized_score": 1.0,
+        "feedback_decision": "positive",
+        "suggested_action": "keep_skill_but_prune_extraneous_selection",
+        "quality_flags": [
+          "extraneous_skill_selection"
+        ],
+        "validation_status": "passed",
+        "hits": {
+          "cve": true,
+          "file": true,
+          "function": true,
+          "evidence": true,
+          "root_cause": true
+        },
+        "expected": {
+          "cves": [
+            "CVE-2018-14469"
+          ],
+          "files": [
+            "print-isakmp.c"
+          ],
+          "functions": [
+            "ikev1_n_print"
+          ]
+        },
+        "matched": {
+          "cves": [
+            "CVE-2018-14469"
+          ],
+          "files": [
+            "print-isakmp.c"
+          ],
+          "functions": [
+            "ikev1_n_print"
+          ]
+        },
+        "predicted_cves": [
+          "CVE-2018-14469"
+        ],
+        "validator_checks": [
+          {
+            "name": "agent-output-ground-truth-match",
+            "type": "content_match",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "ground-truth-source-location",
+            "type": "source_contains",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "binary-present",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": true
+          },
+          {
+            "name": "prepare-confirmation-artifacts",
+            "type": "command",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-exists",
+            "type": "artifact_exists",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "generated-poc-input-executes",
+            "type": "artifact_exec",
+            "status": "passed",
+            "allow_failure": false
+          },
+          {
+            "name": "pcap-poc-placeholder",
+            "type": "asan_command",
+            "status": "skipped",
+            "allow_failure": false
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -8,20 +8,20 @@
     "effectiveness": 0.0009813542688910696
   },
   "elf-cwe120-plt-analysis": {
-    "inject_count": 1463,
-    "positive_count": 1,
-    "negative_count": 21,
+    "inject_count": 1480,
+    "positive_count": 2,
+    "negative_count": 37,
     "neutral_count": 0,
-    "last_injected_at": "2026-06-20T16:00:29",
-    "effectiveness": 0.000683526999316473
+    "last_injected_at": "2026-06-28T00:33:50",
+    "effectiveness": 0.0013513513513513514
   },
   "vuln-hunting": {
-    "inject_count": 1637,
-    "positive_count": 6,
-    "negative_count": 24,
-    "neutral_count": 1,
-    "last_injected_at": "2026-06-25T18:47:35",
-    "effectiveness": 0.0036652412950519244
+    "inject_count": 1837,
+    "positive_count": 14,
+    "negative_count": 198,
+    "neutral_count": 2,
+    "last_injected_at": "2026-07-20T16:34:23",
+    "effectiveness": 0.007621121393576484
   },
   "cisco-wsma-enumeration": {
     "inject_count": 1244,
@@ -56,20 +56,20 @@
     "effectiveness": 0.000856898029134533
   },
   "elf-cwe120-firmware-triage": {
-    "inject_count": 2007,
-    "positive_count": 14,
-    "negative_count": 265,
-    "neutral_count": 10,
-    "last_injected_at": "2026-06-25T18:47:35",
-    "effectiveness": 0.006975585450921774
+    "inject_count": 2154,
+    "positive_count": 19,
+    "negative_count": 392,
+    "neutral_count": 11,
+    "last_injected_at": "2026-07-20T15:11:12",
+    "effectiveness": 0.008820798514391829
   },
   "idalib-headless-elf-sink-analysis": {
-    "inject_count": 853,
-    "positive_count": 0,
-    "negative_count": 0,
+    "inject_count": 855,
+    "positive_count": 1,
+    "negative_count": 1,
     "neutral_count": 0,
-    "last_injected_at": "2026-06-06T23:54:50",
-    "effectiveness": 0.5
+    "last_injected_at": "2026-07-02T08:38:04",
+    "effectiveness": 0.0011695906432748538
   },
   "verify-rootfs-symlink-coverage": {
     "inject_count": 852,
@@ -80,20 +80,20 @@
     "effectiveness": 0.0011737089201877935
   },
   "verify-rootfs-full-enumeration": {
-    "inject_count": 854,
+    "inject_count": 905,
+    "positive_count": 5,
+    "negative_count": 49,
+    "neutral_count": 0,
+    "last_injected_at": "2026-07-20T16:34:23",
+    "effectiveness": 0.0055248618784530384
+  },
+  "firmware-cwe120-result-lookup": {
+    "inject_count": 894,
     "positive_count": 3,
     "negative_count": 3,
     "neutral_count": 0,
-    "last_injected_at": "2026-06-25T11:25:52",
-    "effectiveness": 0.00351288056206089
-  },
-  "firmware-cwe120-result-lookup": {
-    "inject_count": 892,
-    "positive_count": 3,
-    "negative_count": 1,
-    "neutral_count": 0,
-    "last_injected_at": "2026-06-20T16:00:33",
-    "effectiveness": 0.0033632286995515697
+    "last_injected_at": "2026-06-27T15:42:18",
+    "effectiveness": 0.003355704697986577
   },
   "ssh-password-recon-workflow": {
     "inject_count": 793,
@@ -136,12 +136,12 @@
     "effectiveness": 0.0
   },
   "peplink-fiwm-firmware-analysis": {
-    "inject_count": 235,
+    "inject_count": 236,
     "positive_count": 0,
-    "negative_count": 0,
+    "negative_count": 1,
     "neutral_count": 0,
-    "last_injected_at": "2026-06-05T11:29:34",
-    "effectiveness": 0.5
+    "last_injected_at": "2026-07-07T14:55:39",
+    "effectiveness": 0.0
   },
   "cisco-iosxe-webui-wsma-exploitation": {
     "inject_count": 294,
@@ -192,36 +192,36 @@
     "effectiveness": 0.04428044280442804
   },
   "ida-hexrays-buffer-size-verification": {
-    "inject_count": 32,
+    "inject_count": 34,
     "positive_count": 1,
-    "negative_count": 6,
-    "neutral_count": 0,
-    "last_injected_at": "2026-06-20T17:13:02",
-    "effectiveness": 0.03125
-  },
-  "ida-headless-cwe120-sink-analysis": {
-    "inject_count": 91,
-    "positive_count": 0,
-    "negative_count": 3,
-    "neutral_count": 0,
-    "last_injected_at": "2026-06-25T14:49:02",
-    "effectiveness": 0.0
-  },
-  "idalib-headless-sink-callsite-tracing": {
-    "inject_count": 114,
-    "positive_count": 0,
-    "negative_count": 49,
-    "neutral_count": 3,
-    "last_injected_at": "2026-06-12T19:15:49",
-    "effectiveness": 0.0
-  },
-  "cwe120-targeted-binary-ida-scan": {
-    "inject_count": 29,
-    "positive_count": 3,
     "negative_count": 8,
     "neutral_count": 0,
-    "last_injected_at": "2026-06-20T17:13:02",
-    "effectiveness": 0.10344827586206896
+    "last_injected_at": "2026-06-27T15:42:18",
+    "effectiveness": 0.029411764705882353
+  },
+  "ida-headless-cwe120-sink-analysis": {
+    "inject_count": 186,
+    "positive_count": 5,
+    "negative_count": 89,
+    "neutral_count": 0,
+    "last_injected_at": "2026-07-25T15:48:04",
+    "effectiveness": 0.026881720430107527
+  },
+  "idalib-headless-sink-callsite-tracing": {
+    "inject_count": 116,
+    "positive_count": 1,
+    "negative_count": 50,
+    "neutral_count": 3,
+    "last_injected_at": "2026-07-02T08:38:04",
+    "effectiveness": 0.008620689655172414
+  },
+  "cwe120-targeted-binary-ida-scan": {
+    "inject_count": 32,
+    "positive_count": 3,
+    "negative_count": 11,
+    "neutral_count": 0,
+    "last_injected_at": "2026-07-07T14:55:39",
+    "effectiveness": 0.09375
   },
   "skillclaw-internal-mechanics-inspection": {
     "inject_count": 9,
@@ -240,12 +240,12 @@
     "effectiveness": 0.0
   },
   "idalib-headless-batch-diagnosis": {
-    "inject_count": 1,
-    "positive_count": 0,
-    "negative_count": 1,
+    "inject_count": 75,
+    "positive_count": 2,
+    "negative_count": 69,
     "neutral_count": 0,
-    "last_injected_at": "2026-06-12T10:59:37",
-    "effectiveness": 0.0
+    "last_injected_at": "2026-07-25T15:48:04",
+    "effectiveness": 0.02666666666666667
   },
   "elf-plt-reloc-sink-scan": {
     "inject_count": 3,
@@ -256,12 +256,12 @@
     "effectiveness": 0.0
   },
   "idalib-buffer-size-verification-fallback": {
-    "inject_count": 1,
+    "inject_count": 2,
     "positive_count": 0,
-    "negative_count": 0,
+    "negative_count": 1,
     "neutral_count": 0,
-    "last_injected_at": "2026-06-13T14:54:03",
-    "effectiveness": 0.5
+    "last_injected_at": "2026-07-07T14:55:39",
+    "effectiveness": 0.0
   },
   "skillclaw-retrieval-optimization": {
     "inject_count": 3,
@@ -272,11 +272,11 @@
     "effectiveness": 1.0
   },
   "source-parser-state-machine-oob": {
-    "inject_count": 87,
-    "positive_count": 7,
-    "negative_count": 78,
-    "neutral_count": 2,
-    "last_injected_at": "2026-06-25T18:47:35",
-    "effectiveness": 0.08045977011494253
+    "inject_count": 378,
+    "positive_count": 18,
+    "negative_count": 336,
+    "neutral_count": 3,
+    "last_injected_at": "2026-07-25T15:48:04",
+    "effectiveness": 0.047619047619047616
   }
 }
