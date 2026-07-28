@@ -28,6 +28,7 @@ from .validation_store import ValidationStore
 logger = logging.getLogger(__name__)
 
 _CORE_FRONTMATTER_KEYS = {"name", "description", "metadata", "category"}
+_MAX_RECORD_PARSE_WARNINGS = 20
 
 
 def _utc_now_iso() -> str:
@@ -74,6 +75,24 @@ def _read_json(path: Path, default: Any) -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return default
+
+
+def _append_limited_parse_warnings(
+    warnings: list[str],
+    *,
+    label: str,
+    path: Path,
+    line_numbers: list[int],
+) -> None:
+    if not line_numbers:
+        return
+    for line_no in line_numbers[:_MAX_RECORD_PARSE_WARNINGS]:
+        warnings.append(f"failed to parse {label} '{path}' line {line_no}")
+    remaining = len(line_numbers) - _MAX_RECORD_PARSE_WARNINGS
+    if remaining > 0:
+        warnings.append(
+            f"skipped {remaining} additional malformed {label} entries from '{path}'"
+        )
 
 
 def _hash_bytes(data: bytes) -> str:
@@ -456,15 +475,16 @@ def _load_record_prm_scores(record_dir: Path, warnings: list[str]) -> dict[tuple
         return {}
 
     scores: dict[tuple[str, int], float] = {}
+    parse_failures: list[int] = []
     try:
-        with prm_scores_path.open(encoding="utf-8") as handle:
+        with prm_scores_path.open(encoding="utf-8-sig") as handle:
             for line_no, raw_line in enumerate(handle, start=1):
                 if not raw_line.strip():
                     continue
                 try:
                     payload = json.loads(raw_line)
                 except json.JSONDecodeError:
-                    warnings.append(f"failed to parse PRM record '{prm_scores_path}' line {line_no}")
+                    parse_failures.append(line_no)
                     continue
                 if not isinstance(payload, dict):
                     continue
@@ -483,6 +503,12 @@ def _load_record_prm_scores(record_dir: Path, warnings: list[str]) -> dict[tuple
     except OSError as exc:
         warnings.append(f"failed to read PRM records '{prm_scores_path}': {exc}")
 
+    _append_limited_parse_warnings(
+        warnings,
+        label="PRM record",
+        path=prm_scores_path,
+        line_numbers=parse_failures,
+    )
     return scores
 
 
@@ -498,9 +524,10 @@ def _load_record_sessions(config: SkillClawConfig, warnings: list[str]) -> list[
     prm_scores = _load_record_prm_scores(record_dir, warnings)
     grouped: dict[str, dict[str, Any]] = {}
     line_counter = 0
+    parse_failures: list[int] = []
 
     try:
-        with conversations_path.open(encoding="utf-8") as handle:
+        with conversations_path.open(encoding="utf-8-sig") as handle:
             for raw_line in handle:
                 line_counter += 1
                 if not raw_line.strip():
@@ -508,7 +535,7 @@ def _load_record_sessions(config: SkillClawConfig, warnings: list[str]) -> list[
                 try:
                     payload = json.loads(raw_line)
                 except json.JSONDecodeError:
-                    warnings.append(f"failed to parse conversation record '{conversations_path}' line {line_counter}")
+                    parse_failures.append(line_counter)
                     continue
                 if not isinstance(payload, dict):
                     continue
@@ -562,6 +589,12 @@ def _load_record_sessions(config: SkillClawConfig, warnings: list[str]) -> list[
         warnings.append(f"failed to read local conversations '{conversations_path}': {exc}")
         return []
 
+    _append_limited_parse_warnings(
+        warnings,
+        label="conversation record",
+        path=conversations_path,
+        line_numbers=parse_failures,
+    )
     sessions: list[dict[str, Any]] = []
     for session_id, group in grouped.items():
         turns = [group["turns"][turn_num] for turn_num in sorted(group["turns"])]
