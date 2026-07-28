@@ -29,6 +29,17 @@ def _load_json(path: Path) -> dict[str, Any]:
 def _load_optional_json(path: Path | None) -> Any:
     if not path:
         return None
+    if path.is_dir():
+        items = []
+        for child in sorted(path.glob("*.json")):
+            text = child.read_text(encoding="utf-8-sig", errors="replace").strip()
+            if not text:
+                continue
+            try:
+                items.append(json.loads(text))
+            except json.JSONDecodeError:
+                continue
+        return items
     if not path.is_file():
         return None
     text = path.read_text(encoding="utf-8-sig", errors="replace").strip()
@@ -49,12 +60,79 @@ def _load_optional_json(path: Path | None) -> Any:
         return rows
 
 
-def _select_injection(value: Any, session_id: str) -> dict[str, Any] | None:
+def _looks_like_session_snapshot(value: dict[str, Any]) -> bool:
+    return isinstance(value.get("turns"), list) and bool(str(value.get("session_id") or "").strip())
+
+
+def _session_snapshot_to_injection_rows(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    session_id = str(snapshot.get("session_id") or "").strip()
+    turns = snapshot.get("turns")
+    timestamp = str(snapshot.get("timestamp") or "").strip()
+    if not session_id or not isinstance(turns, list):
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for turn in turns:
+        if not isinstance(turn, dict):
+            continue
+        raw_injection = turn.get("skill_injection")
+        injection = raw_injection if isinstance(raw_injection, dict) else {}
+        selected_skill_names = turn.get("selected_skill_names")
+        if not isinstance(selected_skill_names, list):
+            selected_skill_names = injection.get("selected_skill_names")
+        if not isinstance(selected_skill_names, list):
+            selected_skill_names = []
+
+        row = {
+            "session_id": session_id,
+            "timestamp": timestamp,
+            "turn": int(turn.get("turn_num") or turn.get("turn") or 0),
+            "selected_skill_names": [str(item) for item in selected_skill_names if str(item).strip()],
+            "injection_mode": str(
+                turn.get("injection_mode")
+                or injection.get("injection_mode")
+                or ""
+            ),
+            "skill_top_k": turn.get("skill_top_k", injection.get("top_k")),
+            "skill_prompt_hash": str(
+                turn.get("skill_prompt_hash")
+                or injection.get("skill_prompt_hash")
+                or ""
+            ),
+            "available_skill_count": int(
+                turn.get("available_skill_count")
+                or injection.get("available_skill_count")
+                or 0
+            ),
+            "prm_score": turn.get("prm_score"),
+            "source": "session_snapshot",
+        }
+        if row["selected_skill_names"] or row["injection_mode"] or row["skill_prompt_hash"]:
+            rows.append(row)
+    return rows
+
+
+def _normalize_injection_rows(value: Any) -> list[dict[str, Any]]:
     if isinstance(value, dict):
-        return value
+        if _looks_like_session_snapshot(value):
+            return _session_snapshot_to_injection_rows(value)
+        return [value]
     if not isinstance(value, list):
-        return None
-    candidates = [item for item in value if isinstance(item, dict)]
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        if _looks_like_session_snapshot(item):
+            rows.extend(_session_snapshot_to_injection_rows(item))
+        else:
+            rows.append(item)
+    return rows
+
+
+def _select_injection(value: Any, session_id: str) -> dict[str, Any] | None:
+    candidates = _normalize_injection_rows(value)
     if session_id:
         for item in reversed(candidates):
             if str(item.get("session_id") or "") == session_id:
@@ -63,11 +141,7 @@ def _select_injection(value: Any, session_id: str) -> dict[str, Any] | None:
 
 
 def _select_injection_history(value: Any, session_id: str) -> list[dict[str, Any]]:
-    if isinstance(value, dict):
-        return [value]
-    if not isinstance(value, list):
-        return []
-    candidates = [item for item in value if isinstance(item, dict)]
+    candidates = _normalize_injection_rows(value)
     if session_id:
         candidates = [item for item in candidates if str(item.get("session_id") or "") == session_id]
     return candidates
@@ -113,6 +187,22 @@ def _default_compare_md_out(path: Path) -> Path:
     return path.with_name(f"{path.stem}-compare.md")
 
 
+def _parse_injection_timestamp(timestamp_text: str, local_tz) -> datetime | None:
+    text = str(timestamp_text or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            parsed = datetime.strptime(text, "%Y-%m-%d %H:%M:%S").replace(tzinfo=local_tz)
+        except ValueError:
+            return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=local_tz)
+    return parsed.astimezone(local_tz)
+
+
 def _infer_session_id_from_injection(
     injection_value: Any,
     final_record: dict[str, Any],
@@ -120,7 +210,8 @@ def _infer_session_id_from_injection(
     margin_before_seconds: int = 300,
     margin_after_seconds: int = 300,
 ) -> str:
-    if not isinstance(injection_value, list):
+    injection_rows = _normalize_injection_rows(injection_value)
+    if not injection_rows:
         return ""
     run_meta = final_record.get("run")
     if not isinstance(run_meta, dict):
@@ -142,16 +233,13 @@ def _infer_session_id_from_injection(
     end_local = end_utc.astimezone(local_tz) + timedelta(seconds=margin_after_seconds)
 
     candidates: dict[str, tuple[datetime, int]] = {}
-    for item in injection_value:
-        if not isinstance(item, dict):
-            continue
+    for item in injection_rows:
         candidate_session_id = str(item.get("session_id") or "").strip()
         timestamp_text = str(item.get("timestamp") or "").strip()
         if not candidate_session_id or not timestamp_text:
             continue
-        try:
-            timestamp = datetime.strptime(timestamp_text, "%Y-%m-%d %H:%M:%S").replace(tzinfo=local_tz)
-        except ValueError:
+        timestamp = _parse_injection_timestamp(timestamp_text, local_tz)
+        if timestamp is None:
             continue
         if not (start_local <= timestamp <= end_local):
             continue
