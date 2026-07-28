@@ -13,6 +13,43 @@ def _state_dir() -> Path:
     return Path.home() / ".skillclaw"
 
 
+def workspace_runtime_dir(skills_dir: str) -> Path:
+    return Path(str(skills_dir)).expanduser().resolve().parent / "runtime"
+
+
+def workspace_state_dir(skills_dir: str) -> Path:
+    """Preferred workspace-local runtime state directory."""
+    return workspace_runtime_dir(skills_dir) / "state"
+
+
+def legacy_workspace_state_dir(skills_dir: str) -> Path:
+    return Path(str(skills_dir)).expanduser().resolve().parent / "state"
+
+
+def resolve_workspace_state_dir(skills_dir: str) -> Path:
+    runtime_dir = workspace_state_dir(skills_dir)
+    legacy_dir = legacy_workspace_state_dir(skills_dir)
+    if runtime_dir.exists() or not legacy_dir.exists():
+        return runtime_dir
+    return legacy_dir
+
+
+def skill_stats_path(skills_dir: str) -> Path:
+    return workspace_state_dir(skills_dir) / "skill_stats.json"
+
+
+def legacy_skill_stats_path(skills_dir: str) -> Path:
+    return Path(str(skills_dir)).expanduser().resolve() / "skill_stats.json"
+
+
+def is_git_managed_path(path: str) -> bool:
+    current = Path(str(path)).expanduser().resolve()
+    for candidate in (current, *current.parents):
+        if (candidate / ".git").exists():
+            return True
+    return False
+
+
 def pid_file_path() -> Path:
     return _state_dir() / "skillclaw.pid"
 

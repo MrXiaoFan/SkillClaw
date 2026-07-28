@@ -16,6 +16,7 @@ import threading
 from pathlib import Path
 from typing import Optional
 
+from . import runtime_state
 from .config_store import ConfigStore
 
 logger = logging.getLogger(__name__)
@@ -124,27 +125,33 @@ class SkillClawLauncher:
 
         # Auto-pull shared skills on startup
         if cfg.sharing_enabled and cfg.sharing_auto_pull_on_start:
-            try:
-                from .skill_hub import SkillHub
-
-                hub = SkillHub.from_config(cfg)
-                # Local enhancement: startup auto-pull must not delete local
-                # experimental skills that have not been published yet.
-                result = hub.pull_skills(cfg.skills_dir, mirror=False)
-                logger.info(
-                    "[Launcher] auto-pull: %d downloaded, %d unchanged, %d deleted",
-                    result["downloaded"],
-                    result["skipped"],
-                    result.get("deleted", 0),
+            if runtime_state.is_git_managed_path(cfg.skills_dir):
+                logger.warning(
+                    "[Launcher] skipped startup skill pull because skills_dir is git-managed: %s",
+                    cfg.skills_dir,
                 )
-                if skill_manager is not None and (
-                    result.get("downloaded", 0) > 0
-                    or result.get("deleted", 0) > 0
-                    or result.get("restored_from_backup", False)
-                ):
-                    skill_manager.reload()
-            except Exception as e:
-                logger.warning("[Launcher] auto-pull failed: %s", e)
+            else:
+                try:
+                    from .skill_hub import SkillHub
+
+                    hub = SkillHub.from_config(cfg)
+                    # Local enhancement: startup auto-pull must not delete local
+                    # experimental skills that have not been published yet.
+                    result = hub.pull_skills(cfg.skills_dir, mirror=False)
+                    logger.info(
+                        "[Launcher] auto-pull: %d downloaded, %d unchanged, %d deleted",
+                        result["downloaded"],
+                        result["skipped"],
+                        result.get("deleted", 0),
+                    )
+                    if skill_manager is not None and (
+                        result.get("downloaded", 0) > 0
+                        or result.get("deleted", 0) > 0
+                        or result.get("restored_from_backup", False)
+                    ):
+                        skill_manager.reload()
+                except Exception as e:
+                    logger.warning("[Launcher] auto-pull failed: %s", e)
 
         server = SkillClawAPIServer(
             config=cfg,

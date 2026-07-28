@@ -59,6 +59,7 @@ from typing import Any, Dict, Optional
 
 import yaml
 
+from . import runtime_state
 from .skill_bundle import list_skill_bundle_paths
 
 logger = logging.getLogger(__name__)
@@ -372,14 +373,19 @@ class SkillManager:
     # ------------------------------------------------------------------ #
 
     def _stats_path(self) -> str:
-        return os.path.join(self._skills_dir, "skill_stats.json")
+        return str(runtime_state.skill_stats_path(self._skills_dir))
+
+    def _legacy_stats_path(self) -> str:
+        return str(runtime_state.legacy_skill_stats_path(self._skills_dir))
 
     def _load_stats(self) -> Dict[str, Dict[str, Any]]:
         path = self._stats_path()
-        if not os.path.exists(path):
+        legacy_path = self._legacy_stats_path()
+        candidate = path if os.path.exists(path) else legacy_path
+        if not os.path.exists(candidate):
             return {}
         try:
-            with open(path, encoding="utf-8") as f:
+            with open(candidate, encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, OSError) as e:
             logger.warning("[SkillManager] failed to load stats: %s", e)
@@ -387,7 +393,9 @@ class SkillManager:
 
     def _save_stats(self) -> None:
         try:
-            with open(self._stats_path(), "w", encoding="utf-8") as f:
+            path = self._stats_path()
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
                 json.dump(self._stats, f, ensure_ascii=False, indent=2)
         except OSError as e:
             logger.warning("[SkillManager] failed to save stats: %s", e)

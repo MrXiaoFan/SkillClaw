@@ -21,6 +21,7 @@ from evolve_server.storage.oss_helpers import fetch_version_bundle, load_version
 from skillclaw.skill_bundle import bundle_entrypoint_text, read_skill_bundle_with_meta
 
 from .config import SkillClawConfig
+from .runtime_state import legacy_skill_stats_path, resolve_workspace_state_dir, skill_stats_path
 from .skill_hub import SkillHub
 from .validation_store import ValidationStore
 
@@ -236,7 +237,9 @@ def _load_local_skills(config: SkillClawConfig, warnings: list[str]) -> dict[str
     if not skills_dir.is_dir():
         return {}
 
-    stats = _read_json(skills_dir / "skill_stats.json", {})
+    stats = _read_json(skill_stats_path(config.skills_dir), {})
+    if not isinstance(stats, dict):
+        stats = _read_json(legacy_skill_stats_path(config.skills_dir), {})
     if not isinstance(stats, dict):
         stats = {}
 
@@ -319,7 +322,7 @@ def _load_local_skills(config: SkillClawConfig, warnings: list[str]) -> dict[str
 
 
 def _skillclaw_state_dir(config: SkillClawConfig) -> Path:
-    return Path(config.skills_dir).expanduser().parent / "state"
+    return resolve_workspace_state_dir(config.skills_dir)
 
 
 def _find_transcript_path(session_id: str, transcript_paths: list[str]) -> Path | None:

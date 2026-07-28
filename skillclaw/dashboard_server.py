@@ -21,6 +21,7 @@ from evolve_server.storage.oss_helpers import fetch_skill_bundle, fetch_version_
 from .config import SkillClawConfig
 from .dashboard_ingest import build_dashboard_snapshot
 from .dashboard_store import DashboardStore
+from .runtime_state import legacy_skill_stats_path, skill_stats_path
 from .skill_bundle import write_skill_bundle
 from .skill_hub import SkillHub
 
@@ -34,7 +35,9 @@ def _assets_dir() -> Path:
 def _build_skill_filter(config: SkillClawConfig, *, no_filter: bool = False) -> dict[str, Any] | None:
     if no_filter:
         return None
-    stats_path = Path(config.skills_dir).expanduser() / "skill_stats.json"
+    stats_path = skill_stats_path(config.skills_dir)
+    if not stats_path.is_file():
+        stats_path = legacy_skill_stats_path(config.skills_dir)
     if not stats_path.is_file():
         return None
     try:

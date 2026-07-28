@@ -841,7 +841,9 @@ def skills_push(no_filter):
     click.echo(f"Pushing skills to {_sharing_target(cfg)} ...")
     skill_filter = None
     if not no_filter:
-        stats_path = os.path.join(cfg.skills_dir, "skill_stats.json")
+        stats_path = str(runtime_state.skill_stats_path(cfg.skills_dir))
+        if not os.path.exists(stats_path):
+            stats_path = str(runtime_state.legacy_skill_stats_path(cfg.skills_dir))
         if os.path.exists(stats_path):
             import json
 

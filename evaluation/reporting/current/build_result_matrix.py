@@ -61,18 +61,20 @@ def _history_skills(history: list[dict[str, Any]], index: int) -> list[str]:
     return [str(skill) for skill in item.get("selected_skill_names") or []]
 
 
-def _relevance_fields(record: dict[str, Any], selected_skills: list[str]) -> tuple[str, str]:
+def _relevance_fields(record: dict[str, Any], selected_skills: list[str]) -> tuple[str, str, str, str]:
     relevance = record.get("skill_relevance") if isinstance(record.get("skill_relevance"), dict) else {}
     status = str(relevance.get("status") or "")
     relevant = relevance.get("relevant_skills") or []
+    mismatched = relevance.get("mismatched_skills") or []
+    infra = relevance.get("infra_skills") or []
     if status:
-        return status, _join(relevant)
+        return status, _join(relevant), _join(mismatched), _join(infra)
     if not selected_skills:
-        return "no_selected_skills", ""
+        return "no_selected_skills", "", "", ""
     non_infra = [skill for skill in selected_skills if not skill.startswith("skillclaw-")]
     if non_infra:
-        return "legacy_has_non_infra_skill", _join(non_infra)
-    return "legacy_only_infra_skills", ""
+        return "legacy_has_non_infra_skill", _join(non_infra), "", ""
+    return "legacy_only_infra_skills", "", "", _join(selected_skills)
 
 
 def _record_row(path: Path, record: dict[str, Any]) -> dict[str, Any]:
@@ -80,7 +82,7 @@ def _record_row(path: Path, record: dict[str, Any]) -> dict[str, Any]:
     validation = record.get("validation") if isinstance(record.get("validation"), dict) else {}
     run = record.get("run") if isinstance(record.get("run"), dict) else {}
     selected_skills = _selected_skills(record)
-    relevance_status, relevant_skills = _relevance_fields(record, selected_skills)
+    relevance_status, relevant_skills, mismatched_skills, infra_skills = _relevance_fields(record, selected_skills)
     history = _injection_history(record)
     first_selected = _history_skills(history, 0)
     latest_selected = _history_skills(history, -1)
@@ -103,6 +105,8 @@ def _record_row(path: Path, record: dict[str, Any]) -> dict[str, Any]:
         "injection_changed": bool(first_selected and latest_selected and first_selected != latest_selected),
         "skill_relevance": relevance_status,
         "relevant_skills": relevant_skills,
+        "mismatched_skills": mismatched_skills,
+        "infra_skills": infra_skills,
         "confirmation_maturity": record.get("confirmation_maturity") or "",
         "confirmation_current_claim": record.get("confirmation_current_claim") or "",
         "confirmation_accepted_runtime_claim": record.get("confirmation_accepted_runtime_claim") or "",
@@ -157,6 +161,9 @@ def write_markdown(rows: list[dict[str, Any]], out_path: Path) -> None:
         "injection_turns",
         "injection_changed",
         "skill_relevance",
+        "relevant_skills",
+        "mismatched_skills",
+        "infra_skills",
         "decision",
         "action",
     ]
@@ -179,6 +186,7 @@ def write_markdown(rows: list[dict[str, Any]], out_path: Path) -> None:
     lines.append("- `confirmation_maturity` 表示当前案例声称达到的确认层级，例如 `behavior-backed` 或 `intermediate-confirmed-path`。")
     lines.append("- `confirmation_current_claim` 与 `confirmation_accepted_runtime_claim` 可能不同：前者是当前工程上诚实的总体表述，后者是当前接受的运行时确认路径。")
     lines.append("- `skill_relevance=only_infra_skills` 表示 SkillClaw 选到的是框架/自检类技能，而不是任务相关漏洞分析技能。")
+    lines.append("- `relevant_skills / mismatched_skills / infra_skills` 用来直接观察一次 run 里哪些技能与任务相关、哪些明显跑偏、哪些只是框架自检类技能。")
     lines.append("- `decision/action` 是后续技能演化的反馈信号，不等于人工最终结论。")
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -209,6 +217,8 @@ def write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
         "injection_changed",
         "skill_relevance",
         "relevant_skills",
+        "mismatched_skills",
+        "infra_skills",
         "decision",
         "action",
         "agent_ran",

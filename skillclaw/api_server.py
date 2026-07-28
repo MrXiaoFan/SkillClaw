@@ -28,6 +28,7 @@ import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from . import runtime_state
 from .config import SkillClawConfig
 from .prm_scorer import PRMScorer
 from .protocols import anthropic_messages as anthropic_protocol
@@ -3409,6 +3410,12 @@ class SkillClawAPIServer:
         This is a *read-only* operation 鈥?local skills are never pushed
         automatically.  Use ``skillclaw skills push`` for explicit uploads.
         """
+        if runtime_state.is_git_managed_path(self.config.skills_dir):
+            logger.warning(
+                "[SkillHub] skipped automatic skill pull because skills_dir is git-managed: %s",
+                self.config.skills_dir,
+            )
+            return
         try:
             from .skill_hub import SkillHub
 

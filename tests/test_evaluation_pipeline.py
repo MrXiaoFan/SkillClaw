@@ -31,6 +31,7 @@ from evaluation.reporting.research.build_research_claims import build_claims, wr
 from evaluation.reporting.current.build_result_matrix import collect_rows, write_csv, write_markdown
 from evaluation.reporting.feedback.build_skill_summary import build_skill_feedback
 from evaluation.validation.core import assess_skill_relevance, build_feedback
+from skillclaw import runtime_state
 from skillclaw.skill_manager import SkillManager
 
 
@@ -2915,6 +2916,8 @@ def test_build_result_matrix_writes_matrix(tmp_path):
                 "skill_relevance": {
                     "status": "only_infra_skills",
                     "relevant_skills": [],
+                    "mismatched_skills": [],
+                    "infra_skills": ["skillclaw-proxy-introspection"],
                 },
                 "confirmation_maturity": "behavior-backed",
                 "confirmation_current_claim": "runtime marker path is confirmed",
@@ -2938,10 +2941,59 @@ def test_build_result_matrix_writes_matrix(tmp_path):
     assert rows[0]["file_hit"] == "Y"
     assert rows[0]["cve_hit"] == "N"
     assert rows[0]["confirmation_maturity"] == "behavior-backed"
+    assert rows[0]["infra_skills"] == "skillclaw-proxy-introspection"
     assert "only_infra_skills" in md_path.read_text(encoding="utf-8")
+    assert "infra_skills" in md_path.read_text(encoding="utf-8")
     assert "confirmation_maturity" in md_path.read_text(encoding="utf-8")
     assert "inspect_retrieval_before_promoting_skill" in csv_path.read_text(encoding="utf-8")
     assert "behavior-backed" in csv_path.read_text(encoding="utf-8")
+
+
+def test_build_result_matrix_exposes_mismatched_and_relevant_skills(tmp_path):
+    final_record = tmp_path / "demo-mismatch-final.json"
+    final_record.write_text(
+        json.dumps(
+            {
+                "case_id": "demo-mismatch-case",
+                "mode": "skillclaw-inline",
+                "model": "skillclaw-model",
+                "score": 5,
+                "max_score": 10,
+                "checks": {
+                    "cve": {"hit": True},
+                    "file": {"hit": False},
+                    "function": {"hit": False},
+                    "evidence": {"hit": True},
+                    "root_cause": {"hit": True},
+                },
+                "skill_injection": {
+                    "selected_skill_names": [
+                        "source-parser-state-machine-oob",
+                        "elf-cwe120-plt-analysis",
+                    ],
+                },
+                "skill_relevance": {
+                    "status": "mixed_task_relevance",
+                    "relevant_skills": ["source-parser-state-machine-oob"],
+                    "mismatched_skills": ["elf-cwe120-plt-analysis"],
+                    "infra_skills": [],
+                },
+                "validation": {"status": "failed"},
+                "feedback": {
+                    "decision": "negative",
+                    "suggested_action": "require_dynamic_evidence_before_publish",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = collect_rows([final_record])
+
+    assert rows[0]["skill_relevance"] == "mixed_task_relevance"
+    assert rows[0]["relevant_skills"] == "source-parser-state-machine-oob"
+    assert rows[0]["mismatched_skills"] == "elf-cwe120-plt-analysis"
+    assert rows[0]["infra_skills"] == ""
 
 
 def test_refresh_latest_runset_reports_rebuilds_outputs_in_order(tmp_path):
@@ -3522,6 +3574,54 @@ def test_inline_keyword_retrieval_keeps_skillclaw_meta_for_catalog_tasks(tmp_pat
     names = [skill["name"] for skill in manager._keyword_retrieve_for_inline(prompt, top_k=1)]
 
     assert names == ["skillclaw-proxy-introspection"]
+
+
+def test_skill_manager_writes_stats_outside_skills_tree(tmp_path):
+    skills_dir = tmp_path / "skills"
+    _write_skill(
+        skills_dir,
+        "debug-notes",
+        "Use for compact debugging notes.",
+        "Keep an evidence-first debug log.",
+    )
+
+    manager = SkillManager(str(skills_dir), retrieval_mode="template")
+    manager.record_injection(["debug-notes"] * 10)
+    manager._save_stats()
+
+    assert not (skills_dir / "skill_stats.json").exists()
+    stats_path = tmp_path / "runtime" / "state" / "skill_stats.json"
+    assert stats_path.is_file()
+    payload = json.loads(stats_path.read_text(encoding="utf-8"))
+    assert payload["debug-notes"]["inject_count"] == 10
+
+
+def test_skill_manager_loads_legacy_stats_when_runtime_state_missing(tmp_path):
+    skills_dir = tmp_path / "skills"
+    _write_skill(
+        skills_dir,
+        "debug-notes",
+        "Use for compact debugging notes.",
+        "Keep an evidence-first debug log.",
+    )
+    (skills_dir / "skill_stats.json").write_text(
+        json.dumps({"debug-notes": {"inject_count": 7, "effectiveness": 0.5}}),
+        encoding="utf-8",
+    )
+
+    manager = SkillManager(str(skills_dir), retrieval_mode="template")
+
+    assert manager._stats["debug-notes"]["inject_count"] == 7
+
+
+def test_runtime_state_detects_git_managed_path(tmp_path):
+    repo_root = tmp_path / "repo"
+    (repo_root / ".git").mkdir(parents=True)
+    skills_dir = repo_root / "Skills"
+    skills_dir.mkdir()
+
+    assert runtime_state.is_git_managed_path(str(skills_dir)) is True
+    assert runtime_state.is_git_managed_path(str(tmp_path / "outside")) is False
 
 
 def test_build_publication_runset_manifest_filters_latest_runset_source(tmp_path):
