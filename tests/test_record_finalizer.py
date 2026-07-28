@@ -29,6 +29,7 @@ def test_finalize_record_attaches_injection(tmp_path):
     updated = finalize_record(case=case, final_record=final_record, injection_value=injection_rows)
     assert updated["session_id"] == "target"
     assert updated["session_id_source"] == "inferred_from_injection_log"
+    assert updated["selected_skill_names"] == ["source-parser-state-machine-oob"]
     assert updated["skill_injection"]["selected_skill_names"] == ["source-parser-state-machine-oob"]
 
 
@@ -69,6 +70,14 @@ def test_finalize_record_accepts_session_snapshot(tmp_path):
     updated = finalize_record(case=case, final_record=final_record, injection_value=session_snapshot)
     assert updated["session_id"] == "snapshot-session"
     assert updated["session_id_source"] == "inferred_from_injection_log"
+    assert updated["selected_skill_names"] == [
+        "source-parser-state-machine-oob",
+        "vuln-hunting",
+    ]
+    assert updated["injection_mode"] == "inline"
+    assert updated["skill_top_k"] == 3
+    assert updated["skill_prompt_hash"] == "abc123"
+    assert updated["available_skill_count"] == 35
     assert updated["skill_injection"]["selected_skill_names"] == [
         "source-parser-state-machine-oob",
         "vuln-hunting",

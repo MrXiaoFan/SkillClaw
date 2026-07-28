@@ -6,7 +6,7 @@ from argparse import Namespace
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from evaluation.cases.loader import DEFAULT_SCORING, load_case_definition, resolve_source_root
+from evaluation.cases.loader import DEFAULT_SCORING, load_case_definition, resolve_blind_agent_root, resolve_source_root
 from evaluation.utils.check_case_runtime import check_case_environment, infer_claude_provider
 from evaluation.postprocess.compare_records import compare_records, render_markdown
 from evaluation.postprocess.finalize_record import attach_injection
@@ -109,6 +109,37 @@ def test_resolve_source_root_prefers_profiled_or_existing_candidate(tmp_path, mo
     case = load_case_definition(case_path)
 
     assert resolve_source_root(case) == local_root.resolve()
+
+
+def test_resolve_blind_agent_root_defaults_to_sibling_workspace(tmp_path):
+    source_root = tmp_path / "tcpdump-4.9.1"
+    source_root.mkdir()
+    case_path = tmp_path / "case.json"
+    case_path.write_text(
+        json.dumps(
+            {
+                "case_id": "tcpdump-4.9.1-cve-2018-14469",
+                "target": {
+                    "project": "tcpdump",
+                    "version": "4.9.1",
+                    "source_root": str(source_root),
+                },
+                "ground_truth": {
+                    "files": ["print-isakmp.c"],
+                    "functions": ["ikev1_n_print"],
+                    "vulnerability_type": "buffer over-read",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    case = load_case_definition(case_path)
+
+    assert resolve_blind_agent_root(case) == (
+        tmp_path / "blind_workspaces" / "tcpdump-4.9.1-cve-2018-14469"
+    ).resolve()
+    assert resolve_blind_agent_root(case) != source_root.resolve()
 
 
 def test_load_case_definition_applies_validator_defaults(tmp_path):
@@ -544,6 +575,35 @@ def test_infer_session_id_from_injection_uses_run_window():
     session_id = infer_session_id_from_injection(injection_rows, run_meta)
 
     assert session_id == "target"
+
+
+def test_infer_session_id_from_injection_prefers_turn_rows_over_snapshot_rows():
+    injection_rows = [
+        {
+            "session_id": "snapshot-old",
+            "timestamp": "2026-07-28T08:10:29Z",
+            "turn": 8,
+            "source": "session_snapshot",
+        },
+        {
+            "session_id": "target-direct",
+            "timestamp": "2026-07-28 16:12:43",
+            "turn": 1,
+        },
+        {
+            "session_id": "target-direct",
+            "timestamp": "2026-07-28 16:13:32",
+            "turn": 7,
+        },
+    ]
+    run_meta = {
+        "start": "2026-07-28T08:12:35+00:00",
+        "end": "2026-07-28T08:13:47+00:00",
+    }
+
+    session_id = infer_session_id_from_injection(injection_rows, run_meta)
+
+    assert session_id == "target-direct"
 
 
 def test_summarize_skill_feedback_aggregates_selected_skills(tmp_path):
@@ -1019,6 +1079,50 @@ def test_render_case_prompt_blind_mode_does_not_append_confirmation_contract():
     assert "Current confirmation state:" not in prompt
 
 
+def test_render_case_prompt_ignores_task_profile_by_default():
+    case = {
+        "case_id": "gif-demo",
+        "task_profile": {
+            "workspace": "source_tree",
+            "target_component": "file_parser",
+            "analysis_mode": "source_analysis",
+            "bug_class": "memory_safety",
+            "input_vector": "crafted_file",
+        },
+        "prompt": {
+            "recommended_blind_skillclaw": "blind analyze target",
+        },
+    }
+
+    prompt = get_case_prompt(case, "blind-skillclaw-inline")
+
+    assert prompt == "blind analyze target"
+
+
+def test_render_case_prompt_prepends_task_profile_when_enabled(monkeypatch):
+    monkeypatch.setenv("SKILLCLAW_ENABLE_TASK_PROFILE", "1")
+    case = {
+        "case_id": "gif-demo",
+        "task_profile": {
+            "workspace": "source_tree",
+            "target_component": "file_parser",
+            "analysis_mode": "source_analysis",
+            "bug_class": "memory_safety",
+            "input_vector": "crafted_file",
+        },
+        "prompt": {
+            "recommended_blind_skillclaw": "blind analyze target",
+        },
+    }
+
+    prompt = get_case_prompt(case, "blind-skillclaw-inline")
+
+    assert prompt.startswith("Task profile:")
+    assert "Keep the focus on the userland source tree rather than environment-wide exploration." in prompt
+    assert "Prefer source-level reasoning over reverse-engineering workflows" in prompt
+    assert "blind analyze target" in prompt
+
+
 def test_render_case_prompt_appends_confirmation_state():
     case = {
         "case_id": "exiv2-demo",
@@ -1278,6 +1382,42 @@ def test_run_case_validation_bundle_script_validator(tmp_path):
     assert result["checks"][0]["parsed_json"]["checker"] == "demo"
 
 
+def test_run_case_validation_bundle_script_validator_resolves_benchmark_relative_bundle_root(tmp_path):
+    benchmarks_root = tmp_path / "benchmarks"
+    case_dir = benchmarks_root / "cases"
+    bundle = benchmarks_root / "skill_bundles" / "demo"
+    script = bundle / "scripts" / "demo.py"
+    script.parent.mkdir(parents=True)
+    case_dir.mkdir(parents=True)
+    script.write_text(
+        "import json\nprint(json.dumps({'status': 'passed', 'checker': 'demo-relative'}))\n",
+        encoding="utf-8",
+    )
+    case_path = case_dir / "demo.json"
+    case_path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo-relative",
+                "validators": [
+                    {
+                        "name": "bundle",
+                        "type": "bundle_script",
+                        "bundle_root": "skill_bundles/demo",
+                        "script": "demo.py",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    case = load_case_definition(case_path)
+
+    result = run_validators(case, tmp_path, skip_commands=False, case_path=case_path)
+
+    assert result["status"] == "passed"
+    assert result["checks"][0]["parsed_json"]["checker"] == "demo-relative"
+
+
 def test_content_match_validator_uses_agent_output(tmp_path):
     output = tmp_path / "answer.json"
     output.write_text('{"predicted_files":["HTMLparser.c"]}', encoding="utf-8")
@@ -1394,6 +1534,65 @@ def test_assess_skill_relevance_marks_firmware_skills_mismatched_for_source_pars
                 "files": ["print-frag6.c"],
                 "functions": ["frag6_print"],
                 "root_cause": "parser lookahead over-read in IPv6 fragmentation handling",
+            },
+        },
+        selected_skills=[
+            "source-parser-state-machine-oob",
+            "vuln-hunting",
+            "verify-rootfs-full-enumeration",
+        ],
+    )
+
+    assert relevance["status"] == "mixed_task_relevance"
+    assert relevance["relevant_skills"] == ["source-parser-state-machine-oob"]
+    assert "vuln-hunting" in relevance["mismatched_skills"]
+    assert "verify-rootfs-full-enumeration" in relevance["mismatched_skills"]
+
+
+def test_assess_skill_relevance_ignores_task_profile_by_default():
+    relevance = assess_skill_relevance(
+        case={
+            "target": {"project": "giflib", "binary": "util/gif2rgb", "source_root": "/tmp/giflib"},
+            "ground_truth": {
+                "files": ["util/gif2rgb.c"],
+                "functions": ["DumpScreen2RGB"],
+                "root_cause": "background color index reaches color map without bounds validation",
+            },
+            "task_profile": {
+                "workspace": "source_tree",
+                "target_component": "file_parser",
+                "analysis_mode": "source_analysis",
+                "bug_class": "memory_safety",
+                "input_vector": "crafted_file",
+            },
+        },
+        selected_skills=[
+            "source-parser-state-machine-oob",
+            "vuln-hunting",
+            "verify-rootfs-full-enumeration",
+        ],
+    )
+
+    assert relevance["status"] == "no_task_relevant_skill"
+    assert relevance["relevant_skills"] == []
+
+
+def test_assess_skill_relevance_uses_task_profile_when_enabled(monkeypatch):
+    monkeypatch.setenv("SKILLCLAW_ENABLE_TASK_PROFILE", "1")
+    relevance = assess_skill_relevance(
+        case={
+            "target": {"project": "giflib", "binary": "util/gif2rgb", "source_root": "/tmp/giflib"},
+            "ground_truth": {
+                "files": ["util/gif2rgb.c"],
+                "functions": ["DumpScreen2RGB"],
+                "root_cause": "background color index reaches color map without bounds validation",
+            },
+            "task_profile": {
+                "workspace": "source_tree",
+                "target_component": "file_parser",
+                "analysis_mode": "source_analysis",
+                "bug_class": "memory_safety",
+                "input_vector": "crafted_file",
             },
         },
         selected_skills=[
@@ -1635,6 +1834,57 @@ def test_inline_retrieval_skips_firmware_workflows_for_source_parser_task(tmp_pa
     assert "vuln-hunting" not in names
     assert "verify-rootfs-full-enumeration" not in names
     assert "elf-cwe120-firmware-triage" not in names
+    assert "ida-headless-cwe120-sink-analysis" not in names
+
+
+def test_inline_retrieval_uses_task_profile_preamble_for_source_only_prompt(tmp_path, monkeypatch):
+    monkeypatch.setenv("SKILLCLAW_ENABLE_TASK_PROFILE", "1")
+    skills_dir = tmp_path / "skills"
+    _write_test_skill(
+        skills_dir,
+        "source-parser-state-machine-oob",
+        "Find out-of-bounds reads in C parser state machines by tracing source-level bounds guards.",
+        "Inspect parser source, lookahead reads, fragment headers, ND_TCHECK, and guard dominance.",
+    )
+    _write_test_skill(
+        skills_dir,
+        "vuln-hunting",
+        "Use for firmware, binary, and web-exposed target hunting with IDA-assisted workflows. NOT for pure source-code SAST.",
+    )
+    _write_test_skill(
+        skills_dir,
+        "verify-rootfs-full-enumeration",
+        "Use during extracted firmware or rootfs static analysis before Phase 2 deep dive.",
+    )
+    _write_test_skill(
+        skills_dir,
+        "ida-headless-cwe120-sink-analysis",
+        "Use IDA headless triage for ELF binaries and CWE-120 sinks.",
+    )
+
+    manager = SkillManager(str(skills_dir), retrieval_mode="template")
+    case = {
+        "task_profile": {
+            "workspace": "source_tree",
+            "target_component": "file_parser",
+            "analysis_mode": "source_analysis",
+            "bug_class": "memory_safety",
+            "input_vector": "crafted_file",
+        },
+        "prompt": {
+            "recommended_blind_skillclaw": (
+                "Analyze this target for a memory-safety vulnerability that can be demonstrated "
+                "with a crafted GIF input."
+            )
+        },
+    }
+
+    prompt = get_case_prompt(case, "blind-skillclaw-inline")
+    names = [skill["name"] for skill in manager._keyword_retrieve_for_inline(prompt, top_k=5)]
+
+    assert "source-parser-state-machine-oob" in names
+    assert "vuln-hunting" not in names
+    assert "verify-rootfs-full-enumeration" not in names
     assert "ida-headless-cwe120-sink-analysis" not in names
 
 

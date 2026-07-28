@@ -134,3 +134,73 @@ def test_enrich_downloaded_final_uses_local_session_snapshots(tmp_path):
     enriched = json.loads(Path(enriched_path).read_text(encoding="utf-8"))
     assert enriched["session_id"] == "snapshot-session"
     assert enriched["skill_injection"]["selected_skill_names"] == ["source-parser-state-machine-oob"]
+
+
+def test_enrich_downloaded_final_falls_back_to_conversation_log_when_session_dir_empty(tmp_path, monkeypatch):
+    final_path = tmp_path / "demo-final.json"
+    session_dir = tmp_path / "sessions"
+    session_dir.mkdir()
+    records_dir = tmp_path / "runtime" / "records"
+    records_dir.mkdir(parents=True)
+    conversations_path = records_dir / "conversations.jsonl"
+    conversations_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "session_id": "remote-session",
+                        "timestamp": "2026-07-28 15:15:27",
+                        "turn": 5,
+                        "selected_skill_names": [
+                            "source-parser-state-machine-oob",
+                            "vuln-hunting",
+                        ],
+                        "skill_injection": {
+                            "injection_mode": "inline",
+                            "top_k": 3,
+                            "skill_prompt_hash": "abc123",
+                            "available_skill_count": 35,
+                            "selected_skill_names": [
+                                "source-parser-state-machine-oob",
+                                "vuln-hunting",
+                            ],
+                        },
+                    }
+                )
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    final_path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo-case",
+                "run": {
+                    "start": "2026-07-28T07:14:45+00:00",
+                    "end": "2026-07-28T07:16:59+00:00",
+                },
+                "score": 10.0,
+                "max_score": 10.0,
+                "checks": {},
+                "validation": {"status": "passed", "checks": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr("evaluation.runs.run_remote_case._repo_root", lambda: tmp_path)
+    enriched_path = enrich_downloaded_final(
+        case={"id": "demo-case"},
+        downloaded_artifacts={"final": str(final_path)},
+        local_session_dir=session_dir,
+    )
+
+    assert enriched_path is not None
+    enriched = json.loads(Path(enriched_path).read_text(encoding="utf-8"))
+    assert enriched["session_id"] == "remote-session"
+    assert enriched["session_id_source"] == "inferred_from_injection_log"
+    assert enriched["skill_injection"]["selected_skill_names"] == [
+        "source-parser-state-machine-oob",
+        "vuln-hunting",
+    ]
