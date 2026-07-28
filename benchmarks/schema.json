@@ -167,6 +167,37 @@
       },
       "additionalProperties": true
     },
+    "task_profile": {
+      "type": "object",
+      "description": "Optional task-shape metadata used for prompt rendering, retrieval cues, and post-run skill attribution. These fields should describe analysis modality rather than a specific CVE or project name.",
+      "properties": {
+        "workspace": {
+          "type": "string",
+          "enum": ["source_tree", "firmware_rootfs", "binary_only", "mixed"]
+        },
+        "target_component": {
+          "type": "string",
+          "enum": ["file_parser", "network_parser", "firmware_service", "elf_binary", "web_component", "general"]
+        },
+        "analysis_mode": {
+          "type": "string",
+          "enum": ["source_analysis", "binary_reverse", "hybrid", "full_hunt", "dynamic_confirmation"]
+        },
+        "bug_class": {
+          "type": "string",
+          "description": "Human-readable bug family such as memory_safety, state_machine_oob, or cwe120."
+        },
+        "input_vector": {
+          "type": "string",
+          "enum": ["crafted_file", "crafted_packet", "network_request", "local_cli", "general"]
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional compact note clarifying how to interpret the task profile."
+        }
+      },
+      "additionalProperties": true
+    },
     "blind_workspace": {
       "type": "object",
       "description": "Optional blind-test workspace policy. Agent-visible runs should use agent_root and avoid oracle-only paths or CVE-labeled artifacts.",

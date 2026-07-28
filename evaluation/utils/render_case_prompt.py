@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -40,6 +41,96 @@ Experiment execution constraints:
 - If you are uncertain, still output the best-supported JSON instead of continuing tool use.
 - The final response must be exactly one JSON object with keys: predicted_cves, predicted_files, predicted_functions, root_cause, evidence, confidence.
 """.strip()
+
+_WORKSPACE_LABELS = {
+    "source_tree": "源码树",
+    "firmware_rootfs": "固件或 rootfs",
+    "binary_only": "仅二进制",
+    "mixed": "源码与二进制混合",
+}
+
+_TARGET_COMPONENT_LABELS = {
+    "file_parser": "文件解析器",
+    "network_parser": "网络协议解析器",
+    "firmware_service": "固件服务组件",
+    "elf_binary": "ELF 二进制",
+    "web_component": "Web 组件",
+    "general": "通用组件",
+}
+
+_ANALYSIS_MODE_LABELS = {
+    "source_analysis": "源码分析",
+    "binary_reverse": "二进制逆向",
+    "hybrid": "混合分析",
+    "full_hunt": "全量排查",
+    "dynamic_confirmation": "动态确认",
+}
+
+_INPUT_VECTOR_LABELS = {
+    "crafted_file": "构造文件输入",
+    "crafted_packet": "构造报文输入",
+    "network_request": "网络请求输入",
+    "local_cli": "本地命令行输入",
+    "general": "一般输入",
+}
+
+
+def _task_profile_enabled() -> bool:
+    value = str(os.environ.get("SKILLCLAW_ENABLE_TASK_PROFILE", "") or "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def _render_task_profile(case: dict[str, Any]) -> str:
+    profile = case.get("task_profile") if isinstance(case.get("task_profile"), dict) else {}
+    if not profile:
+        return ""
+
+    workspace = str(profile.get("workspace") or "").strip().lower()
+    target_component = str(profile.get("target_component") or "").strip().lower()
+    analysis_mode = str(profile.get("analysis_mode") or "").strip().lower()
+    bug_class = str(profile.get("bug_class") or "").strip()
+    input_vector = str(profile.get("input_vector") or "").strip().lower()
+    notes = str(profile.get("notes") or "").strip()
+
+    lines = ["Task profile:"]
+    if workspace:
+        label = _WORKSPACE_LABELS.get(workspace, workspace)
+        lines.append(f"- Workspace: `{workspace}` ({label})")
+    if target_component:
+        label = _TARGET_COMPONENT_LABELS.get(target_component, target_component)
+        lines.append(f"- Target component: `{target_component}` ({label})")
+    if analysis_mode:
+        label = _ANALYSIS_MODE_LABELS.get(analysis_mode, analysis_mode)
+        lines.append(f"- Analysis mode: `{analysis_mode}` ({label})")
+    if bug_class:
+        lines.append(f"- Bug class: `{bug_class}`")
+    if input_vector:
+        label = _INPUT_VECTOR_LABELS.get(input_vector, input_vector)
+        lines.append(f"- Input vector: `{input_vector}` ({label})")
+
+    if workspace == "source_tree":
+        lines.append("- Treat this as source-code analysis in a userland source tree.")
+        lines.append("- Keep the focus on the userland source tree rather than environment-wide exploration.")
+    elif workspace == "firmware_rootfs":
+        lines.append("- Treat this as firmware/rootfs analysis rather than a pure userland source task.")
+
+    if target_component in {"file_parser", "network_parser"}:
+        lines.append("- Focus on parser control flow, boundary checks, and data-dependent memory access.")
+
+    if analysis_mode == "source_analysis":
+        lines.append("- Prefer source-level reasoning over reverse-engineering workflows unless the task explicitly shifts away from source analysis.")
+    elif analysis_mode == "binary_reverse":
+        lines.append("- Prefer binary-level reasoning; source-only workflows are secondary.")
+
+    if input_vector == "crafted_file":
+        lines.append("- Expect the trigger to come from a crafted file or neutral sample already visible in the workspace.")
+    elif input_vector == "crafted_packet":
+        lines.append("- Expect the trigger to come from a crafted packet, capture, or protocol input already visible in the workspace.")
+
+    if notes:
+        lines.append(f"- Notes: {notes}")
+
+    return "\n".join(lines).strip()
 
 
 def _render_confirmation_contract(case: dict[str, Any]) -> str:
@@ -143,6 +234,10 @@ def get_case_prompt(case: dict[str, Any], mode: str) -> str:
     key = MODE_TO_PROMPT_KEY.get(mode, mode)
     prompt = str(prompts.get(key, "") or "").strip()
     if prompt:
+        if _task_profile_enabled():
+            task_profile = _render_task_profile(case)
+            if task_profile:
+                prompt = f"{task_profile}\n\n{prompt}"
         if not _is_blind_mode(mode):
             contract = _render_confirmation_contract(case)
             if contract:

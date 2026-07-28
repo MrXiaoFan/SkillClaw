@@ -1,6 +1,6 @@
 ---
 name: elf-plt-reloc-sink-scan
-description: "Use `readelf -r` relocation entries (R_X86_64_JUMP_SLOT) instead of `--dyn-syms` to detect imported CWE-120 sink functions in stripped ELF binaries during firmware triage. NOT for: analyzing exported symbols, non-ELF formats, or source-level debug builds where symbol tables are intact."
+description: "Detect imported CWE-120 sink functions (e.g., strcpy, memcpy, read, recv) in stripped ELF binaries using `readelf -r` relocation entries (R_X86_64_JUMP_SLOT). Use this skill ONLY when the task explicitly asks to enumerate or verify the presence of CWE‑120 sinks in a compiled binary as part of firmware/embedded software triage. NOT for: analyzing exported symbols, non‑ELF formats, source‑level debug builds with intact symbol tables, or any task that involves source code analysis (especially parser state‑machine OOB bugs), HTML/XML parser vulnerability hunting, or CVE hunting that does not explicitly require scanning for CWE‑120 imports. Do NOT use this skill for general ELF binary inspection or for tasks that do not mention CWE‑120 sink detection."
 category: general
 ---
 

@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 import re
 from typing import Any, Callable
@@ -110,10 +111,23 @@ def _tokens(text: str) -> set[str]:
     }
 
 
+def _task_profile_enabled() -> bool:
+    value = str(os.environ.get("SKILLCLAW_ENABLE_TASK_PROFILE", "") or "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def _task_profile(case: dict[str, Any]) -> dict[str, Any]:
+    if not _task_profile_enabled():
+        return {}
+    profile = case.get("task_profile")
+    return profile if isinstance(profile, dict) else {}
+
+
 def _case_feature_flags(case: dict[str, Any]) -> dict[str, bool]:
     case = case or {}
     target = case.get("target", {}) if isinstance(case.get("target"), dict) else {}
     truth = case.get("ground_truth", {}) if isinstance(case.get("ground_truth"), dict) else {}
+    profile = _task_profile(case)
     text_parts: list[str] = []
     text_parts.extend(str(target.get(key, "")) for key in ("project", "version", "binary", "build", "source_root"))
     text_parts.extend(str(truth.get(key, "")) for key in ("vulnerability_type", "root_cause"))
@@ -142,14 +156,33 @@ def _case_feature_flags(case: dict[str, Any]) -> dict[str, bool]:
         "cwe120", "overflow", "buffer", "strcpy", "strcat", "sprintf", "gets",
     }
 
+    workspace = str(profile.get("workspace") or "").strip().lower()
+    target_component = str(profile.get("target_component") or "").strip().lower()
+    analysis_mode = str(profile.get("analysis_mode") or "").strip().lower()
+    bug_class = str(profile.get("bug_class") or "").strip().lower()
+
     has_source_tree = bool(target.get("source_root")) or any(name.endswith((".c", ".cc", ".cpp", ".h")) for name in files)
+    if workspace in {"source_tree", "mixed"}:
+        has_source_tree = True
     has_parser_path = any("parser" in item or "html" in item or "xml" in item or "print-" in item for item in files + functions)
+    parser_case = bool(tokens & parser_markers) or has_parser_path
+    if target_component in {"file_parser", "network_parser"}:
+        parser_case = True
+    firmware_case = bool(tokens & firmware_markers)
+    if workspace == "firmware_rootfs" or target_component == "firmware_service":
+        firmware_case = True
+    binary_case = bool(tokens & binary_markers) or bool(target.get("binary"))
+    if workspace in {"binary_only", "mixed"} or target_component == "elf_binary" or analysis_mode == "binary_reverse":
+        binary_case = True
+    cwe120_case = bool(tokens & cwe120_markers)
+    if "cwe120" in bug_class or "buffer_overflow" in bug_class:
+        cwe120_case = True
     return {
         "source_tree": has_source_tree,
-        "parser_case": bool(tokens & parser_markers) or has_parser_path,
-        "firmware_case": bool(tokens & firmware_markers),
-        "binary_case": bool(tokens & binary_markers) or bool(target.get("binary")),
-        "cwe120_case": bool(tokens & cwe120_markers),
+        "parser_case": parser_case,
+        "firmware_case": firmware_case,
+        "binary_case": binary_case,
+        "cwe120_case": cwe120_case,
     }
 
 

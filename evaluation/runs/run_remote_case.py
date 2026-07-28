@@ -275,6 +275,24 @@ def _default_local_session_dir() -> Path:
     return _repo_root() / ".local-share" / "default" / "sessions"
 
 
+def _default_local_record_log() -> Path:
+    return _repo_root() / "runtime" / "records" / "conversations.jsonl"
+
+
+def _resolve_local_injection_source(path: Path) -> Path | None:
+    if path.is_file():
+        return path
+    if path.is_dir():
+        try:
+            next(path.iterdir())
+            return path
+        except StopIteration:
+            fallback = _default_local_record_log()
+            return fallback if fallback.is_file() else path
+    fallback = _default_local_record_log()
+    return fallback if fallback.is_file() else None
+
+
 def _load_json_object(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
     if not isinstance(value, dict):
@@ -289,7 +307,8 @@ def enrich_downloaded_final(
     local_session_dir: Path,
 ) -> str | None:
     final_path_text = str(downloaded_artifacts.get("final") or "").strip()
-    if not final_path_text or not local_session_dir.is_dir():
+    injection_source = _resolve_local_injection_source(local_session_dir)
+    if not final_path_text or injection_source is None:
         return None
 
     final_path = Path(final_path_text)
@@ -297,7 +316,7 @@ def enrich_downloaded_final(
         return None
 
     final_record = _load_json_object(final_path)
-    injection_value = _load_optional_json(local_session_dir)
+    injection_value = _load_optional_json(injection_source)
     enriched = build_finalized_record(
         case=case,
         final_record=final_record,

@@ -35,6 +35,26 @@ def _repo_root(ctx: ValidationContext) -> Path:
     return Path.cwd().resolve()
 
 
+def _resolve_case_relative_dir(ctx: ValidationContext, raw_path: str | Path | None) -> str | None:
+    if not raw_path:
+        return None
+    path_text = str(raw_path).strip()
+    if not path_text:
+        return None
+    path = Path(path_text)
+    if path.is_absolute():
+        return str(path)
+    if ctx.case_path is None:
+        return str(path)
+
+    case_dir = ctx.case_path.resolve().parent
+    candidates = [case_dir / path, case_dir.parent / path, _repo_root(ctx) / path]
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return str(candidates[0])
+
+
 def _command_env(ctx: ValidationContext) -> dict[str, str]:
     env = os.environ.copy()
     env["SKILLCLAW_TARGET_ROOT"] = str(ctx.root.resolve())
@@ -478,12 +498,8 @@ def bundle_script_validator(ctx: ValidationContext, spec: dict[str, Any]) -> dic
     try:
         bundle_root = spec.get("bundle_root") or None
         skills_dir = spec.get("skills_dir") or None
-        if ctx.case_path is not None:
-            case_dir = ctx.case_path.resolve().parent
-            if bundle_root and not Path(str(bundle_root)).is_absolute():
-                bundle_root = str(case_dir / str(bundle_root))
-            if skills_dir and not Path(str(skills_dir)).is_absolute():
-                skills_dir = str(case_dir / str(skills_dir))
+        bundle_root = _resolve_case_relative_dir(ctx, bundle_root)
+        skills_dir = _resolve_case_relative_dir(ctx, skills_dir)
         script_path = resolve_bundle_script(
             script=str(spec.get("script", "") or ""),
             bundle_root=bundle_root,

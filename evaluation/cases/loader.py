@@ -44,6 +44,17 @@ def _clone_json_object(value: Mapping[str, Any]) -> dict[str, Any]:
     return copy.deepcopy(dict(value))
 
 
+def _slug_path_fragment(text: str) -> str:
+    allowed: list[str] = []
+    for char in str(text or ""):
+        if char.isalnum() or char in {"-", "_", "."}:
+            allowed.append(char)
+        else:
+            allowed.append("-")
+    value = "".join(allowed).strip("-")
+    return value or "case"
+
+
 def _expand_path_text(text: str | Path) -> Path:
     return Path(os.path.expandvars(os.path.expanduser(str(text)))).resolve()
 
@@ -140,13 +151,19 @@ def resolve_source_root(case: Mapping[str, Any], override: str | Path | None = N
     return resolve_case_path(case, "target", "source_root", override=override, default=".")
 
 
+def _default_blind_agent_root(case: Mapping[str, Any]) -> Path:
+    source_root = resolve_source_root(case)
+    case_id = str(case.get("case_id") or source_root.name or "case").strip()
+    return (source_root.parent / "blind_workspaces" / _slug_path_fragment(case_id)).resolve()
+
+
 def resolve_blind_agent_root(case: Mapping[str, Any], override: str | Path | None = None) -> Path:
     return resolve_case_path(
         case,
         "blind_workspace",
         "agent_root",
         override=override,
-        default=resolve_source_root(case),
+        default=_default_blind_agent_root(case),
     )
 
 

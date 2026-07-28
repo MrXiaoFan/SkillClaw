@@ -1,7 +1,7 @@
 ---
 name: cwe120-analysis-verification
-description: "Use when verifying CWE-120 buffer-overflow findings in ELF binaries. Guides confirmation of dangerous PLT calls, mitigation checks (PIE/Canary/FORTIFY), and exploitability assessment at specific call sites. NOT for: initial source-code scans or non-ELF formats."
-category: vulnerability-research
+description: "Use when verifying CWE-120 buffer-overflow findings in compiled ELF binaries via disassembly and binary analysis. Confirms dangerous PLT calls, mitigation checks (PIE/Canary/FORTIFY), and exploitability at specific call sites. NOT for: source-code vulnerability reviews, parser state-machine analysis, or any non-ELF formats."
+category: general
 ---
 
 # CWE-120 Analysis Verification
@@ -60,4 +60,3 @@ Document each verified finding with:
 - Disassembly snippet showing buffer setup and source control
 - Mitigation status summary
 - Feasibility assessment (exploitable / needs trigger / informational)
-

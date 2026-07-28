@@ -232,7 +232,8 @@ def _infer_session_id_from_injection(
     start_local = start_utc.astimezone(local_tz) - timedelta(seconds=margin_before_seconds)
     end_local = end_utc.astimezone(local_tz) + timedelta(seconds=margin_after_seconds)
 
-    candidates: dict[str, tuple[datetime, int]] = {}
+    direct_candidates: dict[str, tuple[datetime, int]] = {}
+    snapshot_candidates: dict[str, tuple[datetime, int]] = {}
     for item in injection_rows:
         candidate_session_id = str(item.get("session_id") or "").strip()
         timestamp_text = str(item.get("timestamp") or "").strip()
@@ -244,10 +245,12 @@ def _infer_session_id_from_injection(
         if not (start_local <= timestamp <= end_local):
             continue
         turn = int(item.get("turn") or 0)
-        current = candidates.get(candidate_session_id)
+        bucket = snapshot_candidates if str(item.get("source") or "") == "session_snapshot" else direct_candidates
+        current = bucket.get(candidate_session_id)
         if current is None or (timestamp, turn) > current:
-            candidates[candidate_session_id] = (timestamp, turn)
+            bucket[candidate_session_id] = (timestamp, turn)
 
+    candidates = direct_candidates or snapshot_candidates
     if not candidates:
         return ""
     return max(candidates.items(), key=lambda kv: kv[1])[0]
@@ -270,8 +273,18 @@ def attach_injection(
     injection = _select_injection(injection_value, effective_session_id)
     injection_history = _select_injection_history(injection_value, effective_session_id)
     selected_skills = []
+    injection_mode = ""
+    skill_top_k = None
+    skill_prompt_hash = ""
+    available_skill_count = None
     if isinstance(injection, dict):
         selected_skills = list(injection.get("selected_skill_names") or [])
+        nested_injection = injection.get("skill_injection")
+        nested = nested_injection if isinstance(nested_injection, dict) else {}
+        injection_mode = str(injection.get("injection_mode") or nested.get("injection_mode") or "")
+        skill_top_k = injection.get("skill_top_k", nested.get("top_k"))
+        skill_prompt_hash = str(injection.get("skill_prompt_hash") or nested.get("skill_prompt_hash") or "")
+        available_skill_count = injection.get("available_skill_count", nested.get("available_skill_count"))
 
     final_record = dict(final_record)
     if effective_session_id:
@@ -279,6 +292,11 @@ def attach_injection(
     final_record["session_id_source"] = session_id_source
     final_record["skill_injection"] = injection
     final_record["skill_injection_history"] = injection_history
+    final_record["selected_skill_names"] = [str(item) for item in selected_skills if str(item).strip()]
+    final_record["injection_mode"] = injection_mode
+    final_record["skill_top_k"] = skill_top_k
+    final_record["skill_prompt_hash"] = skill_prompt_hash
+    final_record["available_skill_count"] = available_skill_count
     final_record["skill_relevance"] = assess_skill_relevance(case=case, selected_skills=selected_skills)
     final_record["feedback"] = build_feedback(
         score_result=final_record,
