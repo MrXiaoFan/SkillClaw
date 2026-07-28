@@ -380,6 +380,74 @@ def test_run_case_validation_artifact_exec_expect_crash(tmp_path):
     assert result["checks"][0]["expect_crash"] is True
 
 
+def test_run_case_validation_artifact_exec_requires_all_markers_by_default(tmp_path):
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir()
+    script = artifacts_dir / "run.py"
+    script.write_text(
+        "import sys\n"
+        "sys.stderr.write('AddressSanitizer: heap-buffer-overflow only\\n')\n"
+        "raise SystemExit(134)\n",
+        encoding="utf-8",
+    )
+    case = {
+        "case_id": "demo-artifact-crash-missing-markers",
+        "validators": [
+            {
+                "name": "artifact-exec-crash-missing",
+                "type": "artifact_exec",
+                "path": "artifacts/run.py",
+                "exec_mode": "python",
+                "success_markers": ["AddressSanitizer", "DemoFrame"],
+                "expect_crash": True,
+                "timeout_seconds": 10,
+            }
+        ],
+    }
+
+    result = run_validators(case, tmp_path, skip_commands=False)
+
+    assert result["status"] == "failed"
+    assert result["checks"][0]["status"] == "failed"
+    assert result["checks"][0]["marker_match"] == "all"
+    assert result["checks"][0]["missing_markers"] == ["DemoFrame"]
+    assert result["checks"][0]["reason"] == "missing required success markers"
+
+
+def test_run_case_validation_artifact_exec_supports_any_marker_mode(tmp_path):
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir()
+    script = artifacts_dir / "run.py"
+    script.write_text(
+        "import sys\n"
+        "sys.stderr.write('AddressSanitizer: heap-buffer-overflow only\\n')\n"
+        "raise SystemExit(134)\n",
+        encoding="utf-8",
+    )
+    case = {
+        "case_id": "demo-artifact-crash-any-marker",
+        "validators": [
+            {
+                "name": "artifact-exec-crash-any",
+                "type": "artifact_exec",
+                "path": "artifacts/run.py",
+                "exec_mode": "python",
+                "success_markers": ["AddressSanitizer", "DemoFrame"],
+                "marker_match": "any",
+                "expect_crash": True,
+                "timeout_seconds": 10,
+            }
+        ],
+    }
+
+    result = run_validators(case, tmp_path, skip_commands=False)
+
+    assert result["status"] == "passed"
+    assert result["checks"][0]["status"] == "passed"
+    assert result["checks"][0]["marker_match"] == "any"
+    assert "AddressSanitizer" in result["checks"][0]["matched_markers"]
+
+
 def test_run_case_validation_command_validator(tmp_path):
     code = "print('LOGIC_CONFIRM_OK libxml2-state-machine-window')"
     case = {

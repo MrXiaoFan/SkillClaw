@@ -90,6 +90,22 @@ def _tail(value: Any, limit: int = 4000) -> str:
     return str(value)[-limit:]
 
 
+def _resolve_marker_match(
+    spec: dict[str, Any],
+    markers: list[str],
+    matched_markers: list[str],
+) -> tuple[bool, str, bool, list[str]]:
+    require_markers = bool(spec.get("require_markers")) or bool(markers)
+    raw_mode = str(spec.get("marker_match", "all") or "all").strip().lower()
+    marker_match = raw_mode if raw_mode in {"any", "all"} else "all"
+    missing_markers = [marker for marker in markers if marker not in matched_markers]
+    if not require_markers or not markers:
+        return True, marker_match, require_markers, missing_markers
+    if marker_match == "any":
+        return bool(matched_markers), marker_match, require_markers, missing_markers
+    return len(matched_markers) == len(markers), marker_match, require_markers, missing_markers
+
+
 def _ground_truth_patterns(case: dict[str, Any]) -> list[str]:
     truth = case.get("ground_truth", {}) if isinstance(case.get("ground_truth"), dict) else {}
     patterns: list[str] = []
@@ -342,21 +358,21 @@ def artifact_exec_validator(ctx: ValidationContext, spec: dict[str, Any]) -> dic
     combined_lower = combined.lower()
     markers = [str(item) for item in spec.get("success_markers", []) if str(item).strip()]
     matched_markers = [marker for marker in markers if marker.lower() in combined_lower]
-    require_markers = bool(spec.get("require_markers")) or bool(markers)
+    marker_ok, marker_match, require_markers, missing_markers = _resolve_marker_match(
+        spec,
+        markers,
+        matched_markers,
+    )
     expect_crash = spec.get("expect_crash")
 
     if expect_crash is True:
-        if proc.returncode != 0 and (not require_markers or bool(matched_markers)):
+        if proc.returncode != 0 and marker_ok:
             status = "passed"
-        elif proc.returncode != 0:
-            status = "partial"
         else:
             status = "failed"
     else:
-        if proc.returncode == 0 and (not require_markers or bool(matched_markers)):
+        if proc.returncode == 0 and marker_ok:
             status = "passed"
-        elif proc.returncode == 0:
-            status = "partial"
         else:
             status = "failed"
 
@@ -368,9 +384,19 @@ def artifact_exec_validator(ctx: ValidationContext, spec: dict[str, Any]) -> dic
             "stderr_tail": stderr_tail,
             "success_markers": markers,
             "matched_markers": matched_markers,
+            "missing_markers": missing_markers,
+            "marker_match": marker_match,
+            "require_markers": require_markers,
             "expect_crash": expect_crash,
         }
     )
+    if status == "failed":
+        if expect_crash is True and proc.returncode == 0:
+            result["reason"] = "expected non-zero return code"
+        elif expect_crash is not True and proc.returncode != 0:
+            result["reason"] = "expected zero return code"
+        elif require_markers and missing_markers:
+            result["reason"] = "missing required success markers"
     return result
 
 

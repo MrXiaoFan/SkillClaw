@@ -293,6 +293,37 @@ def _resolve_local_injection_source(path: Path) -> Path | None:
     return fallback if fallback.is_file() else None
 
 
+def _load_local_injection_value(path: Path) -> Any:
+    primary = _resolve_local_injection_source(path)
+    if primary is None:
+        return None
+
+    primary_value = _load_optional_json(primary)
+    if not path.is_dir():
+        return primary_value
+
+    fallback = _default_local_record_log()
+    if not fallback.is_file():
+        return primary_value
+    try:
+        if fallback.resolve() == primary.resolve():
+            return primary_value
+    except OSError:
+        pass
+
+    fallback_value = _load_optional_json(fallback)
+    merged: list[Any] = []
+    if isinstance(primary_value, list):
+        merged.extend(primary_value)
+    elif primary_value is not None:
+        merged.append(primary_value)
+    if isinstance(fallback_value, list):
+        merged.extend(fallback_value)
+    elif fallback_value is not None:
+        merged.append(fallback_value)
+    return merged
+
+
 def _load_json_object(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
     if not isinstance(value, dict):
@@ -307,8 +338,8 @@ def enrich_downloaded_final(
     local_session_dir: Path,
 ) -> str | None:
     final_path_text = str(downloaded_artifacts.get("final") or "").strip()
-    injection_source = _resolve_local_injection_source(local_session_dir)
-    if not final_path_text or injection_source is None:
+    injection_value = _load_local_injection_value(local_session_dir)
+    if not final_path_text or injection_value is None:
         return None
 
     final_path = Path(final_path_text)
@@ -316,7 +347,6 @@ def enrich_downloaded_final(
         return None
 
     final_record = _load_json_object(final_path)
-    injection_value = _load_optional_json(injection_source)
     enriched = build_finalized_record(
         case=case,
         final_record=final_record,

@@ -288,6 +288,12 @@
             "description": "For artifact_exec: output markers that should appear when the generated artifact runs correctly."
           },
           "require_markers": { "type": "boolean", "default": false },
+          "marker_match": {
+            "type": "string",
+            "enum": ["any", "all"],
+            "default": "all",
+            "description": "For artifact_exec: how success_markers are matched when markers are required. Prefer all for confirmation-grade validators."
+          },
           "expect_crash": {
             "type": "boolean",
             "default": true,
