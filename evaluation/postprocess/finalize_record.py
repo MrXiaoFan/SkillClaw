@@ -164,6 +164,8 @@ def _select_validation(value: Any, case_id: str) -> dict[str, Any] | None:
 
 
 def _default_finalized_out(path: Path) -> Path:
+    if path.stem.endswith("-final"):
+        return path.with_name(f"{path.stem}-enriched{path.suffix}")
     if path.stem.endswith("-final-enriched"):
         return path
     if path.stem.endswith("-with-injection"):

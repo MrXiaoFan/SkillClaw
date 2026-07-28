@@ -331,6 +331,26 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     return value
 
 
+def _sync_local_manifest_with_final(manifest_path: Path, final_record: dict[str, Any]) -> None:
+    if not manifest_path.is_file():
+        return
+    manifest = _load_json_object(manifest_path)
+    manifest["session_id"] = str(final_record.get("session_id") or "")
+    manifest["session_id_source"] = str(final_record.get("session_id_source") or "")
+    skill_relevance = final_record.get("skill_relevance")
+    manifest["skill_relevance"] = (
+        str(skill_relevance.get("status") or "")
+        if isinstance(skill_relevance, dict)
+        else str(skill_relevance or "")
+    )
+    skill_injection = final_record.get("skill_injection")
+    selected_skills = []
+    if isinstance(skill_injection, dict):
+        selected_skills = [str(item) for item in skill_injection.get("selected_skill_names") or [] if str(item).strip()]
+    manifest["selected_skills"] = selected_skills
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def enrich_downloaded_final(
     *,
     case: dict[str, Any],
@@ -352,9 +372,17 @@ def enrich_downloaded_final(
         final_record=final_record,
         injection_value=injection_value,
     )
+    final_path.write_text(json.dumps(enriched, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    manifest_path_text = str(downloaded_artifacts.get("manifest") or "").strip()
+    if manifest_path_text:
+        _sync_local_manifest_with_final(Path(manifest_path_text), enriched)
+
     out_path = _default_finalized_out(final_path)
-    out_path.write_text(json.dumps(enriched, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return str(out_path)
+    if out_path != final_path:
+        out_path.write_text(json.dumps(enriched, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return str(out_path)
+    return str(final_path)
 
 
 def prepare_manual_run(args: argparse.Namespace) -> dict[str, Any]:

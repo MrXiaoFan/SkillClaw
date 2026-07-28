@@ -9,9 +9,10 @@ from pathlib import Path
 from evaluation.cases.loader import DEFAULT_SCORING, load_case_definition, resolve_blind_agent_root, resolve_source_root
 from evaluation.utils.check_case_runtime import check_case_environment, infer_claude_provider
 from evaluation.postprocess.compare_records import compare_records, render_markdown
-from evaluation.postprocess.finalize_record import attach_injection
+from evaluation.postprocess.finalize_record import _default_finalized_out, attach_injection
 from evaluation.utils.audit_run_layout import audit_run_layout
 from evaluation.utils.backfill_run_manifests import backfill_run_manifest
+from evaluation.runs.run_remote_case import enrich_downloaded_final
 from evaluation.runs.run_single_case import extract_json_object, infer_session_id_from_injection, run_case
 from evaluation.runs.run_case_validation import run_validators
 from evaluation.utils.smoke_check_cases import smoke_cases
@@ -628,6 +629,95 @@ def test_attach_skill_injection_can_infer_session_id_from_run_window():
     assert updated["session_id"] == "target"
     assert updated["session_id_source"] == "inferred_from_injection_log"
     assert updated["skill_injection"]["selected_skill_names"] == ["source-parser-state-machine-oob"]
+
+
+def test_default_finalized_out_uses_clean_enriched_suffix():
+    path = Path("runtime/imports/remote_vm/demo-final.json")
+
+    result = _default_finalized_out(path)
+
+    assert result == Path("runtime/imports/remote_vm/demo-final-enriched.json")
+
+
+def test_enrich_downloaded_final_overwrites_final_and_syncs_manifest(tmp_path, monkeypatch):
+    case = {
+        "case_id": "demo",
+        "target": {"project": "parser", "binary": "demo"},
+        "ground_truth": {
+            "vulnerability_type": "state machine oob",
+            "root_cause": "source parser state machine out-of-bounds read",
+        },
+        "confirmation": {"maturity": "demo"},
+    }
+    final_path = tmp_path / "demo-final.json"
+    manifest_path = tmp_path / "demo-manifest.json"
+    record_log = tmp_path / "conversations.jsonl"
+    local_session_dir = tmp_path / "sessions"
+    local_session_dir.mkdir()
+
+    final_path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo",
+                "score": 8,
+                "max_score": 10,
+                "validation": {"status": "passed"},
+                "skill_injection": None,
+                "skill_relevance": {"status": "no_selected_skills"},
+                "run": {
+                    "start": "2026-07-28T11:35:56+00:00",
+                    "end": "2026-07-28T11:36:50+00:00",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "run_id": "demo-run",
+                "session_id": "",
+                "session_id_source": "missing",
+                "skill_relevance": "no_selected_skills",
+                "selected_skills": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    record_log.write_text(
+        json.dumps(
+            {
+                "session_id": "target-session",
+                "timestamp": "2026-07-28 19:36:37",
+                "turn": 6,
+                "injection_mode": "inline",
+                "selected_skill_names": ["source-parser-state-machine-oob"],
+                "available_skill_count": 35,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr("evaluation.runs.run_remote_case._default_local_record_log", lambda: record_log)
+
+    result_path = enrich_downloaded_final(
+        case=case,
+        downloaded_artifacts={"final": str(final_path), "manifest": str(manifest_path)},
+        local_session_dir=local_session_dir,
+    )
+
+    updated_final = json.loads(final_path.read_text(encoding="utf-8"))
+    updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert result_path == str(final_path.with_name("demo-final-enriched.json"))
+    assert updated_final["session_id"] == "target-session"
+    assert updated_final["selected_skill_names"] == ["source-parser-state-machine-oob"]
+    assert updated_manifest["session_id"] == "target-session"
+    assert updated_manifest["session_id_source"] == "inferred_from_injection_log"
+    assert updated_manifest["selected_skills"] == ["source-parser-state-machine-oob"]
+    assert updated_manifest["skill_relevance"] == "has_task_relevant_skill"
 
 
 def test_infer_session_id_from_injection_uses_run_window():
