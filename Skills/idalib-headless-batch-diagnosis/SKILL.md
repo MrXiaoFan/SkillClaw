@@ -1,6 +1,6 @@
 ---
 name: idalib-headless-batch-diagnosis
-description: "Operational debugging procedures for headless IDA Pro 9.x batch analysis when output is empty, silent, or ambiguous. Covers license verification, exit-code checking, and raw log inspection before applying grep/tail filters. NOT for: interactive GUI analysis, non-batch single-binary sessions where output is already confirmed, or non-IDA reverse engineering tools."
+description: "Operational debugging procedures for headless IDA Pro 9.x batch analysis via idalib/idapro when output is empty, silent, or ambiguous. Covers license verification, exit-code checking, and raw log inspection before applying grep/tail filters. NOT for interactive GUI analysis, non-batch single-binary sessions where output is already confirmed, or any task not involving headless IDA batch execution anomalies."
 category: general
 ---
 

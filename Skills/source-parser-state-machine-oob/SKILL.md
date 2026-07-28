@@ -1,6 +1,6 @@
 ---
 name: source-parser-state-machine-oob
-description: "Find out-of-bounds reads/writes in C/C++ parser state machines that use explicit cur/end/avail pointer pairs for buffer management. Investigate missing guard checks before lookahead reads, chunked parsing, and growth macros. Use for source-level parser vulnerabilities in XML/HTML/protocol/file-format parsers where the parsing loop advances cursor pointers and performs lookahead reads via pointer arithmetic (cur[3], NXT(n), etc.) and guard checks like avail < N or end - cur < N. NOT for simple array-index out-of-bounds bugs in parsers lacking such pointer-based state machines (e.g., GIF, PNG, or other fixed-buffer parsers); NOT for pure ELF dangerous-function triage, generic web vulnerabilities, or IDA-only sink enumeration."
+description: "Find out-of-bounds reads/writes in C/C++ parser state machines that use explicit cur/end/avail pointer pairs for buffer management. ONLY activate when the source code contains variables like cur, end, avail, input->cur, input->end (or similar explicit pointer-based input tracking) and performs lookahead reads via pointer arithmetic (e.g., cur[3], NXT(n), *cur++) that are guarded by expressions such as avail < N or end - cur < N. Use for source-level parser vulnerabilities in XML, HTML, protocol, or file-format parsers that follow this pattern. NOT for: decompressed pixel/index OOB into any colormap or palette (e.g., GIF, PNG, JPEG decoders), any parser or decoder lacking cur/end/avail pointer guards (including fixed-buffer, array-index, or LZW-decompression based parsers), pure ELF dangerous-function triage, generic web vulnerabilities, or IDA-only sink enumeration. If the target source does not contain explicit cur/end/avail pointer arithmetic and lookahead guards, this skill is not applicable."
 category: general
 ---
 
@@ -159,3 +159,4 @@ If any answer is missing, report the finding as a candidate, not a confirmed vul
 - Do not invoke Claude Code local `Skill(...)`; SkillClaw skills are server-side prompt guidance.
 - Do not claim success solely because dangerous functions appear in imports.
 - Do not ignore source-level parser macros; expand or inspect them when they hide pointer arithmetic.
+

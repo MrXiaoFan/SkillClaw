@@ -1,6 +1,6 @@
 ---
 name: vuln-hunting
-description: "Orchestrated vulnerability hunting for firmware, binary, and web-exposed binary targets (e.g., firmware images, ELF executables, compiled CGI binaries, embedded Lua bytecode) using specialist routing, IDA MCP-assisted static analysis, and structured evidence chains. Use only when the task provides a binary artifact and requires IDA Pro MCP reverse engineering. NOT for: source-code-only audits (e.g., reviewing C source files without binary artifacts), live web/API penetration testing without binary artifacts, network service fuzzing without binary context, generic CVE lookups, or any vulnerability hunting that does not involve reverse engineering a compiled binary artifact."
+description: "Orchestrated reverse-engineering vulnerability hunting for compiled binary artifacts (firmware images, ELF executables, CGI binaries, embedded Lua bytecode) using IDA Pro MCP static analysis, specialist routing, and structured evidence chains. Use ONLY when the task provides a binary artifact and requires IDA MCP reverse engineering. STRICTLY EXCLUDED: source-code-only audits (e.g., reviewing .c/.h files without a binary, library source-focused research like giflib CVE-2016-3977), live web/API penetration testing without a binary artifact, network service fuzzing without binary context, generic CVE lookups, and any memory-safety or vulnerability discovery task that provides only source code and no compiled binary file."
 category: general
 ---
 

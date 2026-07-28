@@ -16,12 +16,12 @@
     "effectiveness": 0.0013513513513513514
   },
   "vuln-hunting": {
-    "inject_count": 1837,
-    "positive_count": 14,
-    "negative_count": 198,
+    "inject_count": 1861,
+    "positive_count": 17,
+    "negative_count": 219,
     "neutral_count": 2,
-    "last_injected_at": "2026-07-20T16:34:23",
-    "effectiveness": 0.007621121393576484
+    "last_injected_at": "2026-07-27T16:43:48",
+    "effectiveness": 0.009134873723804407
   },
   "cisco-wsma-enumeration": {
     "inject_count": 1244,
@@ -56,12 +56,12 @@
     "effectiveness": 0.000856898029134533
   },
   "elf-cwe120-firmware-triage": {
-    "inject_count": 2154,
-    "positive_count": 19,
+    "inject_count": 2156,
+    "positive_count": 21,
     "negative_count": 392,
     "neutral_count": 11,
-    "last_injected_at": "2026-07-20T15:11:12",
-    "effectiveness": 0.008820798514391829
+    "last_injected_at": "2026-07-27T10:28:00",
+    "effectiveness": 0.00974025974025974
   },
   "idalib-headless-elf-sink-analysis": {
     "inject_count": 855,
@@ -80,12 +80,12 @@
     "effectiveness": 0.0011737089201877935
   },
   "verify-rootfs-full-enumeration": {
-    "inject_count": 905,
-    "positive_count": 5,
-    "negative_count": 49,
+    "inject_count": 929,
+    "positive_count": 8,
+    "negative_count": 70,
     "neutral_count": 0,
-    "last_injected_at": "2026-07-20T16:34:23",
-    "effectiveness": 0.0055248618784530384
+    "last_injected_at": "2026-07-27T16:43:48",
+    "effectiveness": 0.008611410118406888
   },
   "firmware-cwe120-result-lookup": {
     "inject_count": 894,
@@ -152,12 +152,12 @@
     "effectiveness": 0.013605442176870748
   },
   "idalib-cwe120-sink-exploitability-check": {
-    "inject_count": 85,
-    "positive_count": 0,
+    "inject_count": 87,
+    "positive_count": 2,
     "negative_count": 49,
     "neutral_count": 3,
-    "last_injected_at": "2026-06-12T19:15:49",
-    "effectiveness": 0.0
+    "last_injected_at": "2026-07-27T10:28:00",
+    "effectiveness": 0.022988505747126436
   },
   "vuln-hunting-claw": {
     "inject_count": 431,
@@ -200,12 +200,12 @@
     "effectiveness": 0.029411764705882353
   },
   "ida-headless-cwe120-sink-analysis": {
-    "inject_count": 186,
-    "positive_count": 5,
-    "negative_count": 89,
+    "inject_count": 188,
+    "positive_count": 7,
+    "negative_count": 92,
     "neutral_count": 0,
-    "last_injected_at": "2026-07-25T15:48:04",
-    "effectiveness": 0.026881720430107527
+    "last_injected_at": "2026-07-25T15:48:30",
+    "effectiveness": 0.03723404255319149
   },
   "idalib-headless-sink-callsite-tracing": {
     "inject_count": 116,
@@ -240,12 +240,12 @@
     "effectiveness": 0.0
   },
   "idalib-headless-batch-diagnosis": {
-    "inject_count": 75,
-    "positive_count": 2,
-    "negative_count": 69,
+    "inject_count": 79,
+    "positive_count": 6,
+    "negative_count": 72,
     "neutral_count": 0,
-    "last_injected_at": "2026-07-25T15:48:04",
-    "effectiveness": 0.02666666666666667
+    "last_injected_at": "2026-07-27T10:28:00",
+    "effectiveness": 0.0759493670886076
   },
   "elf-plt-reloc-sink-scan": {
     "inject_count": 3,
@@ -272,11 +272,11 @@
     "effectiveness": 1.0
   },
   "source-parser-state-machine-oob": {
-    "inject_count": 378,
-    "positive_count": 18,
-    "negative_count": 336,
+    "inject_count": 404,
+    "positive_count": 23,
+    "negative_count": 360,
     "neutral_count": 3,
-    "last_injected_at": "2026-07-25T15:48:04",
-    "effectiveness": 0.047619047619047616
+    "last_injected_at": "2026-07-27T16:43:48",
+    "effectiveness": 0.05693069306930693
   }
 }
