@@ -224,3 +224,46 @@ Saved validation output:
 - So the current engineering state is:
   - `analysis -> validation` is now working on remote VM for this case
   - `validation -> evolve feedback publish` still needs an explicit connected run record path
+
+## 2026-07-29: validated evolution handoff deployment
+
+### 13. Remote repository inspection
+
+Command executed from Windows:
+
+```powershell
+ssh -i C:\Users\Fan\.ssh\skillclaw_vm -o BatchMode=yes li@192.168.1.4 "cd /home/li/skillclaw-eval/SkillClaw && git status --short && git branch --show-current && git rev-parse --short HEAD && git remote -v"
+```
+
+Result:
+
+```text
+branch: dev
+commit: ba05afe
+remote: origin -> https://github.com/MrXiaoFan/SkillClaw.git
+working tree: previous evaluation/ and benchmarks/ sync files were modified; one confirmation adapter was untracked
+```
+
+The modified files were not deleted or overwritten.
+
+### 14. Preserve remote changes and fast-forward to the shared dev commit
+
+Command executed from Windows:
+
+```powershell
+ssh -i C:\Users\Fan\.ssh\skillclaw_vm -o BatchMode=yes li@192.168.1.4 "cd /home/li/skillclaw-eval/SkillClaw && git stash push -u -m 'pre-sync-20260729' && git pull --ff-only origin dev && git rev-parse --short HEAD && git status --short && git stash list | head -n 3"
+```
+
+Result:
+
+```text
+Saved working directory and index state On dev: pre-sync-20260729
+Updating ba05afe..9adc039
+Fast-forward
+54 files changed, 3579 insertions(+), 800 deletions(-)
+commit: 9adc039
+working tree: clean
+stash@{0}: On dev: pre-sync-20260729
+```
+
+The VM, Codeup `dev`, GitHub `dev`, and the local repository now use commit `9adc039`.
