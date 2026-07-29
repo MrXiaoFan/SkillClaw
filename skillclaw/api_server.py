@@ -20,6 +20,7 @@ import re
 import struct
 import threading
 import time
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -1545,6 +1546,7 @@ class SkillClawAPIServer:
         self._session_scored_turns: dict[str, int] = {}  # session -> finalized PRM turn count
         self._session_turns: dict[str, list] = {}
         self._session_last_active: dict[str, float] = {}  # session -> unix_ts
+        self._session_segments: dict[str, dict[str, Any]] = {}
         self._session_inline_skill_cache: dict[str, dict[str, Any]] = {}
         self._closing_sessions: set[str] = set()  # session ids currently being closed
         self._background_tasks: set[asyncio.Task] = set()  # transient async tasks (upload, submit)
@@ -1748,6 +1750,7 @@ class SkillClawAPIServer:
             # cleanup still work correctly.
             if _raw_sid:
                 session_id = _raw_sid
+                session_id_source = "x-session-id" if x_session_id else "body-session-id"
                 turn_type = _resolve_turn_type(x_turn_type, body.get("turn_type"), default="main")
             else:
                 msg_count = len(body.get("messages") or [])
@@ -1755,7 +1758,9 @@ class SkillClawAPIServer:
                     body.get("model", "default"),
                     msg_count,
                 )
+                session_id_source = "heuristic"
                 turn_type = _resolve_turn_type(x_turn_type, body.get("turn_type"), default="main")
+            owner._register_session_identity(session_id, session_id_source)
             session_done = _resolve_session_done(x_session_done, body.get("session_done"))
             # Do not infer session_done from bootstrap text 鈥?only explicit
             # X-Session-Done or body session_done trigger session close.
@@ -1794,6 +1799,15 @@ class SkillClawAPIServer:
                     body.get("model", owner._served_model),
                     len(body.get("input", []) if isinstance(body.get("input"), list) else []),
                 )
+                if x_session_id:
+                    session_id_source = "x-session-id"
+                elif codex_session_id:
+                    session_id_source = "session-id-header"
+                elif body.get("session_id"):
+                    session_id_source = "body-session-id"
+                else:
+                    session_id_source = "heuristic"
+                owner._register_session_identity(session_id, session_id_source)
                 session_done = _resolve_session_done(x_session_done, body.get("session_done"))
                 if bool(body.get("stream", False)):
                     return StreamingResponse(
@@ -1836,6 +1850,12 @@ class SkillClawAPIServer:
             _raw_sid = x_session_id or codex_session_id or body.get("session_id") or ""
             if _raw_sid:
                 session_id = _raw_sid
+                if x_session_id:
+                    session_id_source = "x-session-id"
+                elif codex_session_id:
+                    session_id_source = "session-id-header"
+                else:
+                    session_id_source = "body-session-id"
                 turn_type = _resolve_turn_type(x_turn_type, body.get("turn_type"), default="main")
             else:
                 msg_count = len(openai_body.get("messages") or [])
@@ -1843,7 +1863,9 @@ class SkillClawAPIServer:
                     openai_body.get("model", owner._served_model),
                     msg_count,
                 )
+                session_id_source = "heuristic"
                 turn_type = _resolve_turn_type(x_turn_type, body.get("turn_type"), default="main")
+            owner._register_session_identity(session_id, session_id_source)
             session_done = _resolve_session_done(x_session_done, body.get("session_done"))
 
             result = await owner._handle_request(
@@ -1926,6 +1948,7 @@ class SkillClawAPIServer:
                 sessions.append(
                     {
                         "session_id": sid,
+                        **owner._session_identity_fields(sid),
                         "idle_seconds": idle_sec,
                         "turn_count": turn_count,
                         "is_closing": sid in owner._closing_sessions,
@@ -1951,8 +1974,8 @@ class SkillClawAPIServer:
             if session_id not in active_ids:
                 raise HTTPException(status_code=404, detail="session not found")
 
-            await owner._close_session(session_id, reason="user_requested")
-            return JSONResponse(content={"deleted": True, "session_id": session_id})
+            closed_segment = await owner._close_session(session_id, reason="user_requested")
+            return JSONResponse(content={"deleted": True, "session_id": session_id, **(closed_segment or {})})
 
         # ---------------------------------------------------------------- #
         # Anthropic-compatible endpoint 鈥?used by NanoClaw (credential proxy
@@ -2006,11 +2029,19 @@ class SkillClawAPIServer:
             _raw_sid = x_session_id or x_claude_code_session_id or raw_body.get("session_id") or ""
             if _raw_sid:
                 session_id = _raw_sid
+                if x_session_id:
+                    session_id_source = "x-session-id"
+                elif x_claude_code_session_id:
+                    session_id_source = "x-claude-code-session-id"
+                else:
+                    session_id_source = "body-session-id"
                 turn_type = _resolve_turn_type(x_turn_type, raw_body.get("turn_type"), default="main")
             else:
                 msg_count = len(openai_body.get("messages") or [])
                 session_id = await owner._resolve_tui_session(model, msg_count)
+                session_id_source = "heuristic"
                 turn_type = _resolve_turn_type(x_turn_type, raw_body.get("turn_type"), default="main")
+            owner._register_session_identity(session_id, session_id_source)
             session_done = _resolve_session_done(x_session_done, raw_body.get("session_done"))
 
             result = await owner._handle_request(
@@ -2130,7 +2161,41 @@ class SkillClawAPIServer:
 
     def _touch_session(self, session_id: str) -> None:
         if session_id:
+            self._register_session_identity(session_id)
             self._session_last_active[session_id] = time.time()
+
+    def _register_session_identity(self, session_id: str, source: str = "unknown") -> dict[str, Any]:
+        if not session_id:
+            return {}
+        if not hasattr(self, "_session_segments"):
+            self._session_segments = {}
+        existing = self._session_segments.get(session_id)
+        if existing is not None:
+            if existing.get("session_id_source") in {"", "unknown", "heuristic"} and source not in {
+                "",
+                "unknown",
+                "heuristic",
+            }:
+                existing["session_id_source"] = source
+            return existing
+        segment = {
+            "client_session_id": session_id,
+            "session_segment_id": str(uuid.uuid4()),
+            "session_id_source": source or "unknown",
+            "segment_started_at": datetime.now(timezone.utc).isoformat(),
+            "segment_status": "active",
+        }
+        self._session_segments[session_id] = segment
+        logger.info(
+            "[SessionDetect] opened segment=%s client_session=%s source=%s",
+            segment["session_segment_id"],
+            session_id,
+            segment["session_id_source"],
+        )
+        return segment
+
+    def _session_identity_fields(self, session_id: str) -> dict[str, Any]:
+        return dict(self._register_session_identity(session_id))
 
     def _collect_active_session_ids(self) -> list[str]:
         session_ids = set(self._session_last_active.keys())
@@ -2255,12 +2320,15 @@ class SkillClawAPIServer:
         await self._drain_active_sessions(reason="server_shutdown")
         await self._await_background_tasks(self._shutdown_drain_timeout_seconds)
 
-    async def _close_session(self, session_id: str, reason: str = "explicit") -> None:
+    async def _close_session(self, session_id: str, reason: str = "explicit") -> dict[str, Any] | None:
         """Flush a session: finalize pending turn feedback, upload session data, clean up state."""
         if not session_id:
             return
         if session_id in self._closing_sessions:
             return
+        closed_segment = self._session_identity_fields(session_id)
+        closed_segment["segment_status"] = "closed"
+        closed_segment["segment_closed_at"] = datetime.now(timezone.utc).isoformat()
         self._closing_sessions.add(session_id)
         try:
             self._flush_pending_record(session_id, None)
@@ -2327,16 +2395,25 @@ class SkillClawAPIServer:
             turns = self._session_turns.pop(session_id, [])
             modified_skill_names = _extract_modified_skill_names(turns)
             if turns and self.config.sharing_enabled:
-                self._safe_create_task(self._upload_session_data(session_id, turns))
+                self._safe_create_task(
+                    self._upload_session_data(
+                        session_id,
+                        turns,
+                        segment_status="closed",
+                        segment_meta=copy.deepcopy(closed_segment),
+                    )
+                )
             if self.config.sharing_enabled:
                 self._safe_create_task(self._pull_skills_from_cloud(skip_names=modified_skill_names))
             self._session_last_active.pop(session_id, None)
             self._session_inline_skill_cache.pop(session_id, None)
+            self._session_segments.pop(session_id, None)
             for key, meta in list(self._tui_session_meta.items()):
                 if isinstance(meta, dict) and meta.get("session_id") == session_id:
                     self._tui_session_meta.pop(key, None)
         finally:
             self._closing_sessions.discard(session_id)
+        return closed_segment
 
     # ------------------------------------------------------------------ #
     # Record helpers                                                       #
@@ -2385,6 +2462,7 @@ class SkillClawAPIServer:
         instruction_text = _extract_last_user_instruction(messages)
         record = {
             "session_id": session_id,
+            **self._session_identity_fields(session_id),
             "turn": turn_num,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "messages": messages,
@@ -2733,6 +2811,7 @@ class SkillClawAPIServer:
             )
             raw_turn_kind = _classify_raw_turn_kind(protocol, content, tool_calls)
             turn_record = {
+                **self._session_identity_fields(session_id),
                 "turn_num": turn_num,
                 "raw_turn_kind": raw_turn_kind,
                 "prompt_text": user_instruction,
@@ -2914,6 +2993,7 @@ class SkillClawAPIServer:
         turns = self._session_turns.setdefault(session_id, [])
         turn_num = len(turns) + 1
         turn_record = {
+            **self._session_identity_fields(session_id),
             "turn_num": turn_num,
             "raw_turn_kind": "final" if turn_type == "main" else "side",
             "prompt_text": prompt_text[:2000],
@@ -3312,12 +3392,15 @@ class SkillClawAPIServer:
         self,
         session_id: str,
         turns: list[dict],
+        *,
+        segment_status: str = "active",
+        segment_meta: Optional[dict[str, Any]] = None,
     ) -> bool:
         """Upload the complete session turn records to cloud storage.
 
         Session data and skill data live in *separate* cloud paths so they
         can be consumed independently:
-          - sessions: ``{group_id}/sessions/{session_id}.jsonl``
+          - sessions: ``{group_id}/sessions/{session_segment_id}.json``
           - skills:   ``{group_id}/skills/{name}/SKILL.md``  (handled by SkillHub)
         """
         try:
@@ -3330,8 +3413,14 @@ class SkillClawAPIServer:
                     "(skill registry may still use Nacos)"
                 )
                 return False
+            identity = dict(segment_meta or self._session_identity_fields(session_id))
+            identity["segment_status"] = segment_status
+            segment_id = str(identity.get("session_segment_id") or uuid.uuid4())
             session_payload = {
-                "session_id": session_id,
+                "session_id": segment_id,
+                **identity,
+                "client_session_id": session_id,
+                "session_segment_id": segment_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
                 "user_alias": self.config.sharing_user_alias or os.environ.get("USER", "anonymous"),
                 "num_turns": len(turns),
@@ -3339,7 +3428,7 @@ class SkillClawAPIServer:
             }
 
             content = json.dumps(session_payload, ensure_ascii=False)
-            oss_key = f"{hub._prefix()}sessions/{session_id}.json"
+            oss_key = f"{hub._prefix()}sessions/{segment_id}.json"
             hub._bucket.put_object(oss_key, content.encode("utf-8"))
             logger.info(
                 "[SkillHub] session uploaded: %s (%d turns, %d bytes)",
@@ -3374,7 +3463,7 @@ class SkillClawAPIServer:
         self._safe_create_task(self._upload_session_snapshot_and_trigger(session_id, turns))
 
     async def _upload_session_snapshot_and_trigger(self, session_id: str, turns: list[dict]) -> None:
-        uploaded = await self._upload_session_data(session_id, turns)
+        uploaded = await self._upload_session_data(session_id, turns, segment_status="active")
         if uploaded:
             await self._trigger_evolve()
 

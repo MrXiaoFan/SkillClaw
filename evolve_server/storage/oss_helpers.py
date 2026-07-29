@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Any, Optional
 
-from skillclaw.object_store import build_object_store
+from skillclaw.object_store import build_object_store, is_not_found_error
 from skillclaw.skill_bundle import (
     bundle_entrypoint_text,
     bundle_file_records,
@@ -48,6 +48,15 @@ def list_session_keys(bucket, prefix: str) -> list[str]:
     return keys
 
 
+def list_run_feedback_keys(bucket, prefix: str) -> list[str]:
+    """List run-scoped validator feedback objects."""
+    return [
+        key
+        for key in list_object_keys(bucket, f"{prefix}run_feedback/")
+        if key.endswith(".json")
+    ]
+
+
 def list_object_keys(bucket, prefix: str) -> list[str]:
     """List all object keys under *prefix* across local/OSS backends."""
     if hasattr(bucket, "iter_objects"):
@@ -64,13 +73,14 @@ def list_object_keys(bucket, prefix: str) -> list[str]:
     return [obj.key for obj in iterator]
 
 
-def read_json_object(bucket, key: str) -> Optional[dict]:
+def read_json_object(bucket, key: str, warn_missing: bool = True) -> Optional[dict]:
     """Download and parse a single JSON object from storage."""
     try:
         data = bucket.get_object(key).read().decode("utf-8")
         return json.loads(data)
     except Exception as e:
-        logger.warning("[Storage] failed to read %s: %s", key, e)
+        if warn_missing or not is_not_found_error(e):
+            logger.warning("[Storage] failed to read %s: %s", key, e)
         return None
 
 
@@ -103,8 +113,8 @@ def save_manifest(bucket, prefix: str, manifest: dict[str, dict[str, Any]]) -> N
     bucket.put_object(f"{prefix}manifest.jsonl", content.encode("utf-8"))
 
 
-def delete_session_keys(bucket, keys: list[str]) -> int:
-    """Delete session objects from the bucket (OSS or local).
+def delete_object_keys(bucket, keys: list[str]) -> int:
+    """Delete object keys from the bucket (OSS or local).
 
     Returns the number of successfully deleted keys.
     """
@@ -116,8 +126,17 @@ def delete_session_keys(bucket, keys: list[str]) -> int:
         except Exception as e:
             logger.warning("[OSS] failed to delete %s: %s", key, e)
     if deleted:
-        logger.info("[OSS] deleted %d/%d session keys", deleted, len(keys))
+        logger.info("[Storage] deleted %d/%d object keys", deleted, len(keys))
     return deleted
+
+
+def delete_session_keys(bucket, keys: list[str]) -> int:
+    """Backward-compatible session-key deletion helper."""
+    return delete_object_keys(bucket, keys)
+
+
+def write_json_object(bucket, key: str, payload: dict[str, Any]) -> None:
+    bucket.put_object(key, json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"))
 
 
 def fetch_skill_content(bucket, prefix: str, skill_name: str) -> Optional[str]:

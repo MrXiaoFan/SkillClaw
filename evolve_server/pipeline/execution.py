@@ -361,6 +361,10 @@ def _build_feedback_context(feedback_context: dict | None) -> str:
         f"- Skill: {skill}",
         f"- Gate decision: {str(feedback_context.get('gate_decision') or 'unknown')}",
     ]
+    if str(feedback_context.get("attribution_status") or "") == "observational":
+        lines.append(
+            "- Attribution: observational only; the validator confirms the run outcome, not that this skill caused it."
+        )
     summary = feedback_context.get("summary")
     if isinstance(summary, dict):
         selected_runs = summary.get("selected_runs")
@@ -399,6 +403,7 @@ def _build_feedback_context(feedback_context: dict | None) -> str:
             "Use this feedback conservatively:",
             "- If gate_decision is revise, prefer narrow edits that follow revision_directives.",
             "- If gate_decision is demote or insufficient_evidence, avoid broad promotion claims.",
+            "- Do not infer causal skill effectiveness from co-selection alone; prefer skip unless session evidence shows a concrete skill defect.",
             "- Do not erase source-validated working guidance unless the feedback explicitly contradicts it.",
         ]
     )

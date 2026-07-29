@@ -66,6 +66,8 @@ def _looks_like_session_snapshot(value: dict[str, Any]) -> bool:
 
 def _session_snapshot_to_injection_rows(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     session_id = str(snapshot.get("session_id") or "").strip()
+    client_session_id = str(snapshot.get("client_session_id") or session_id).strip()
+    session_segment_id = str(snapshot.get("session_segment_id") or session_id).strip()
     turns = snapshot.get("turns")
     timestamp = str(snapshot.get("timestamp") or "").strip()
     if not session_id or not isinstance(turns, list):
@@ -85,6 +87,8 @@ def _session_snapshot_to_injection_rows(snapshot: dict[str, Any]) -> list[dict[s
 
         row = {
             "session_id": session_id,
+            "client_session_id": str(turn.get("client_session_id") or client_session_id),
+            "session_segment_id": str(turn.get("session_segment_id") or session_segment_id),
             "timestamp": timestamp,
             "turn": int(turn.get("turn_num") or turn.get("turn") or 0),
             "selected_skill_names": [str(item) for item in selected_skill_names if str(item).strip()],
@@ -135,15 +139,28 @@ def _select_injection(value: Any, session_id: str) -> dict[str, Any] | None:
     candidates = _normalize_injection_rows(value)
     if session_id:
         for item in reversed(candidates):
-            if str(item.get("session_id") or "") == session_id:
+            candidate_ids = {
+                str(item.get("session_id") or ""),
+                str(item.get("client_session_id") or ""),
+            }
+            if session_id in candidate_ids:
                 return item
+        return None
     return candidates[-1] if candidates else None
 
 
 def _select_injection_history(value: Any, session_id: str) -> list[dict[str, Any]]:
     candidates = _normalize_injection_rows(value)
     if session_id:
-        candidates = [item for item in candidates if str(item.get("session_id") or "") == session_id]
+        candidates = [
+            item
+            for item in candidates
+            if session_id
+            in {
+                str(item.get("session_id") or ""),
+                str(item.get("client_session_id") or ""),
+            }
+        ]
     return candidates
 
 
@@ -291,6 +308,8 @@ def attach_injection(
     final_record = dict(final_record)
     if effective_session_id:
         final_record["session_id"] = effective_session_id
+    if isinstance(injection, dict) and injection.get("session_segment_id"):
+        final_record["session_segment_id"] = str(injection["session_segment_id"])
     final_record["session_id_source"] = session_id_source
     final_record["skill_injection"] = injection
     final_record["skill_injection_history"] = injection_history

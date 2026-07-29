@@ -48,6 +48,51 @@ def test_session_snapshot_upload_only_queues_on_configured_interval() -> None:
     queued[0].close()
 
 
+def test_reopened_client_session_gets_a_new_segment() -> None:
+    server = _server_for_snapshot_tests()
+    first = server._register_session_identity("client-session", "x-claude-code-session-id")
+    server._session_segments.pop("client-session")
+    second = server._register_session_identity("client-session", "x-claude-code-session-id")
+
+    assert first["client_session_id"] == second["client_session_id"] == "client-session"
+    assert first["session_segment_id"] != second["session_segment_id"]
+
+
+@pytest.mark.anyio
+async def test_session_upload_uses_segment_id_as_storage_key(monkeypatch) -> None:
+    server = _server_for_snapshot_tests()
+    stored = {}
+
+    class FakeBucket:
+        def put_object(self, key, data):
+            stored["key"] = key
+            stored["payload"] = data
+
+    class FakeHub:
+        _bucket = FakeBucket()
+
+        @staticmethod
+        def _prefix():
+            return "default/"
+
+    from skillclaw.skill_hub import SkillHub
+
+    monkeypatch.setattr(SkillHub, "object_storage_from_config", lambda _config: FakeHub())
+    segment = server._register_session_identity("client-session", "x-claude-code-session-id")
+    uploaded = await server._upload_session_data(
+        "client-session",
+        [{"turn_num": 1}],
+        segment_status="closed",
+        segment_meta=segment,
+    )
+
+    payload = __import__("json").loads(stored["payload"])
+    assert uploaded is True
+    assert stored["key"] == f"default/sessions/{segment['session_segment_id']}.json"
+    assert payload["client_session_id"] == "client-session"
+    assert payload["session_segment_id"] == segment["session_segment_id"]
+
+
 def test_session_snapshot_upload_uses_stable_deep_copy() -> None:
     server = _server_for_snapshot_tests()
     queued = []
@@ -85,7 +130,7 @@ async def test_session_snapshot_triggers_evolve_only_after_successful_upload() -
     server = _server_for_snapshot_tests()
     calls = {"upload": 0, "trigger": 0}
 
-    async def fake_upload(_session_id, _turns):
+    async def fake_upload(_session_id, _turns, **_kwargs):
         calls["upload"] += 1
         return calls["upload"] == 1
 

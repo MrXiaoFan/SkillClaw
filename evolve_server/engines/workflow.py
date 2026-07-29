@@ -17,9 +17,12 @@ import hashlib
 import json
 import logging
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+
+from fastapi import FastAPI, HTTPException, Request
 
 from skillclaw.skill_bundle import bundle_tree_sha256
 from skillclaw.validation_store import ValidationStore
@@ -40,11 +43,15 @@ from ..pipeline.session_judge import judge_sessions_parallel
 from ..pipeline.skill_verifier import verify_skill_candidate
 from ..pipeline.summarizer import set_summarizer_debug_dir, summarize_sessions_parallel
 from ..storage.oss_helpers import (
+    delete_object_keys,
     delete_session_keys,
     fetch_skill_content,
+    list_run_feedback_keys,
     list_session_keys,
+    read_json_object,
     save_manifest,
     save_version_bundle,
+    write_json_object,
 )
 from .common import EvolveEngineMixin
 
@@ -131,6 +138,153 @@ class EvolveServer(EvolveEngineMixin):
             for item in feedback_bundle
             if str(item.get("skill") or "").strip()
         }
+
+    async def _load_validated_pairs(
+        self,
+    ) -> tuple[list[dict[str, Any]], list[str], list[str], dict[str, int]]:
+        session_keys = await self._call_storage(list_session_keys, self._bucket, self._prefix)
+        feedback_keys = await self._call_storage(list_run_feedback_keys, self._bucket, self._prefix)
+        feedback_by_segment: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+        for key in feedback_keys:
+            payload = await self._call_storage(read_json_object, self._bucket, key)
+            if not isinstance(payload, dict):
+                continue
+            segment_id = str(payload.get("session_segment_id") or "").strip()
+            if segment_id:
+                feedback_by_segment.setdefault(segment_id, []).append((key, payload))
+
+        ready_sessions: list[dict[str, Any]] = []
+        ready_session_keys: list[str] = []
+        ready_feedback_keys: list[str] = []
+        closed_unmatched = 0
+        active_sessions = 0
+        matched_segments: set[str] = set()
+        for key in session_keys:
+            session = await self._call_storage(read_json_object, self._bucket, key)
+            if not isinstance(session, dict):
+                continue
+            if str(session.get("segment_status") or "") != "closed":
+                active_sessions += 1
+                continue
+            segment_id = str(session.get("session_segment_id") or session.get("session_id") or "").strip()
+            client_session_id = str(session.get("client_session_id") or "").strip()
+            matches = [
+                item
+                for item in feedback_by_segment.get(segment_id, [])
+                if not client_session_id
+                or str(item[1].get("client_session_id") or "").strip() == client_session_id
+            ]
+            if not matches:
+                closed_unmatched += 1
+                continue
+            paired = dict(session)
+            paired["validator_feedback"] = [payload for _, payload in matches]
+            ready_sessions.append(paired)
+            ready_session_keys.append(key)
+            ready_feedback_keys.extend(feedback_key for feedback_key, _ in matches)
+            matched_segments.add(segment_id)
+
+        unmatched_feedback = sum(
+            len(items)
+            for segment_id, items in feedback_by_segment.items()
+            if segment_id not in matched_segments
+        )
+        queue = {
+            "ready_pairs": len(ready_sessions),
+            "active_sessions": active_sessions,
+            "closed_sessions_waiting_feedback": closed_unmatched,
+            "feedback_waiting_session": unmatched_feedback,
+        }
+        return ready_sessions, ready_session_keys, ready_feedback_keys, queue
+
+    @classmethod
+    def _paired_feedback_map(cls, sessions: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for session in sessions:
+            for envelope in session.get("validator_feedback") or []:
+                if not isinstance(envelope, dict):
+                    continue
+                for item in envelope.get("skill_feedback") or []:
+                    if not isinstance(item, dict):
+                        continue
+                    skill = str(item.get("skill") or "").strip()
+                    if skill:
+                        grouped.setdefault(skill, []).append(item)
+
+        merged: dict[str, dict[str, Any]] = {}
+        decision_order = {"demote": 0, "revise": 1, "insufficient_evidence": 2, "keep": 3, "promote": 4}
+        for skill, rows in grouped.items():
+            item = dict(rows[-1])
+            summaries = [row.get("summary") for row in rows if isinstance(row.get("summary"), dict)]
+            dimensions = [row.get("dimensions") for row in rows if isinstance(row.get("dimensions"), dict)]
+            selected_runs = sum(int(summary.get("selected_runs") or 0) for summary in summaries)
+            weighted_score = sum(
+                float(summary.get("mean_score") or 0) * int(summary.get("selected_runs") or 0)
+                for summary in summaries
+            )
+            summary_keys = {key for summary in summaries for key in summary if key != "mean_score"}
+            item["summary"] = {
+                key: sum(int(summary.get(key) or 0) for summary in summaries)
+                for key in summary_keys
+            }
+            item["summary"]["mean_score"] = round(weighted_score / selected_runs, 3) if selected_runs else None
+            dimension_keys = {key for dimension in dimensions for key in dimension}
+            item["dimensions"] = {
+                key: sum(int(dimension.get(key) or 0) for dimension in dimensions)
+                for key in dimension_keys
+            }
+            item["gate_decision"] = min(
+                (str(row.get("gate_decision") or "unknown") for row in rows),
+                key=lambda value: decision_order.get(value, 2),
+            )
+            for key in ("gate_reasons", "gate_suggestions", "revision_directives"):
+                item[key] = sorted({str(value) for row in rows for value in row.get(key) or [] if str(value).strip()})
+            item["attribution_status"] = "observational"
+            item["attribution_note"] = (
+                "The validator confirms the run outcome, but does not by itself prove that this selected skill caused it."
+            )
+            merged[skill] = item
+        return merged
+
+    def _run_receipt_key(self, session_segment_id: str, run_id: str) -> str:
+        run_key = hashlib.sha256(run_id.encode("utf-8")).hexdigest()[:20]
+        return f"{self._prefix}run_receipts/{session_segment_id}/{run_key}.json"
+
+    async def _write_consumption_receipts(
+        self,
+        sessions: list[dict[str, Any]],
+        records: list[dict[str, Any]],
+    ) -> None:
+        for session in sessions:
+            for envelope in session.get("validator_feedback") or []:
+                if not isinstance(envelope, dict):
+                    continue
+                segment_id = str(envelope.get("session_segment_id") or "").strip()
+                run_id = str(envelope.get("run_id") or "").strip()
+                if not segment_id or not run_id:
+                    continue
+                segment_records = [
+                    record
+                    for record in records
+                    if segment_id in {str(value) for value in record.get("session_ids") or []}
+                ]
+                receipt = {
+                    "status": "consumed",
+                    "consumed_at": datetime.now(timezone.utc).isoformat(),
+                    "run_id": run_id,
+                    "client_session_id": str(envelope.get("client_session_id") or ""),
+                    "session_segment_id": segment_id,
+                    "candidate_count": sum(
+                        1 for record in segment_records if record.get("action") == "queued_for_validation"
+                    ),
+                    "uploaded_count": sum(1 for record in segment_records if record.get("uploaded")),
+                }
+                await self._call_storage(
+                    write_json_object,
+                    self._bucket,
+                    self._run_receipt_key(segment_id, run_id),
+                    receipt,
+                )
 
     def _uses_nacos_skill_registry(self) -> bool:
         return str(getattr(self.config, "skill_storage_backend", "") or "").strip().lower() == "nacos"
@@ -940,14 +1094,28 @@ class EvolveServer(EvolveEngineMixin):
         logger.info("[EvolveServer] === starting evolution cycle ===")
         started_at = time.monotonic()
 
-        sessions, session_keys = await self._drain_sessions()
+        feedback_keys: list[str] = []
+        queue_status = {
+            "ready_pairs": 0,
+            "active_sessions": 0,
+            "closed_sessions_waiting_feedback": 0,
+            "feedback_waiting_session": 0,
+        }
+        if self.config.publish_mode == "validated":
+            sessions, session_keys, feedback_keys, queue_status = await self._load_validated_pairs()
+        else:
+            sessions, session_keys = await self._drain_sessions()
         judge_summary = self._empty_judge_summary()
         skill_group_count = 0
         no_skill_sessions: list[dict] = []
         evolution_records: list[dict] = []
         had_processing_error = False
-        feedback_bundle = self._load_feedback_bundle()
-        feedback_by_skill = self._feedback_map(feedback_bundle)
+        if self.config.publish_mode == "validated":
+            feedback_bundle = None
+            feedback_by_skill = self._paired_feedback_map(sessions)
+        else:
+            feedback_bundle = self._load_feedback_bundle()
+            feedback_by_skill = self._feedback_map(feedback_bundle)
 
         if sessions:
             logger.info("[EvolveServer] summarizing %d sessions", len(sessions))
@@ -1002,7 +1170,10 @@ class EvolveServer(EvolveEngineMixin):
         if not self._uses_nacos_skill_registry():
             await self._call_storage(self._id_registry.save_to_oss, self._bucket, self._prefix)
         if session_keys and not had_processing_error:
+            await self._write_consumption_receipts(sessions, all_records)
             await self._call_storage(delete_session_keys, self._bucket, session_keys)
+            if feedback_keys:
+                await self._call_storage(delete_object_keys, self._bucket, feedback_keys)
         elif session_keys and had_processing_error:
             logger.warning(
                 "[EvolveServer] retaining %d session(s) in queue because this cycle had processing errors",
@@ -1031,8 +1202,9 @@ class EvolveServer(EvolveEngineMixin):
             "session_judge": judge_summary,
             "skill_verifier": skill_verifier_summary,
             "validation_publish": validation_publish_summary,
-            "feedback_bundle_loaded": bool(feedback_bundle),
+            "feedback_bundle_loaded": bool(feedback_by_skill),
             "feedback_bundle_skill_count": len(feedback_by_skill),
+            "validated_pair_queue": queue_status,
             "had_processing_error": had_processing_error,
         }
         self._append_history(summary)
@@ -1086,7 +1258,6 @@ class EvolveServer(EvolveEngineMixin):
         self._running = False
 
     def create_http_app(self):
-        from fastapi import FastAPI
         from fastapi.responses import JSONResponse
 
         app = FastAPI(title="SkillClaw Evolve Server")
@@ -1095,12 +1266,66 @@ class EvolveServer(EvolveEngineMixin):
         async def trigger_evolve():
             return JSONResponse(content=await self.run_once())
 
+        @app.post("/v1/run-feedback")
+        async def submit_run_feedback(request: Request):
+            payload = await request.json()
+            if not isinstance(payload, dict):
+                raise HTTPException(status_code=400, detail="feedback payload must be a JSON object")
+            segment_id = str(payload.get("session_segment_id") or "").strip()
+            run_id = str(payload.get("run_id") or "").strip()
+            client_session_id = str(payload.get("client_session_id") or "").strip()
+            skill_feedback = payload.get("skill_feedback")
+            try:
+                uuid.UUID(segment_id)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="session_segment_id must be a UUID") from exc
+            if not run_id or not client_session_id:
+                raise HTTPException(status_code=400, detail="run_id and client_session_id are required")
+            if not isinstance(skill_feedback, list):
+                raise HTTPException(status_code=400, detail="skill_feedback must be a list")
+            run_key = hashlib.sha256(run_id.encode("utf-8")).hexdigest()[:20]
+            key = f"{self._prefix}run_feedback/{segment_id}/{run_key}.json"
+            await self._call_storage(write_json_object, self._bucket, key, payload)
+            return JSONResponse(
+                content={
+                    "queued": True,
+                    "run_id": run_id,
+                    "client_session_id": client_session_id,
+                    "session_segment_id": segment_id,
+                    "storage_key": key,
+                }
+            )
+
+        @app.get("/v1/run-feedback/status")
+        async def run_feedback_status(run_id: str, session_segment_id: str):
+            if not run_id or not session_segment_id:
+                raise HTTPException(status_code=400, detail="run_id and session_segment_id are required")
+            receipt = await self._call_storage(
+                read_json_object,
+                self._bucket,
+                self._run_receipt_key(session_segment_id, run_id),
+                False,
+            )
+            if not isinstance(receipt, dict):
+                return JSONResponse(
+                    content={
+                        "status": "pending",
+                        "run_id": run_id,
+                        "session_segment_id": session_segment_id,
+                    }
+                )
+            return JSONResponse(content=receipt)
+
         @app.get("/status")
         async def status():
             entries = (
                 self._load_remote_skills() if self._uses_nacos_skill_registry() else self._id_registry.all_entries()
             )
             pending_keys = await self._call_storage(list_session_keys, self._bucket, self._prefix)
+            feedback_keys = await self._call_storage(list_run_feedback_keys, self._bucket, self._prefix)
+            pair_status = None
+            if self.config.publish_mode == "validated":
+                _, _, _, pair_status = await self._load_validated_pairs()
             return JSONResponse(
                 content={
                     "engine": "workflow",
@@ -1108,6 +1333,8 @@ class EvolveServer(EvolveEngineMixin):
                     "publish_mode": self.config.publish_mode,
                     "feedback_bundle_path": self.config.feedback_bundle_path,
                     "pending_sessions": len(pending_keys),
+                    "pending_run_feedback": len(feedback_keys),
+                    "validated_pair_queue": pair_status,
                     "validation_policy": {
                         "required_results": self.config.validation_required_results,
                         "required_approvals": self.config.validation_required_approvals,

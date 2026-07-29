@@ -117,6 +117,10 @@ async def test_anthropic_messages_uses_claude_code_session_header(anthropic_serv
     assert response.status_code == 200
     assert response.json()["content"] == [{"type": "text", "text": "ok"}]
     assert seen["session_id"] == "claude-session-1"
+    identity = anthropic_server._session_segments["claude-session-1"]
+    assert identity["client_session_id"] == "claude-session-1"
+    assert identity["session_id_source"] == "x-claude-code-session-id"
+    assert identity["session_segment_id"]
 
 
 @pytest.mark.asyncio

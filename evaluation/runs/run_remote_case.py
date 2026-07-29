@@ -16,6 +16,7 @@ import shlex
 import sys
 import tarfile
 import tempfile
+import uuid
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -122,12 +123,24 @@ def build_remote_layout(
     )
 
 
-def build_manual_claude_command(*, agent_root: str, prompt_path: str, raw_path: str) -> str:
+def _session_id_for_run(run_id: str, explicit: str = "") -> str:
+    if explicit:
+        return str(uuid.UUID(explicit))
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"skillclaw-evaluation:{run_id}"))
+
+
+def build_manual_claude_command(
+    *,
+    agent_root: str,
+    prompt_path: str,
+    raw_path: str,
+    session_id: str,
+) -> str:
     return "\n".join(
         [
             f"cd {_quote(agent_root)}",
             f"rm -f {_quote(raw_path)}",
-            "claude -p --dangerously-skip-permissions --output-format text \\",
+            f"claude -p --dangerously-skip-permissions --output-format text --session-id {_quote(session_id)} \\",
             f"  < {_quote(prompt_path)} \\",
             f"  | tee {_quote(raw_path)}",
         ]
@@ -159,6 +172,7 @@ def build_remote_run_command(
     mode: str,
     remote_output_dir: str,
     run_id: str,
+    session_id: str,
     agent_output: str | None = None,
     preflight: bool = False,
     expected_provider: str | None = None,
@@ -178,6 +192,8 @@ def build_remote_run_command(
         remote_output_dir,
         "--run-id",
         run_id,
+        "--session-id",
+        session_id,
     ]
     if agent_output:
         parts.extend(["--agent-output", agent_output])
@@ -338,6 +354,7 @@ def _sync_local_manifest_with_final(manifest_path: Path, final_record: dict[str,
         return
     manifest = _load_json_object(manifest_path)
     manifest["session_id"] = str(final_record.get("session_id") or "")
+    manifest["session_segment_id"] = str(final_record.get("session_segment_id") or "")
     manifest["session_id_source"] = str(final_record.get("session_id_source") or "")
     skill_relevance = final_record.get("skill_relevance")
     manifest["skill_relevance"] = (
@@ -404,6 +421,7 @@ def prepare_manual_run(args: argparse.Namespace) -> dict[str, Any]:
     case = load_case_definition(args.case)
     case_id = str(case.get("case_id") or args.case.stem)
     run_id = args.run_id or make_run_id(case_id, args.mode)
+    client_session_id = _session_id_for_run(run_id, args.session_id)
     config = RemoteExperimentVmConfig.from_args(args)
 
     with RemoteExperimentVmClient(config) as client:
@@ -450,6 +468,7 @@ def prepare_manual_run(args: argparse.Namespace) -> dict[str, Any]:
     result = {
         "action": "prepare-manual",
         "run_id": run_id,
+        "client_session_id": client_session_id,
         "sync": sync_result,
         "prepare": prepare_result,
         "render_prompt": render_result,
@@ -463,6 +482,7 @@ def prepare_manual_run(args: argparse.Namespace) -> dict[str, Any]:
             agent_root=agent_root,
             prompt_path=layout.remote_prompt_path,
             raw_path=layout.remote_raw_path,
+            session_id=client_session_id,
         ),
         "local_import_dir": str(layout.local_import_dir),
     }
@@ -503,6 +523,7 @@ def finalize_manual_run(args: argparse.Namespace) -> dict[str, Any]:
     case = load_case_definition(args.case)
     case_id = str(case.get("case_id") or args.case.stem)
     run_id = args.run_id or make_run_id(case_id, args.mode)
+    client_session_id = _session_id_for_run(run_id, args.session_id)
     config = RemoteExperimentVmConfig.from_args(args)
     with RemoteExperimentVmClient(config) as client:
         remote_home = _get_remote_home(client)
@@ -528,6 +549,7 @@ def finalize_manual_run(args: argparse.Namespace) -> dict[str, Any]:
             mode=args.mode,
             remote_output_dir=layout.remote_output_dir,
             run_id=run_id,
+            session_id=client_session_id,
             agent_output=remote_raw_path,
             preflight=args.preflight,
             expected_provider=args.expected_provider,
@@ -552,6 +574,7 @@ def finalize_manual_run(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "action": "finalize-manual",
         "run_id": run_id,
+        "client_session_id": client_session_id,
         "remote_command": command,
         "run_result": run_result,
         "downloaded_artifacts": downloaded,
@@ -566,6 +589,7 @@ def run_auto(args: argparse.Namespace) -> dict[str, Any]:
     case = load_case_definition(args.case)
     case_id = str(case.get("case_id") or args.case.stem)
     run_id = args.run_id or make_run_id(case_id, args.mode)
+    client_session_id = _session_id_for_run(run_id, args.session_id)
     config = RemoteExperimentVmConfig.from_args(args)
     with RemoteExperimentVmClient(config) as client:
         remote_home = _get_remote_home(client)
@@ -586,6 +610,7 @@ def run_auto(args: argparse.Namespace) -> dict[str, Any]:
             mode=args.mode,
             remote_output_dir=layout.remote_output_dir,
             run_id=run_id,
+            session_id=client_session_id,
             preflight=args.preflight,
             expected_provider=args.expected_provider,
             skillclaw_url=args.skillclaw_url,
@@ -617,6 +642,7 @@ def run_auto(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "action": "run-auto",
         "run_id": run_id,
+        "client_session_id": client_session_id,
         "sync": sync_result,
         "remote_command": command,
         "run_result": run_result,
@@ -653,6 +679,7 @@ def _build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("case", type=Path)
     prepare.add_argument("--mode", default="blind-skillclaw-inline-guarded")
     prepare.add_argument("--run-id", default="")
+    prepare.add_argument("--session-id", default="", help="Existing Claude session UUID; omitted for a new blind run.")
 
     finalize = subparsers.add_parser(
         "finalize-manual",
@@ -661,6 +688,7 @@ def _build_parser() -> argparse.ArgumentParser:
     finalize.add_argument("case", type=Path)
     finalize.add_argument("--mode", default="blind-skillclaw-inline-guarded")
     finalize.add_argument("--run-id", default="")
+    finalize.add_argument("--session-id", default="", help="Claude session UUID printed by prepare-manual.")
     finalize.add_argument("--remote-raw-path", default="")
     finalize.add_argument("--preflight", action="store_true")
     finalize.add_argument("--expected-provider", choices=["skillclaw", "deepseek", "unknown"], default=None)
@@ -678,6 +706,7 @@ def _build_parser() -> argparse.ArgumentParser:
     auto.add_argument("case", type=Path)
     auto.add_argument("--mode", default="blind-skillclaw-inline-guarded")
     auto.add_argument("--run-id", default="")
+    auto.add_argument("--session-id", default="", help="Existing Claude session UUID; omitted for a new blind run.")
     auto.add_argument("--preflight", action="store_true")
     auto.add_argument("--expected-provider", choices=["skillclaw", "deepseek", "unknown"], default=None)
     auto.add_argument("--skillclaw-url", default="")

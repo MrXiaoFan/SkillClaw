@@ -13,6 +13,7 @@ import json
 import os
 import subprocess
 import sys
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -226,6 +227,7 @@ def run_agent(
     raw_path: Path,
     stderr_path: Path,
     timeout_seconds: int,
+    session_id: str,
 ) -> int:
     command = [
         claude_cmd,
@@ -233,6 +235,8 @@ def run_agent(
         "--dangerously-skip-permissions",
         "--output-format",
         "text",
+        "--session-id",
+        session_id,
     ]
     with raw_path.open("w", encoding="utf-8", errors="replace") as stdout:
         with stderr_path.open("w", encoding="utf-8", errors="replace") as stderr:
@@ -353,6 +357,8 @@ def build_final_record(
         "confirmation_maturity": str(confirmation.get("maturity") or ""),
         "confirmation_current_claim": str(confirmation.get("current_claim") or ""),
     }
+    if isinstance(injection, dict) and injection.get("session_segment_id"):
+        record["session_segment_id"] = str(injection["session_segment_id"])
     record["feedback"] = build_feedback(
         score_result=score,
         validation_result=validation,
@@ -372,6 +378,19 @@ def run_case(args: argparse.Namespace) -> dict[str, Any]:
     validator_root = resolve_validator_root(case, getattr(args, "validator_root", None), args.mode)
     prompt = get_case_prompt(case, args.mode)
     model = args.model if args.model != "auto" else infer_model()
+    requested_session_id = str(args.session_id or "").strip()
+    effective_session_id = requested_session_id
+    session_id_source = "explicit" if requested_session_id else "missing"
+    if not args.agent_output and not args.no_run_agent:
+        if requested_session_id:
+            try:
+                uuid.UUID(requested_session_id)
+            except ValueError as exc:
+                raise ValueError("--session-id must be a valid UUID when invoking Claude") from exc
+            session_id_source = "provided_to_agent"
+        else:
+            effective_session_id = str(uuid.uuid4())
+            session_id_source = "generated_for_agent"
 
     output_dir.mkdir(parents=True, exist_ok=True)
     paths["prompt"].write_text(prompt + "\n", encoding="utf-8")
@@ -402,6 +421,8 @@ def run_case(args: argparse.Namespace) -> dict[str, Any]:
         "validator_root": str(validator_root),
         "start": datetime.now(timezone.utc).isoformat(),
         "agent_ran": False,
+        "client_session_id": effective_session_id,
+        "session_id_source": session_id_source,
         "status": None,
     }
 
@@ -425,6 +446,7 @@ def run_case(args: argparse.Namespace) -> dict[str, Any]:
                 raw_path=paths["raw"],
                 stderr_path=paths["stderr"],
                 timeout_seconds=args.timeout_seconds,
+                session_id=effective_session_id,
             )
         except subprocess.TimeoutExpired:
             meta["status"] = "timeout"
@@ -457,8 +479,6 @@ def run_case(args: argparse.Namespace) -> dict[str, Any]:
     write_json(paths["validation"], validation)
 
     injection_value = load_optional_json(args.injection_json)
-    effective_session_id = str(args.session_id or "").strip()
-    session_id_source = "explicit" if effective_session_id else "missing"
     if not effective_session_id:
         inferred_session_id = infer_session_id_from_injection(injection_value, meta)
         if inferred_session_id:
