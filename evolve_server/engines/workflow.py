@@ -1103,8 +1103,17 @@ class EvolveServer(EvolveEngineMixin):
             pending_keys = await self._call_storage(list_session_keys, self._bucket, self._prefix)
             return JSONResponse(
                 content={
+                    "engine": "workflow",
                     "running": self._running,
+                    "publish_mode": self.config.publish_mode,
+                    "feedback_bundle_path": self.config.feedback_bundle_path,
                     "pending_sessions": len(pending_keys),
+                    "validation_policy": {
+                        "required_results": self.config.validation_required_results,
+                        "required_approvals": self.config.validation_required_approvals,
+                        "min_mean_score": self.config.validation_min_mean_score,
+                        "max_rejections": self.config.validation_max_rejections,
+                    },
                     "registered_skills": len(entries),
                     "skills": {
                         name: {

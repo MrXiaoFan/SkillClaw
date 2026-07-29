@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 
+import pytest
+
+from evaluation.evolution import EvolutionHandoffError, build_run_feedback_bundle, handoff_validated_run
 from evaluation.runs.run_remote_case import (
     build_manual_claude_command,
     build_remote_layout,
@@ -303,3 +306,110 @@ def test_enrich_downloaded_final_merges_session_snapshots_with_conversation_log(
         "elf-plt-reloc-sink-scan",
         "elf-cwe120-plt-analysis",
     ]
+
+
+def _write_evolution_record(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo-case",
+                "mode": "blind-skillclaw-inline-guarded",
+                "session_id": "session-demo",
+                "score": 9.0,
+                "max_score": 10.0,
+                "checks": {
+                    "file": {"hit": True, "expected": ["parser.c"], "matched": ["parser.c"]},
+                    "function": {"hit": True, "expected": ["parse"], "matched": ["parse"]},
+                    "evidence": {"hit": True},
+                    "root_cause": {"hit": True},
+                },
+                "validation": {"status": "passed", "checks": []},
+                "feedback": {"decision": "positive", "suggested_action": "keep"},
+                "skill_relevance": {
+                    "status": "has_task_relevant_skill",
+                    "relevant_skills": ["source-parser-state-machine-oob"],
+                    "mismatched_skills": [],
+                    "infra_skills": [],
+                },
+                "skill_injection": {"selected_skill_names": ["source-parser-state-machine-oob"]},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_build_run_feedback_bundle_is_compact_and_run_scoped(tmp_path):
+    final_path = tmp_path / "final.json"
+    output_path = tmp_path / "runtime" / "evolve" / "feedback.json"
+    _write_evolution_record(final_path)
+
+    result = build_run_feedback_bundle(final_path, output_path)
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert result["session_id"] == "session-demo"
+    assert result["skills"] == ["source-parser-state-machine-oob"]
+    assert payload[0]["summary"]["selected_runs"] == 1
+    assert payload[0]["dimensions"]["validator_passed"] == 1
+
+
+def test_handoff_requires_validated_mode_and_queues_without_publish(tmp_path):
+    final_path = tmp_path / "final.json"
+    feedback_path = tmp_path / "runtime" / "evolve" / "feedback.json"
+    _write_evolution_record(final_path)
+    calls = []
+    trigger_count = 0
+
+    def fake_request(url, *, method="GET", api_key="", timeout=30.0):
+        nonlocal trigger_count
+        calls.append((method, url, api_key, timeout))
+        if url.endswith("/status"):
+            return {
+                "engine": "workflow",
+                "publish_mode": "validated",
+                "pending_sessions": 0,
+                "feedback_bundle_path": str(feedback_path),
+            }
+        if method == "DELETE":
+            return {"deleted": True, "session_id": "session-demo"}
+        trigger_count += 1
+        if trigger_count == 1:
+            return {"sessions": 0, "uploaded_skills": 0, "candidates_queued": 0}
+        return {"sessions": 1, "uploaded_skills": 0, "candidates_queued": 1}
+
+    result = handoff_validated_run(
+        final_path,
+        repo_root=tmp_path,
+        skillclaw_url="http://skillclaw.test",
+        skillclaw_api_key="secret",
+        evolve_url="http://evolve.test",
+        request=fake_request,
+        trigger_delay_seconds=0,
+    )
+
+    assert result["status"] == "handed_off"
+    assert result["next_stage"] == "candidate_validation"
+    assert feedback_path.is_file()
+    assert any(method == "DELETE" and url.endswith("/v1/sessions/session-demo") for method, url, _, _ in calls)
+
+
+def test_handoff_refuses_direct_publish_mode(tmp_path):
+    final_path = tmp_path / "final.json"
+    _write_evolution_record(final_path)
+
+    def fake_request(_url, **_kwargs):
+        return {
+            "engine": "workflow",
+            "publish_mode": "direct",
+            "pending_sessions": 0,
+            "feedback_bundle_path": str(tmp_path / "runtime" / "feedback.json"),
+        }
+
+    with pytest.raises(EvolutionHandoffError, match="validated"):
+        handoff_validated_run(
+            final_path,
+            repo_root=tmp_path,
+            skillclaw_url="http://skillclaw.test",
+            skillclaw_api_key="secret",
+            evolve_url="http://evolve.test",
+            request=fake_request,
+        )

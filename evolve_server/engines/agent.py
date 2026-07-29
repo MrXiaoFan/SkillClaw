@@ -546,6 +546,7 @@ class AgentEvolveServer(EvolveEngineMixin):
             )
             return JSONResponse(
                 content={
+                    "engine": "agent",
                     "running": self._running,
                     "pending_sessions": len(pending_keys),
                     "registered_skills": len(entries),

@@ -66,6 +66,8 @@ def _build_config_from_args(args: argparse.Namespace) -> EvolveServerConfig:
         config.http_port = args.port
     if args.publish_mode:
         config.publish_mode = args.publish_mode
+    if args.feedback_bundle:
+        config.feedback_bundle_path = args.feedback_bundle
     if args.nacos_publish_mode:
         config.nacos_publish_mode = args.nacos_publish_mode
     if args.use_skill_verifier is not None:
@@ -116,6 +118,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["direct", "validated"],
         default=None,
         help="Direct publish to skills/ or stage jobs for client-side validation before publish.",
+    )
+    parser.add_argument(
+        "--feedback-bundle",
+        type=str,
+        default=None,
+        help="Runtime JSON feedback bundle consumed by the evolution engine.",
     )
     parser.add_argument(
         "--nacos-publish-mode",

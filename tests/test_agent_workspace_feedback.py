@@ -1,5 +1,6 @@
 ﻿import json
 
+from evolve_server.__main__ import _build_config_from_args, build_parser
 from evolve_server.core.config import EvolveServerConfig
 from evolve_server.engines.agent_workspace import AgentWorkspace
 from evolve_server.pipeline.execution import _build_feedback_context
@@ -69,6 +70,24 @@ def test_config_defaults_feedback_bundle_path_for_workflow_engine():
 
     normalized = config.feedback_bundle_path.replace("\\", "/")
     assert normalized.endswith("reports/current/skill_feedback_bundle.json")
+
+
+def test_evolve_cli_accepts_runtime_feedback_bundle():
+    args = build_parser().parse_args(
+        [
+            "--engine",
+            "workflow",
+            "--publish-mode",
+            "validated",
+            "--feedback-bundle",
+            "runtime/evolve/skill_feedback_bundle.json",
+        ]
+    )
+
+    config = _build_config_from_args(args)
+
+    assert config.publish_mode == "validated"
+    assert config.feedback_bundle_path == "runtime/evolve/skill_feedback_bundle.json"
 
 
 def test_feedback_context_formats_gate_and_directives():

@@ -177,9 +177,19 @@ If you want to understand what was added beyond upstream SkillClaw, start with:
 
 The extension's main loop is:
 
-`benchmark case -> agent run -> validation -> final record -> feedback bundle -> evolve server`
+`benchmark case -> agent run -> validation -> final record -> feedback bundle -> candidate skill -> replay validation -> publish/reload`
 
 So this fork is not just "extra scripts". It is a thin confirmation-aware evaluation framework attached to the original SkillClaw runtime.
+
+For the validated research loop, start the workflow engine with a runtime feedback file:
+
+```powershell
+.\.venv\Scripts\python.exe -m evolve_server --engine workflow `
+  --local-root .local-share --group-id default --port 8787 `
+  --publish-mode validated --feedback-bundle runtime/evolve/skill_feedback_bundle.json
+```
+
+Then add `--evolve-after-run` to `evaluation.runs.run_remote_case run-auto` or `finalize-manual`. The runner closes the matched SkillClaw session, writes only that run's validator-backed feedback, and triggers Evolve. A candidate remains unpublished until the Validation Worker accepts it.
 
 ---
 

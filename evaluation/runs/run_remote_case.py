@@ -22,6 +22,7 @@ from typing import Any
 
 try:
     from evaluation.cases.loader import load_case_definition, resolve_source_root
+    from evaluation.evolution import handoff_validated_run
     from evaluation.postprocess.finalize_record import (
         _default_finalized_out,
         _load_optional_json,
@@ -32,6 +33,7 @@ try:
 except ImportError:  # pragma: no cover - direct script execution.
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from evaluation.cases.loader import load_case_definition, resolve_source_root
+    from evaluation.evolution import handoff_validated_run
     from evaluation.postprocess.finalize_record import (
         _default_finalized_out,
         _load_optional_json,
@@ -385,6 +387,18 @@ def enrich_downloaded_final(
     return str(final_path)
 
 
+def _handoff_after_run(args: argparse.Namespace, repo_root: Path, enriched_path: str | None) -> dict[str, Any] | None:
+    if not args.evolve_after_run or not enriched_path:
+        return None
+    return handoff_validated_run(
+        Path(enriched_path),
+        repo_root=repo_root,
+        skillclaw_url=args.skillclaw_url or "http://127.0.0.1:30000",
+        skillclaw_api_key=args.skillclaw_key or os.environ.get("SKILLCLAW_API_KEY", ""),
+        evolve_url=args.evolve_url,
+    )
+
+
 def prepare_manual_run(args: argparse.Namespace) -> dict[str, Any]:
     repo_root = _repo_root()
     case = load_case_definition(args.case)
@@ -504,7 +518,11 @@ def finalize_manual_run(args: argparse.Namespace) -> dict[str, Any]:
             remote_results_root=remote_results_root,
             local_import_root=args.local_import_root,
         )
-        remote_raw_path = _expand_remote_path(args.remote_raw_path, remote_home) if args.remote_raw_path else layout.remote_raw_path
+        remote_raw_path = (
+            _expand_remote_path(args.remote_raw_path, remote_home)
+            if args.remote_raw_path
+            else layout.remote_raw_path
+        )
         command = build_remote_run_command(
             remote_case_path=layout.remote_case_path,
             mode=args.mode,
@@ -530,6 +548,7 @@ def finalize_manual_run(args: argparse.Namespace) -> dict[str, Any]:
         downloaded_artifacts=downloaded,
         local_session_dir=args.local_session_dir,
     )
+    evolution_handoff = _handoff_after_run(args, repo_root, enriched_path)
     return {
         "action": "finalize-manual",
         "run_id": run_id,
@@ -537,6 +556,7 @@ def finalize_manual_run(args: argparse.Namespace) -> dict[str, Any]:
         "run_result": run_result,
         "downloaded_artifacts": downloaded,
         "local_final_enriched": enriched_path,
+        "evolution_handoff": evolution_handoff,
         "local_import_dir": str(layout.local_import_dir),
     }
 
@@ -573,7 +593,11 @@ def run_auto(args: argparse.Namespace) -> dict[str, Any]:
             expected_skill_count=args.expected_skill_count,
             path_profile=args.remote_path_profile,
         )
-        sync_result = sync_remote_repo(client, repo_root=repo_root, remote_repo_root=remote_repo_root) if args.sync_repo else None
+        sync_result = (
+            sync_remote_repo(client, repo_root=repo_root, remote_repo_root=remote_repo_root)
+            if args.sync_repo
+            else None
+        )
         if args.mode.startswith("blind-"):
             client.run(
                 build_remote_prepare_command(
@@ -589,6 +613,7 @@ def run_auto(args: argparse.Namespace) -> dict[str, Any]:
         downloaded_artifacts=downloaded,
         local_session_dir=args.local_session_dir,
     )
+    evolution_handoff = _handoff_after_run(args, repo_root, enriched_path)
     return {
         "action": "run-auto",
         "run_id": run_id,
@@ -597,6 +622,7 @@ def run_auto(args: argparse.Namespace) -> dict[str, Any]:
         "run_result": run_result,
         "downloaded_artifacts": downloaded,
         "local_final_enriched": enriched_path,
+        "evolution_handoff": evolution_handoff,
         "local_import_dir": str(layout.local_import_dir),
     }
 
@@ -628,7 +654,10 @@ def _build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--mode", default="blind-skillclaw-inline-guarded")
     prepare.add_argument("--run-id", default="")
 
-    finalize = subparsers.add_parser("finalize-manual", help="Use an already-produced remote raw.txt to run remote scoring and validation.")
+    finalize = subparsers.add_parser(
+        "finalize-manual",
+        help="Use an already-produced remote raw.txt to run remote scoring and validation.",
+    )
     finalize.add_argument("case", type=Path)
     finalize.add_argument("--mode", default="blind-skillclaw-inline-guarded")
     finalize.add_argument("--run-id", default="")
@@ -638,6 +667,12 @@ def _build_parser() -> argparse.ArgumentParser:
     finalize.add_argument("--skillclaw-url", default="")
     finalize.add_argument("--skillclaw-key", default="")
     finalize.add_argument("--expected-skill-count", type=int, default=None)
+    finalize.add_argument(
+        "--evolve-after-run",
+        action="store_true",
+        help="Close the session and queue validated skill candidates.",
+    )
+    finalize.add_argument("--evolve-url", default="http://127.0.0.1:8787")
 
     auto = subparsers.add_parser("run-auto", help="Run the whole case remotely through the existing remote-side runner.")
     auto.add_argument("case", type=Path)
@@ -648,6 +683,12 @@ def _build_parser() -> argparse.ArgumentParser:
     auto.add_argument("--skillclaw-url", default="")
     auto.add_argument("--skillclaw-key", default="")
     auto.add_argument("--expected-skill-count", type=int, default=None)
+    auto.add_argument(
+        "--evolve-after-run",
+        action="store_true",
+        help="Close the session and queue validated skill candidates.",
+    )
+    auto.add_argument("--evolve-url", default="http://127.0.0.1:8787")
 
     check = subparsers.add_parser("check", help="Verify remote connectivity and repo presence.")
     check.add_argument("--cwd", default="")
