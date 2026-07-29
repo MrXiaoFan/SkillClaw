@@ -28,6 +28,33 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
 
 
+def _preferred_record_path(path: Path) -> Path:
+    if path.name == "final.json":
+        enriched = path.with_name("final-enriched.json")
+        if enriched.exists():
+            return enriched
+        return path
+    suffix = "-final.json"
+    if path.name.endswith(suffix):
+        enriched = path.with_name(path.name[: -len(suffix)] + "-final-enriched.json")
+        if enriched.exists():
+            return enriched
+    return path
+
+
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    seen: set[str] = set()
+    ordered: list[Path] = []
+    for path in paths:
+        preferred = _preferred_record_path(path)
+        key = str(preferred.resolve()) if preferred.exists() else str(preferred)
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(preferred)
+    return ordered
+
+
 def _as_float(value: Any, default: float = 0.0) -> float:
     try:
         return float(value)
@@ -279,8 +306,8 @@ def write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
 
 def _resolve_inputs(args: argparse.Namespace) -> list[Path]:
     if args.inputs:
-        return [Path(item) for item in args.inputs]
-    return sorted(Path(args.records_dir).glob(args.pattern))
+        return _dedupe_paths([Path(item) for item in args.inputs])
+    return _dedupe_paths(sorted(Path(args.records_dir).glob(args.pattern)))
 
 
 def main(argv: list[str] | None = None) -> int:

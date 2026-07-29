@@ -1,6 +1,6 @@
 # 当前结果矩阵
 
-生成时间：2026-07-29 09:56:58
+生成时间：2026-07-29 10:01:49
 记录数：5
 
 | case_id | mode | score_text | cve_hit | file_hit | function_hit | evidence_hit | root_cause_hit | validation | confirmation_maturity | selected_skills | first_selected_skills | latest_selected_skills | injection_turns | injection_changed | skill_relevance | relevant_skills | mismatched_skills | infra_skills | decision | action |
@@ -9,7 +9,7 @@
 | giflib-5.1.2-cve-2016-3977 | blind-skillclaw-inline-guarded | 10/10 | Y | Y | Y | Y | Y | passed | asan-backed | source-parser-state-machine-oob, verify-rootfs-full-enumeration, vuln-hunting | source-parser-state-machine-oob, verify-rootfs-full-enumeration, vuln-hunting | source-parser-state-machine-oob, verify-rootfs-full-enumeration, vuln-hunting | 7 | False | no_task_relevant_skill |  | source-parser-state-machine-oob, verify-rootfs-full-enumeration, vuln-hunting |  | neutral | inspect_retrieval_before_promoting_skill |
 | libxml2-2.9.4-cve-2017-8872 | blind-skillclaw-inline-guarded | 10/10 | Y | Y | Y | Y | Y | passed | logic-confirm | source-parser-state-machine-oob, elf-plt-reloc-sink-scan, cwe120-analysis-verification | source-parser-state-machine-oob, elf-plt-reloc-sink-scan, cwe120-analysis-verification | source-parser-state-machine-oob, elf-plt-reloc-sink-scan, cwe120-analysis-verification | 6 | False | mixed_task_relevance | source-parser-state-machine-oob | elf-plt-reloc-sink-scan, cwe120-analysis-verification |  | positive | keep_skill_but_prune_extraneous_selection |
 | tcpdump-4.9.1-cve-2017-13031 | blind-skillclaw-inline-guarded | 10/10 | Y | Y | Y | Y | Y | passed | behavior-backed | source-parser-state-machine-oob, elf-plt-reloc-sink-scan, elf-cwe120-plt-analysis | source-parser-state-machine-oob, elf-plt-reloc-sink-scan, elf-cwe120-plt-analysis | source-parser-state-machine-oob, elf-plt-reloc-sink-scan, elf-cwe120-plt-analysis | 7 | False | mixed_task_relevance | source-parser-state-machine-oob | elf-plt-reloc-sink-scan, elf-cwe120-plt-analysis |  | positive | keep_skill_but_prune_extraneous_selection |
-| tcpdump-4.9.1-cve-2018-14469 | blind-skillclaw-inline-guarded | 10/10 | Y | Y | Y | Y | Y | passed | behavior-backed |  |  |  | 0 | False | no_selected_skills |  |  |  | positive | use_as_baseline_positive |
+| tcpdump-4.9.1-cve-2018-14469 | blind-skillclaw-inline-guarded | 10/10 | Y | Y | Y | Y | Y | passed | behavior-backed | source-parser-state-machine-oob, elf-plt-reloc-sink-scan, elf-cwe120-plt-analysis | source-parser-state-machine-oob, elf-plt-reloc-sink-scan, elf-cwe120-plt-analysis | source-parser-state-machine-oob, elf-plt-reloc-sink-scan, elf-cwe120-plt-analysis | 19 | False | mixed_task_relevance | source-parser-state-machine-oob | elf-plt-reloc-sink-scan, elf-cwe120-plt-analysis |  | positive | keep_skill_but_prune_extraneous_selection |
 
 ## 说明
 
