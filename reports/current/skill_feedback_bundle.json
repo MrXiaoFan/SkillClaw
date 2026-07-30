@@ -1,7 +1,7 @@
 [
   {
     "skill": "elf-plt-reloc-sink-scan",
-    "generated_at": "2026-07-28T08:29:50.975728+00:00",
+    "generated_at": "2026-07-30T07:45:18.592839+00:00",
     "gate_decision": "demote",
     "gate_reasons": [
       "共有 3 次错配选中，且没有任务对齐证据",
@@ -41,7 +41,7 @@
     "revision_templates": [],
     "cases": [
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511-final-enriched.json",
         "case_id": "libxml2-2.9.4-cve-2017-8872",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -145,7 +145,7 @@
         ]
       },
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929-final-enriched.json",
         "case_id": "tcpdump-4.9.1-cve-2017-13031",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -233,7 +233,7 @@
         ]
       },
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446-final-enriched.json",
         "case_id": "tcpdump-4.9.1-cve-2018-14469",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -328,7 +328,7 @@
   },
   {
     "skill": "cwe120-analysis-verification",
-    "generated_at": "2026-07-28T08:29:50.975721+00:00",
+    "generated_at": "2026-07-30T07:45:18.592832+00:00",
     "gate_decision": "demote",
     "gate_reasons": [
       "共有 2 次错配选中，且没有任务对齐证据",
@@ -368,7 +368,7 @@
     "revision_templates": [],
     "cases": [
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511-final-enriched.json",
         "case_id": "libxml2-2.9.4-cve-2017-8872",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -472,7 +472,7 @@
         ]
       },
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929-final-enriched.json",
         "case_id": "tcpdump-4.9.1-cve-2017-13031",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -563,7 +563,7 @@
   },
   {
     "skill": "elf-cwe120-plt-analysis",
-    "generated_at": "2026-07-28T08:29:50.975804+00:00",
+    "generated_at": "2026-07-30T07:45:18.592921+00:00",
     "gate_decision": "insufficient_evidence",
     "gate_reasons": [
       "仅有 1 次样本，低于最少要求 2",
@@ -603,7 +603,7 @@
     "revision_templates": [],
     "cases": [
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446-final-enriched.json",
         "case_id": "tcpdump-4.9.1-cve-2018-14469",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -698,7 +698,7 @@
   },
   {
     "skill": "verify-rootfs-full-enumeration",
-    "generated_at": "2026-07-28T08:29:50.975665+00:00",
+    "generated_at": "2026-07-30T07:45:18.592768+00:00",
     "gate_decision": "insufficient_evidence",
     "gate_reasons": [
       "仅有 1 次样本，低于最少要求 2",
@@ -738,7 +738,7 @@
     "revision_templates": [],
     "cases": [
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445-final-enriched.json",
         "case_id": "giflib-5.1.2-cve-2016-3977",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -825,7 +825,7 @@
   },
   {
     "skill": "vuln-hunting",
-    "generated_at": "2026-07-28T08:29:50.975651+00:00",
+    "generated_at": "2026-07-30T07:45:18.592754+00:00",
     "gate_decision": "insufficient_evidence",
     "gate_reasons": [
       "仅有 1 次样本，低于最少要求 2",
@@ -865,7 +865,7 @@
     "revision_templates": [],
     "cases": [
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445-final-enriched.json",
         "case_id": "giflib-5.1.2-cve-2016-3977",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -952,7 +952,7 @@
   },
   {
     "skill": "source-parser-state-machine-oob",
-    "generated_at": "2026-07-28T08:29:50.975595+00:00",
+    "generated_at": "2026-07-30T07:45:18.592693+00:00",
     "gate_decision": "keep",
     "gate_reasons": [
       "2 次正向样本，平均分 0.875",
@@ -992,7 +992,7 @@
     "revision_templates": [],
     "cases": [
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445\\giflib-5.1.2-cve-2016-3977-blind-skillclaw-inline-guarded-20260728-151445-final-enriched.json",
         "case_id": "giflib-5.1.2-cve-2016-3977",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -1076,7 +1076,7 @@
         ]
       },
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511\\libxml2-2.9.4-cve-2017-8872-blind-skillclaw-inline-guarded-20260728-154511-final-enriched.json",
         "case_id": "libxml2-2.9.4-cve-2017-8872",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -1180,7 +1180,7 @@
         ]
       },
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929\\tcpdump-4.9.1-cve-2017-13031-blind-skillclaw-inline-guarded-20260728-161929-final-enriched.json",
         "case_id": "tcpdump-4.9.1-cve-2017-13031",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",
@@ -1268,7 +1268,7 @@
         ]
       },
       {
-        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446-final-final-enriched.json",
+        "record": "D:\\Code\\SkillClaw\\SkillClaw\\runtime\\imports\\remote_vm\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446\\tcpdump-4.9.1-cve-2018-14469-blind-skillclaw-inline-guarded-20260728-160446-final-enriched.json",
         "case_id": "tcpdump-4.9.1-cve-2018-14469",
         "mode": "blind-skillclaw-inline-guarded",
         "model": "skillclaw-model",

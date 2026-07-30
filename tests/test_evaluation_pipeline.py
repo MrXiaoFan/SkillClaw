@@ -3359,6 +3359,66 @@ def test_refresh_latest_runset_reports_accepts_run_manifests(tmp_path):
     assert next(iter(record_sources.values()))["input_type"] == "manifest"
 
 
+def test_refresh_latest_runset_reports_repairs_legacy_final_enriched_name(tmp_path):
+    run_dir = tmp_path / "giflib-run"
+    run_dir.mkdir()
+    record = run_dir / "giflib-run-final-enriched.json"
+    record.write_text(
+        json.dumps(
+            {
+                "case_id": "case-a",
+                "mode": "skillclaw-inline",
+                "model": "skillclaw-model",
+                "score": 10,
+                "max_score": 10,
+                "checks": {
+                    "cve": {"hit": True},
+                    "file": {"hit": True},
+                    "function": {"hit": True},
+                    "evidence": {"hit": True},
+                    "root_cause": {"hit": True},
+                },
+                "skill_injection": {"selected_skill_names": ["source-parser-state-machine-oob"]},
+                "skill_relevance": {
+                    "status": "matched_task_skill",
+                    "relevant_skills": ["source-parser-state-machine-oob"],
+                    "mismatched_skills": [],
+                    "infra_skills": [],
+                },
+                "validation": {"status": "passed", "checks": []},
+                "feedback": {"decision": "positive", "suggested_action": "keep_or_promote_skill"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest = tmp_path / "runset_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "name": "test-runset-legacy-final-enriched",
+                "records": ["giflib-run/giflib-run-final-final-enriched.json"],
+                "outputs": {
+                    "matrix_md": "result_matrix.md",
+                    "matrix_csv": "matrix.csv",
+                    "feedback_md": "feedback.md",
+                    "feedback_csv": "feedback.csv",
+                    "gate_md": "gate.md",
+                    "gate_json": "gate.json",
+                    "bundle_md": "bundle.md",
+                    "bundle_json": "bundle.json",
+                    "runset_md": "runset.md",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = refresh_reports(manifest)
+
+    assert Path(result["outputs"]["matrix_md"]).is_file()
+    assert next(iter(result["record_sources"].keys())).endswith("giflib-run-final-enriched.json")
+
+
 def test_refresh_latest_runset_reports_accepts_run_indexes(tmp_path):
     record_a = tmp_path / "case-a-final.json"
     record_b = tmp_path / "case-b-final.json"

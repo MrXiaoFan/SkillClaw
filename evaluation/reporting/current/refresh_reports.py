@@ -151,26 +151,41 @@ def _record_paths_from_run_index(path: Path) -> list[Path]:
     return paths
 
 
+def _repair_record_path(path: Path) -> Path:
+    candidate = path.resolve()
+    if candidate.is_file():
+        return candidate
+    name = candidate.name
+    if "-final-final-enriched.json" in name:
+        repaired = candidate.with_name(name.replace("-final-final-enriched.json", "-final-enriched.json"))
+        if repaired.is_file():
+            return repaired.resolve()
+    return candidate
+
+
 def _resolve_record_paths(manifest: dict[str, Any], base_dir: Path) -> tuple[list[Path], dict[str, dict[str, str]]]:
     rows: list[tuple[Path, dict[str, str]]] = []
     for path in _resolve_paths(list(manifest.get("records") or []), base_dir):
-        rows.append((path.resolve(), {"input_type": "record", "input_path": str(path.resolve())}))
+        repaired = _repair_record_path(path)
+        rows.append((repaired, {"input_type": "record", "input_path": str(path.resolve())}))
 
     for path in _resolve_paths(list(manifest.get("manifests") or []), base_dir):
         record_path = _record_path_from_run_manifest(path)
         if record_path is not None:
+            record_path = _repair_record_path(record_path)
             rows.append(
                 (
-                    record_path.resolve(),
+                    record_path,
                     {"input_type": "manifest", "input_path": str(path.resolve())},
                 )
             )
 
     for path in _resolve_paths(list(manifest.get("run_indexes") or []), base_dir):
         for record_path in _record_paths_from_run_index(path):
+            record_path = _repair_record_path(record_path)
             rows.append(
                 (
-                    record_path.resolve(),
+                    record_path,
                     {"input_type": "run_index", "input_path": str(path.resolve())},
                 )
             )
