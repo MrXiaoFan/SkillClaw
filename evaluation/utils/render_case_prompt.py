@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import json
 import os
 import sys
@@ -229,11 +230,44 @@ def _is_blind_mode(mode: str) -> bool:
     return str(mode or "").startswith("blind-")
 
 
+def _sanitize_blind_prompt(case: dict[str, Any], prompt: str) -> str:
+    text = str(prompt or "").strip()
+    if not text:
+        return text
+
+    target = case.get("target", {}) if isinstance(case.get("target"), dict) else {}
+    case_id = str(case.get("case_id") or "").strip()
+    project = str(target.get("project") or "").strip()
+    version = str(target.get("version") or "").strip()
+    source_root_name = Path(str(target.get("source_root") or "")).name.strip()
+
+    variants = {
+        case_id,
+        source_root_name,
+        f"{project}-{version}" if project and version else "",
+        f"{project} {version}" if project and version else "",
+    }
+    for value in sorted((item for item in variants if item), key=len, reverse=True):
+        text = text.replace(value, "target")
+
+    text = re.sub(
+        r"blind evaluation workspace for [^.,;\n]+?(?= and the target|[.,;\n]|$)",
+        "blind evaluation workspace",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\bfor target\b", "", text)
+    text = re.sub(r"\s{2,}", " ", text)
+    return text.strip()
+
+
 def get_case_prompt(case: dict[str, Any], mode: str) -> str:
     prompts = case.get("prompt", {}) if isinstance(case.get("prompt"), dict) else {}
     key = MODE_TO_PROMPT_KEY.get(mode, mode)
     prompt = str(prompts.get(key, "") or "").strip()
     if prompt:
+        if _is_blind_mode(mode):
+            prompt = _sanitize_blind_prompt(case, prompt)
         if _task_profile_enabled():
             task_profile = _render_task_profile(case)
             if task_profile:

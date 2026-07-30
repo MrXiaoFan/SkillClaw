@@ -31,7 +31,7 @@ from evaluation.utils.bundle_script_bridge import resolve_bundle_script, run_bun
 from evaluation.reporting.research.build_research_claims import build_claims, write_markdown as write_claim_markdown
 from evaluation.reporting.current.build_result_matrix import collect_rows, write_csv, write_markdown
 from evaluation.reporting.feedback.build_skill_summary import build_skill_feedback
-from evaluation.validation.core import assess_skill_relevance, build_feedback
+from evaluation.validation.core import assess_skill_relevance, build_feedback, summarize_checks
 from skillclaw import runtime_state
 from skillclaw.skill_manager import SkillManager
 
@@ -138,10 +138,46 @@ def test_resolve_blind_agent_root_defaults_to_sibling_workspace(tmp_path):
 
     case = load_case_definition(case_path)
 
-    assert resolve_blind_agent_root(case) == (
-        tmp_path / "blind_workspaces" / "tcpdump-4.9.1-cve-2018-14469"
-    ).resolve()
+    blind_root = resolve_blind_agent_root(case)
+
+    assert blind_root.parent == (tmp_path / "blind_workspaces").resolve()
+    assert blind_root.name.startswith("workspace-")
+    assert "tcpdump-4.9.1-cve-2018-14469" not in str(blind_root)
     assert resolve_blind_agent_root(case) != source_root.resolve()
+
+
+def test_resolve_blind_agent_root_sanitizes_configured_leaf(tmp_path):
+    source_root = tmp_path / "giflib-5.1.2"
+    source_root.mkdir()
+    case_path = tmp_path / "case.json"
+    case_path.write_text(
+        json.dumps(
+            {
+                "case_id": "giflib-5.1.2-cve-2016-3977",
+                "target": {
+                    "project": "giflib",
+                    "version": "5.1.2",
+                    "source_root": str(source_root),
+                },
+                "blind_workspace": {
+                    "agent_root": str(tmp_path / "blind_workspaces" / "giflib-5.1.2-cve-2016-3977"),
+                },
+                "ground_truth": {
+                    "files": ["util/gif2rgb.c"],
+                    "functions": ["DumpScreen2RGB"],
+                    "vulnerability_type": "heap overflow",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    case = load_case_definition(case_path)
+    blind_root = resolve_blind_agent_root(case)
+
+    assert blind_root.parent == (tmp_path / "blind_workspaces").resolve()
+    assert blind_root.name.startswith("workspace-")
+    assert "giflib-5.1.2-cve-2016-3977" not in str(blind_root)
 
 
 def test_load_case_definition_applies_validator_defaults(tmp_path):
@@ -1238,6 +1274,31 @@ def test_render_case_prompt_blind_mode_does_not_append_confirmation_contract():
     assert "Current confirmation state:" not in prompt
 
 
+def test_render_case_prompt_sanitizes_blind_case_identity():
+    case = {
+        "case_id": "giflib-5.1.2-cve-2016-3977",
+        "target": {
+            "project": "giflib",
+            "version": "5.1.2",
+            "source_root": "/tmp/giflib-5.1.2",
+            "binary": "util/gif2rgb",
+        },
+        "prompt": {
+            "recommended_blind_skillclaw": (
+                "Do not use WebSearch. The current working directory is a blind evaluation "
+                "workspace for giflib-5.1.2 and the target utility is util/gif2rgb."
+            ),
+        },
+    }
+
+    prompt = get_case_prompt(case, "blind-skillclaw-inline")
+
+    assert "giflib-5.1.2" not in prompt
+    assert "giflib-5.1.2-cve-2016-3977" not in prompt
+    assert "blind evaluation workspace" in prompt
+    assert "util/gif2rgb" in prompt
+
+
 def test_render_case_prompt_ignores_task_profile_by_default():
     case = {
         "case_id": "gif-demo",
@@ -1613,6 +1674,33 @@ def test_build_feedback_marks_positive_high_score_with_validation():
 
     assert feedback["decision"] == "positive"
     assert feedback["suggested_action"] == "keep_or_promote_skill"
+
+
+def test_summarize_checks_marks_soft_failure_as_partial():
+    status = summarize_checks(
+        [
+            {"status": "passed", "allow_failure": False},
+            {"status": "failed", "allow_failure": True},
+        ]
+    )
+
+    assert status == "partial"
+
+
+def test_build_feedback_does_not_promote_partial_validation():
+    relevance = assess_skill_relevance(
+        case={"ground_truth": {"root_cause": "parser state machine out of bounds read"}},
+        selected_skills=["source-parser-state-machine-oob"],
+    )
+    feedback = build_feedback(
+        score_result={"score": 8, "max_score": 10},
+        validation_result={"status": "partial"},
+        skill_injection={"selected_skill_names": ["source-parser-state-machine-oob"]},
+        skill_relevance=relevance,
+    )
+
+    assert feedback["decision"] == "neutral"
+    assert feedback["suggested_action"] == "collect_more_cases"
 
 
 def test_build_feedback_flags_cve_miss_with_source_localization():
@@ -2197,8 +2285,9 @@ def test_run_single_case_blind_mode_uses_blind_workspace_root(tmp_path):
         )
     )
 
-    assert final["run"]["target_root"] == str(blind_root)
-    assert final["run"]["agent_root"] == str(blind_root)
+    assert Path(final["run"]["target_root"]).parent == blind_root.parent.resolve()
+    assert Path(final["run"]["target_root"]).name.startswith("workspace-")
+    assert Path(final["run"]["agent_root"]) == Path(final["run"]["target_root"])
     assert final["run"]["validator_root"] == str(source_root)
     assert final["validation"]["status"] == "passed"
 
@@ -2281,8 +2370,9 @@ def test_run_single_case_blind_mode_prefers_existing_candidate_roots(tmp_path):
         )
     )
 
-    assert final["run"]["target_root"] == str(blind_root.resolve())
-    assert final["run"]["agent_root"] == str(blind_root.resolve())
+    assert Path(final["run"]["target_root"]).parent == blind_root.resolve().parent
+    assert Path(final["run"]["target_root"]).name.startswith("workspace-")
+    assert Path(final["run"]["agent_root"]) == Path(final["run"]["target_root"])
     assert final["run"]["validator_root"] == str(source_root.resolve())
     assert final["validation"]["status"] == "passed"
 

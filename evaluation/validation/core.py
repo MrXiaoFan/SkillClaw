@@ -69,11 +69,13 @@ def summarize_checks(checks: list[dict[str, Any]]) -> str:
     ]
     if hard_failures:
         return "failed"
-    if passed and len(passed) + len(skipped) + len(soft_failures) == len(checks):
-        return "passed"
-    if checks:
+    if not checks:
+        return "no_validators"
+    if soft_failures:
         return "partial"
-    return "no_validators"
+    if passed and len(passed) + len(skipped) == len(checks):
+        return "passed"
+    return "partial"
 
 
 def _latest_validation(validation: Any) -> dict[str, Any] | None:
@@ -346,11 +348,13 @@ def build_feedback(
         quality_flags.append("extraneous_skill_selection")
         reasons.append("quality_flag=extraneous_skill_selection")
 
+    validation_passed = validation_status == "passed"
+
     if relevance_status == "no_selected_skills":
         if "cve_identity_miss" in quality_flags:
             decision = "neutral"
             action = "baseline_cve_identity_review"
-        elif normalized is not None and normalized >= 0.8 and validation_status in {"passed", "partial", None}:
+        elif normalized is not None and normalized >= 0.8 and validation_passed:
             decision = "positive"
             action = "use_as_baseline_positive"
         else:
@@ -362,10 +366,10 @@ def build_feedback(
     elif "cve_identity_miss" in quality_flags:
         decision = "neutral"
         action = "revise_cve_identity_before_promotion"
-    elif relevance_status == "mixed_task_relevance" and normalized is not None and normalized >= 0.8 and validation_status in {"passed", "partial", None}:
+    elif relevance_status == "mixed_task_relevance" and normalized is not None and normalized >= 0.8 and validation_passed:
         decision = "positive"
         action = "keep_skill_but_prune_extraneous_selection"
-    elif normalized is not None and normalized >= 0.8 and validation_status in {"passed", "partial", None}:
+    elif normalized is not None and normalized >= 0.8 and validation_passed:
         decision = "positive"
         action = "keep_or_promote_skill"
     elif normalized is not None and normalized < 0.5:

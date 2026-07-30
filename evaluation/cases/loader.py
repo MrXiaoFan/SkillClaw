@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 from collections.abc import Mapping
@@ -153,18 +154,38 @@ def resolve_source_root(case: Mapping[str, Any], override: str | Path | None = N
 
 def _default_blind_agent_root(case: Mapping[str, Any]) -> Path:
     source_root = resolve_source_root(case)
-    case_id = str(case.get("case_id") or source_root.name or "case").strip()
-    return (source_root.parent / "blind_workspaces" / _slug_path_fragment(case_id)).resolve()
+    return (source_root.parent / "blind_workspaces" / _blind_workspace_name(case)).resolve()
+
+
+def _blind_workspace_name(case: Mapping[str, Any]) -> str:
+    case_id = str(case.get("case_id") or "").strip()
+    target = case.get("target") if isinstance(case.get("target"), Mapping) else {}
+    project = str(target.get("project") or "").strip()
+    version = str(target.get("version") or "").strip()
+    binary = str(target.get("binary") or "").strip()
+    seed = "|".join(part for part in (case_id, project, version, binary) if part) or "case"
+    digest = hashlib.sha1(seed.encode("utf-8")).hexdigest()[:12]
+    return f"workspace-{digest}"
+
+
+def _sanitize_blind_agent_root(case: Mapping[str, Any], path: Path) -> Path:
+    root = Path(path).resolve()
+    if root.parent == root:
+        return root
+    return (root.parent / _blind_workspace_name(case)).resolve()
 
 
 def resolve_blind_agent_root(case: Mapping[str, Any], override: str | Path | None = None) -> Path:
-    return resolve_case_path(
+    path = resolve_case_path(
         case,
         "blind_workspace",
         "agent_root",
         override=override,
         default=_default_blind_agent_root(case),
     )
+    if override:
+        return path
+    return _sanitize_blind_agent_root(case, path)
 
 
 def resolve_blind_validator_root(case: Mapping[str, Any], override: str | Path | None = None) -> Path:
