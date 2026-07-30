@@ -76,14 +76,22 @@ def list_sessions(host: str, port: int, api_key: str | None) -> None:
         print("No active sessions.")
         return
 
-    print(f"{'Session ID':<48} {'Idle (s)':<10} {'Turns':<8} {'Closing':<8}")
-    print("-" * 74)
+    print(
+        f"{'Session ID':<36} {'Client Session ID':<36}"
+        f" {'Segment ID':<36} {'Status':<8} {'Idle(s)':<8} {'Turns':<6}"
+    )
+    print("-" * 130)
     for s in sessions:
+        client_id = s.get("client_session_id") or ""
+        segment_id = s.get("session_segment_id") or ""
+        status = s.get("segment_status") or ""
         print(
-            f"{s['session_id']:<48} "
-            f"{s.get('idle_seconds', '?'):<10} "
-            f"{s.get('turn_count', 0):<8} "
-            f"{'yes' if s.get('is_closing') else 'no':<8}"
+            f"{s['session_id']:<36} "
+            f"{client_id:<36} "
+            f"{segment_id:<36} "
+            f"{status:<8} "
+            f"{s.get('idle_seconds', '?'):<8} "
+            f"{s.get('turn_count', 0):<6}"
         )
     print(f"\nTotal: {len(sessions)} session(s)")
 
@@ -105,6 +113,12 @@ def delete_session(session_id: str, host: str, port: int, api_key: str | None) -
         sys.exit(1)
 
     print(f"Deleted session: {data.get('session_id')}")
+    segment_id = data.get("session_segment_id")
+    segment_status = data.get("segment_status")
+    if segment_id:
+        print(f"  client_session_id: {data.get('client_session_id')}")
+        print(f"  session_segment_id: {segment_id}")
+        print(f"  segment_status: {segment_status}")
 
 
 def delete_all_sessions(host: str, port: int, api_key: str | None, force: bool = False) -> None:
