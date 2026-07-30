@@ -509,6 +509,7 @@ class DashboardStore:
                     "response_preview": row["response_preview"],
                     "source": str(payload.get("source", "") or ""),
                     "outcome": str(payload.get("outcome", "") or ""),
+                    "command_summary": str(payload.get("command_summary", "") or ""),
                 }
             )
         return items

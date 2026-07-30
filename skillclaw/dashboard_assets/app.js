@@ -2282,6 +2282,7 @@ function renderSessionsPage() {
 
 function renderSessionCard(session) {
   const active = String(session.session_id || "") === String(state.selectedSessionId || "")
+  const preview = _sessionPreview(session)
   return `
     <article class="record-card ${active ? "active" : ""}" data-select-session="${escapeHtml(session.session_id)}">
       <div class="card-head">
@@ -2291,7 +2292,7 @@ function renderSessionCard(session) {
         </div>
         ${badge(sourceLabel(session.source || "local"), String(session.source || "").toLowerCase() === "local" ? "neutral" : "published")}
       </div>
-      <p class="card-copy">${escapeHtml(clip(session.prompt_preview || session.response_preview || l("没有摘要。", "No summary."), 120))}</p>
+      <p class="card-copy">${escapeHtml(clip(preview, 120))}</p>
       <div class="chip-row">
         ${tag(outcomeLabel(session.outcome))}
         ${tag(l("回合 {count}", "Turns {count}", { count: number(session.num_turns || 0) }))}
@@ -2410,6 +2411,10 @@ function renderTurnCard(turn) {
   const injected = normalizeSkillNames(turn.injected_skills)
   const read = normalizeSkillNames(turn.read_skills)
   const modified = normalizeSkillNames(turn.modified_skills)
+
+  const rawPrompt = String(turn.prompt_text || "").trim()
+  const promptSegments = splitCollapsibleBlocks(rawPrompt)
+
   return `
     <article class="turn-card">
       <div class="turn-head">
@@ -2420,7 +2425,7 @@ function renderTurnCard(turn) {
       </div>
       <div class="turn-block">
         <span class="turn-label">${escapeHtml(l("用户输入", "User Prompt"))}</span>
-        <pre>${escapeHtml(String(turn.prompt_text || "").trim() || l("(空)", "(empty)"))}</pre>
+        ${promptSegments ? renderCollapsibleBlocks(promptSegments) : `<pre>${escapeHtml(rawPrompt || l("(空)", "(empty)"))}</pre>`}
       </div>
       <div class="turn-block">
         <span class="turn-label">${escapeHtml(l("模型回复", "Model Response"))}</span>
@@ -2433,6 +2438,89 @@ function renderTurnCard(turn) {
       </div>
     </article>
   `
+}
+
+const COLLAPSIBLE_TAGS = [
+  "system-reminder",
+]
+
+// command block: <command-name>...</command-name> through </local-command-stdout> (single fold)
+const _COMMAND_BLOCK_RE = /(<command-name>[\s\S]*?<\/local-command-stdout>)/g
+
+function _collapsiblePattern() {
+  const tagAlt = COLLAPSIBLE_TAGS.join("|")
+  // matches individual collapsible tags OR a command block
+  return new RegExp(`(<(${tagAlt})>[\\s\\S]*?<\\/\\2>)|${_COMMAND_BLOCK_RE.source}`, "g")
+}
+
+function _collapsibleTagFor(match) {
+  // match[1]: system-reminder block (tag name in match[2])
+  // match[3]: command block (<command-name>...</local-command-stdout>)
+  if (match[3] !== undefined) return { tag: "command-block", full: match[3] }
+  return { tag: match[2], full: match[1] }
+}
+
+function splitCollapsibleBlocks(text) {
+  const re = _collapsiblePattern()
+  if (!re.test(text)) return null
+  re.lastIndex = 0
+  const segments = []
+  let lastEnd = 0
+  let match
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastEnd) {
+      segments.push({ type: "text", content: text.slice(lastEnd, match.index).trim() })
+    }
+    const info = _collapsibleTagFor(match)
+    segments.push({ type: "collapsible", content: info.full, tag: info.tag })
+    lastEnd = re.lastIndex
+  }
+  const remaining = text.slice(lastEnd).trim()
+  if (remaining) {
+    segments.push({ type: "text", content: remaining })
+  }
+  return segments.length ? segments : null
+}
+
+function stripCollapsibleBlocks(text) {
+  // strip complete tags first
+  const re = _collapsiblePattern()
+  let result = text.replace(re, "").trim()
+  // strip truncated command block (preview cut off mid-block)
+  result = result.replace(/^<command-name>[^>]*>[\s\S]*/i, "").trim()
+  // strip truncated individual tag
+  const tagAlt = COLLAPSIBLE_TAGS.join("|")
+  const truncatedRe = new RegExp(`^<(${tagAlt})[^>]*>[\\s\\S]*`, "i")
+  result = result.replace(truncatedRe, "").trim()
+  return result
+}
+
+function _sessionPreview(session) {
+  const cmdSummary = session.command_summary || ""
+  const stripped = stripCollapsibleBlocks(session.prompt_preview || "")
+  const userMsg = stripped || session.response_preview
+  if (cmdSummary && userMsg) {
+    return `${cmdSummary} | ${userMsg}`
+  }
+  return cmdSummary || userMsg || l("没有摘要。", "No summary.")
+}
+
+function renderCollapsibleBlocks(segments) {
+  return segments.map((seg) => {
+    if (seg.type === "collapsible") {
+      const label = seg.tag === "system-reminder"
+        ? l("系统提示（已折叠）", "System Reminder (collapsed)")
+        : l("命令元信息（已折叠）", "Command Meta (collapsed)")
+      return `
+        <details class="system-reminder-details">
+          <summary class="system-reminder-summary">${escapeHtml(label)}</summary>
+          <pre class="system-reminder-content">${escapeHtml(seg.content)}</pre>
+        </details>
+      `
+    }
+    if (!seg.content) return ""
+    return `<pre>${escapeHtml(seg.content)}</pre>`
+  }).join("")
 }
 
 async function runOperation(op) {

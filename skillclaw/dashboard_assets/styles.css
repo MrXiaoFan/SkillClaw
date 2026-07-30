@@ -857,3 +857,36 @@ body[data-loading="true"] button[data-op] {
     padding: 14px;
   }
 }
+
+/* system-reminder 折叠块 */
+.system-reminder-details {
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fcfcfd;
+}
+
+.system-reminder-summary {
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.system-reminder-summary:hover {
+  background: var(--slate-soft);
+}
+
+.system-reminder-details[open] .system-reminder-summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.system-reminder-content {
+  border: none;
+  border-radius: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  background: #fafbfc;
+}

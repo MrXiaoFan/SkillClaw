@@ -126,6 +126,49 @@ def _truncate(text: str, limit: int = 180) -> str:
     return value[: max(0, limit - 3)].rstrip() + "..."
 
 
+_COLLAPSIBLE_TAGS = [
+    "system-reminder",
+]
+
+_COMMAND_BLOCK_RE = re.compile(r"<command-name>[\s\S]*?</local-command-stdout>")
+
+
+def _strip_collapsible(text: str) -> str:
+    """Remove collapsible XML-like tags and their content from text."""
+    import re
+
+    result = text
+    # strip command blocks first (multi-tag)
+    result = _COMMAND_BLOCK_RE.sub("", result).strip()
+    # strip individual collapsible tags
+    for tag in _COLLAPSIBLE_TAGS:
+        result = re.sub(
+            rf"<{tag}>[\s\S]*?</{tag}>",
+            "",
+            result,
+        ).strip()
+    # also strip truncated opening tag at the start (preview may be cut off)
+    result = re.sub(r"^<command-name>[^>]*>[\s\S]*", "", result).strip()
+    tag_alt = "|".join(_COLLAPSIBLE_TAGS)
+    result = re.sub(rf"^<({tag_alt})[^>]*>[\s\S]*", "", result).strip()
+    return result
+
+
+def _command_summary(text: str) -> str:
+    """Extract a human-readable command summary from prompt text (e.g. '/rename to xxx')."""
+    import re
+
+    m = re.search(r"<command-name>/(\w+)</command-name>", text)
+    if not m:
+        return ""
+    cmd = m.group(1)
+    args_m = re.search(r"<command-args>([^<]+)</command-args>", text)
+    arg = args_m.group(1).strip() if args_m else ""
+    if cmd == "rename" and arg:
+        return f"rename to {arg}"
+    return f"/{cmd} {arg}".strip()
+
+
 def _trim_message(text: str, limit: int = 6000) -> str:
     value = str(text or "").strip()
     if len(value) <= limit:
@@ -1201,6 +1244,7 @@ def build_dashboard_snapshot(config: SkillClawConfig) -> dict[str, Any]:
             turns = []
         prompt_preview = ""
         response_preview = ""
+        command_summary = ""
         prm_scores: list[float] = []
         session_skill_names: set[str] = set()
         injected_names_all: set[str] = set()
@@ -1211,9 +1255,13 @@ def build_dashboard_snapshot(config: SkillClawConfig) -> dict[str, Any]:
             if not isinstance(turn, dict):
                 continue
             if not prompt_preview:
-                prompt_preview = _truncate(str(turn.get("prompt_text", "") or ""))
+                raw = str(turn.get("prompt_text", "") or "")
+                stripped = _strip_collapsible(raw)
+                prompt_preview = _truncate(stripped or raw)
             if not response_preview:
                 response_preview = _truncate(str(turn.get("response_text", "") or ""))
+            if not command_summary:
+                command_summary = _command_summary(raw)
 
             prm_score = turn.get("prm_score")
             if isinstance(prm_score, (int, float)) and not isinstance(prm_score, bool):
@@ -1264,6 +1312,7 @@ def build_dashboard_snapshot(config: SkillClawConfig) -> dict[str, Any]:
                 "modified_skills": sorted(modified_names_all),
                 "prompt_preview": prompt_preview,
                 "response_preview": response_preview,
+                "command_summary": command_summary,
                 "turns": turns,
             }
         )
