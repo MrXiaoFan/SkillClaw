@@ -5,7 +5,11 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from skillclaw.api_server import SkillClawAPIServer
+from skillclaw.api_server import (
+    SkillClawAPIServer,
+    _extract_last_user_instruction,
+    _extract_session_task_instruction,
+)
 from skillclaw.config import SkillClawConfig
 
 
@@ -121,6 +125,56 @@ async def test_anthropic_messages_uses_claude_code_session_header(anthropic_serv
     assert identity["client_session_id"] == "claude-session-1"
     assert identity["session_id_source"] == "x-claude-code-session-id"
     assert identity["session_segment_id"]
+
+
+def test_extract_last_user_instruction_skips_transient_system_reminder():
+    messages = [
+        {"role": "system", "content": "system"},
+        {"role": "user", "content": "Analyze util/gif2rgb for a memory-safety bug."},
+        {"role": "assistant", "content": "I'll inspect the source."},
+        {
+            "role": "user",
+            "content": (
+                "<system-reminder>\n"
+                "The following skills are available for use with the Skill tool:\n"
+                "- update-config: ...\n"
+            ),
+        },
+    ]
+
+    assert _extract_last_user_instruction(messages) == "Analyze util/gif2rgb for a memory-safety bug."
+
+
+def test_extract_last_user_instruction_falls_back_when_only_reminder_exists():
+    reminder = (
+        "<system-reminder>\n"
+        "The following skills are available for use with the Skill tool:\n"
+        "- update-config: ...\n"
+    )
+    messages = [{"role": "user", "content": reminder}]
+
+    assert _extract_last_user_instruction(messages) == reminder
+
+
+def test_extract_session_task_instruction_uses_prior_real_task_when_current_turn_only_has_reminder():
+    reminder = (
+        "<system-reminder>\n"
+        "The following skills are available for use with the Skill tool:\n"
+        "- update-config: ...\n"
+    )
+    messages = [
+        {"role": "system", "content": "system"},
+        {"role": "user", "content": reminder},
+    ]
+    previous_turns = [
+        {"prompt_text": "Analyze util/gif2rgb for a memory-safety vulnerability."},
+        {"prompt_text": reminder},
+    ]
+
+    assert (
+        _extract_session_task_instruction(messages, previous_turns)
+        == "Analyze util/gif2rgb for a memory-safety vulnerability."
+    )
 
 
 @pytest.mark.asyncio

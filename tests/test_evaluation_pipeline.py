@@ -2065,6 +2065,16 @@ def test_inline_retrieval_skips_firmware_workflows_for_source_parser_task(tmp_pa
     )
     _write_test_skill(
         skills_dir,
+        "cwe120-targeted-binary-ida-scan",
+        "Use targeted IDA and binary triage for compiled ELF or PE buffer-overflow hunting.",
+    )
+    _write_test_skill(
+        skills_dir,
+        "firmware-embedded-lua-shell-extraction",
+        "Use for extracted firmware binaries and embedded Lua shell analysis.",
+    )
+    _write_test_skill(
+        skills_dir,
         "ida-headless-cwe120-sink-analysis",
         "Use IDA headless triage for ELF binaries and CWE-120 sinks.",
     )
@@ -2081,6 +2091,8 @@ def test_inline_retrieval_skips_firmware_workflows_for_source_parser_task(tmp_pa
     assert "vuln-hunting" not in names
     assert "verify-rootfs-full-enumeration" not in names
     assert "elf-cwe120-firmware-triage" not in names
+    assert "cwe120-targeted-binary-ida-scan" not in names
+    assert "firmware-embedded-lua-shell-extraction" not in names
     assert "ida-headless-cwe120-sink-analysis" not in names
 
 
@@ -2133,6 +2145,84 @@ def test_inline_retrieval_uses_task_profile_preamble_for_source_only_prompt(tmp_
     assert "vuln-hunting" not in names
     assert "verify-rootfs-full-enumeration" not in names
     assert "ida-headless-cwe120-sink-analysis" not in names
+
+
+def test_inline_retrieval_treats_negative_trigger_clauses_as_exclusions(tmp_path):
+    skills_dir = tmp_path / "skills"
+    _write_test_skill(
+        skills_dir,
+        "source-parser-state-machine-oob",
+        (
+            "Find out-of-bounds reads/writes in C/C++ parser state machines. "
+            "NOT for: GIF image decoders, palette-index bugs, or array-index overflows."
+        ),
+    )
+    _write_test_skill(
+        skills_dir,
+        "vuln-hunting",
+        (
+            "Reverse-engineering workflow for compiled binary artifacts. "
+            "STRICTLY EXCLUDED: source-code-only audits, giflib-style library source reviews, "
+            "and file-format source debugging."
+        ),
+    )
+    _write_test_skill(
+        skills_dir,
+        "verify-rootfs-full-enumeration",
+        (
+            "Firmware extracted rootfs coverage verification. "
+            "NOT for: source-code repositories, C library audits, or single utility debugging."
+        ),
+    )
+
+    manager = SkillManager(str(skills_dir), retrieval_mode="template")
+    prompt = (
+        "Do not use WebSearch. The current working directory is a blind evaluation workspace "
+        "and the target utility is util/gif2rgb. Analyze this target for a memory-safety "
+        "vulnerability that can be demonstrated with a crafted GIF input. You may inspect "
+        "source code, normal build outputs, and neutral sample files that are already present "
+        "in the workspace, but do not assume any hidden oracle or confirmation artifact exists. "
+        "Identify the most plausible vulnerable file, function, root cause, and supporting evidence.\n\n"
+        "Experiment execution constraints:\n"
+        "- Do not use TodoWrite.\n"
+        "- Finish with exactly one JSON object.\n"
+    )
+
+    names = [skill["name"] for skill in manager._keyword_retrieve_for_inline(prompt, top_k=3)]
+
+    assert names == []
+
+
+def test_inline_retrieval_keeps_positive_trigger_when_exclusion_clause_is_present(tmp_path):
+    skills_dir = tmp_path / "skills"
+    _write_test_skill(
+        skills_dir,
+        "source-parser-state-machine-oob",
+        (
+            "Find out-of-bounds reads/writes in parser state machines for source-level protocol "
+            "and file-format parsers with explicit bounds guards. "
+            "NOT for: GIF image decoders, palette-index bugs, or pure binary triage."
+        ),
+    )
+    _write_test_skill(
+        skills_dir,
+        "vuln-hunting",
+        (
+            "Reverse-engineering workflow for compiled binary artifacts. "
+            "STRICTLY EXCLUDED: source-code-only audits and parser source reviews."
+        ),
+    )
+
+    manager = SkillManager(str(skills_dir), retrieval_mode="template")
+    prompt = (
+        "Locate a buffer over-read vulnerability in the tcpdump IPv6 fragmentation parser. "
+        "Analyze parser bounds guards, source files, and protocol header handling."
+    )
+
+    names = [skill["name"] for skill in manager._keyword_retrieve_for_inline(prompt, top_k=2)]
+
+    assert names[0] == "source-parser-state-machine-oob"
+    assert "vuln-hunting" not in names
 
 
 def test_run_single_case_with_existing_agent_output(tmp_path):

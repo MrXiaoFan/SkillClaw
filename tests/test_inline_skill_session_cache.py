@@ -110,3 +110,34 @@ def test_inline_skill_meta_tasks_do_not_pin_session(tmp_path):
     assert first_meta["stable_action"] == "none"
     assert second_meta["stable_action"] == "pin"
     assert len(manager.calls) == 2
+
+
+def test_inline_skill_reminder_turn_ignores_cached_selection(tmp_path):
+    manager = FakeInlineSkillManager()
+    server = _inline_server(tmp_path, manager)
+    reminder = (
+        "<system-reminder>\n"
+        "The following skills are available for use with the Skill tool:\n"
+        "- update-config: ...\n"
+    )
+
+    server._session_turns["session-c"] = [
+        {"prompt_text": "Analyze tcpdump parser state machine OOB vulnerability."}
+    ]
+    server._session_inline_skill_cache["session-c"] = {
+        "generation": manager.generation,
+        "selected_skill_names": ["ssh-password-recon-workflow", "skillclaw-skill-discovery"],
+    }
+
+    _, names, meta = server._inject_skills(
+        [{"role": "user", "content": reminder}],
+        session_id="session-c",
+    )
+
+    assert names == ["source-parser-state-machine-oob", "vuln-hunting"]
+    assert meta["stable_action"] == "none"
+    assert meta["stable_session"] is False
+    assert meta["selected_skill_names"] == []
+    assert meta["attribution_eligible"] is False
+    assert server._session_inline_skill_cache.get("session-c") is None
+    assert len(manager.calls) == 1

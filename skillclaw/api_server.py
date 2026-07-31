@@ -638,12 +638,53 @@ def _normalize_messages_for_template(messages: list[dict]) -> list[dict]:
 
 def _extract_last_user_instruction(messages: list[dict]) -> str:
     """Return the most recent user message text from the current turn context."""
+    fallback = ""
     for msg in reversed(messages):
         if isinstance(msg, dict) and msg.get("role") == "user":
             text = _flatten_message_content(msg.get("content"))
             if text:
+                if not fallback:
+                    fallback = text
+                if _is_transient_skill_reminder(text):
+                    continue
                 return text
-    return ""
+    return fallback
+
+
+def _is_transient_skill_reminder(text: str) -> bool:
+    lowered = str(text or "").strip().lower()
+    if not lowered:
+        return False
+    if lowered.startswith("<system-reminder>"):
+        return True
+    return "the following skills are available for use with the skill tool" in lowered
+
+
+def _extract_session_task_instruction(
+    messages: list[dict],
+    previous_turns: list[dict] | None = None,
+) -> str:
+    """Return the best task instruction for routing and records.
+
+    Claude SDK follow-up turns can contain transient ``<system-reminder>``
+    user messages that list local skills/tooling and do not describe the
+    actual task. When that happens, fall back to the most recent prior turn's
+    non-reminder instruction text inside the same session.
+    """
+    current = _extract_last_user_instruction(messages)
+    if current and not _is_transient_skill_reminder(current):
+        return current
+
+    for turn in reversed(previous_turns or []):
+        if not isinstance(turn, dict):
+            continue
+        text = str(turn.get("prompt_text") or turn.get("instruction_text") or "").strip()
+        if not text:
+            continue
+        if _is_transient_skill_reminder(text):
+            continue
+        return text
+    return current
 
 
 _ERROR_PATTERNS: list[tuple[re.Pattern, str]] = [
@@ -2459,7 +2500,10 @@ class SkillClawAPIServer:
     ):
         if not self._record_file:
             return
-        instruction_text = _extract_last_user_instruction(messages)
+        instruction_text = _extract_session_task_instruction(
+            messages,
+            self._session_turns.get(session_id, []),
+        )
         record = {
             "session_id": session_id,
             **self._session_identity_fields(session_id),
@@ -2793,7 +2837,10 @@ class SkillClawAPIServer:
                     ", ".join(r.get("skill_name", "?") for r in modified_skills),
                 )
 
-            user_instruction = _extract_last_user_instruction(messages)
+            user_instruction = _extract_session_task_instruction(
+                messages,
+                self._session_turns.get(session_id, []),
+            )
             self._turn_counts[session_id] = self._turn_counts.get(session_id, 0) + 1
             turn_num = self._turn_counts[session_id]
             prompt_text = "\n".join(
@@ -3598,10 +3645,15 @@ class SkillClawAPIServer:
         top_k = int(getattr(self.config, "skill_top_k", 3) or 3)
         stable_action = "none"
         stable_generation = int(getattr(self.skill_manager, "generation", 0) or 0)
+        current_user_instruction = _extract_last_user_instruction(messages)
+        reminder_only_turn = _is_transient_skill_reminder(current_user_instruction)
+        allow_session_stability = bool(session_id and not reminder_only_turn)
         if injection_mode in {"inline", "server", "server-inline"}:
             # Local enhancement: inline selected SKILL.md content for remote
             # clients whose filesystem cannot read the server's skill paths.
-            cached = self._session_inline_skill_cache.get(session_id) if session_id else None
+            if session_id and not allow_session_stability:
+                self._session_inline_skill_cache.pop(session_id, None)
+            cached = self._session_inline_skill_cache.get(session_id) if allow_session_stability else None
             skill_text = ""
             skill_names: list[str] = []
             if (
@@ -3630,14 +3682,17 @@ class SkillClawAPIServer:
                     self._session_inline_skill_cache.pop(session_id, None)
 
             if not skill_text:
-                task_description = _extract_last_user_instruction(messages)
+                task_description = _extract_session_task_instruction(
+                    messages,
+                    self._session_turns.get(session_id, []),
+                )
                 skill_text, skill_names = self.skill_manager.build_inline_injection_prompt(
                     task_description,
                     max_chars=max_skill_chars,
                     top_k=top_k,
                 )
                 has_task_skill = any(not str(name).startswith("skillclaw-") for name in skill_names)
-                if session_id and has_task_skill:
+                if allow_session_stability and has_task_skill:
                     self._session_inline_skill_cache[session_id] = {
                         "generation": stable_generation,
                         "selected_skill_names": list(skill_names),
@@ -3666,20 +3721,31 @@ class SkillClawAPIServer:
         except Exception:
             all_skill_count = len(skill_names)
 
+        selected_skill_names_for_meta = [] if reminder_only_turn else list(skill_names)
+
         skill_injection_meta = {
             "enabled": True,
             "injection_mode": injection_mode,
             "top_k": top_k if injection_mode in {"inline", "server", "server-inline"} else None,
-            "selected_skill_names": list(skill_names),
+            "selected_skill_names": selected_skill_names_for_meta,
             "available_skill_count": all_skill_count,
             "skill_prompt_chars": len(skill_text),
             "skill_prompt_hash": hashlib.sha256(skill_text.encode("utf-8")).hexdigest()[:16],
-            "stable_session": bool(session_id and injection_mode in {"inline", "server", "server-inline"}),
+            "stable_session": bool(
+                allow_session_stability and injection_mode in {"inline", "server", "server-inline"}
+            ),
             "stable_action": stable_action,
             "stable_generation": stable_generation,
+            "attribution_eligible": not reminder_only_turn,
         }
 
-        if injection_mode in {"inline", "server", "server-inline"}:
+        if reminder_only_turn and skill_names:
+            logger.info(
+                "[SkillManager] reminder-only turn injected %d skill(s) but excluded from attribution: %s",
+                len(skill_names),
+                ", ".join(skill_names)[:400],
+            )
+        elif injection_mode in {"inline", "server", "server-inline"}:
             logger.info(
                 "[SkillManager] inlining %d skill(s) stable=%s: %s",
                 len(skill_names),

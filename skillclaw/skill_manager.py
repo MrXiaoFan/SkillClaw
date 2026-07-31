@@ -90,7 +90,158 @@ _INLINE_QUERY_STOPWORDS = {
     "finish",
     "containing",
     "output",
+    "already",
+    "also",
+    "and",
+    "any",
+    "are",
+    "artifact",
+    "artifacts",
+    "assume",
+    "at",
+    "be",
+    "been",
+    "being",
+    "blind",
+    "both",
+    "broad",
+    "build",
+    "but",
+    "by",
+    "call",
+    "called",
+    "calling",
+    "calls",
+    "can",
+    "command",
+    "commands",
+    "confidence",
+    "confirmation",
+    "constraints",
+    "continue",
+    "continuing",
+    "current",
+    "demonstrated",
+    "directory",
+    "do",
+    "does",
+    "doing",
+    "done",
+    "evaluation",
+    "exactly",
+    "evidence",
+    "exists",
+    "experiment",
+    "file",
+    "files",
+    "final",
+    "for",
+    "from",
+    "function",
+    "functions",
+    "get",
+    "gets",
+    "getting",
+    "grep",
+    "have",
+    "hidden",
+    "identify",
+    "if",
+    "in",
+    "input",
+    "inspect",
+    "instead",
+    "into",
+    "invoke",
+    "is",
+    "it",
+    "its",
+    "keys",
+    "list",
+    "may",
+    "memory",
+    "most",
+    "neutral",
+    "no",
+    "normal",
+    "not",
+    "of",
+    "one",
+    "oracle",
+    "other",
+    "our",
+    "out",
+    "output",
+    "outputs",
+    "over",
+    "plausible",
+    "predicted_cves",
+    "predicted_files",
+    "predicted_functions",
+    "present",
+    "prefer",
+    "produce",
+    "project",
+    "projects",
+    "response",
+    "responses",
+    "root",
+    "root_cause",
+    "sample",
+    "samples",
+    "safety",
+    "scan",
+    "scans",
+    "should",
+    "single",
+    "soon",
+    "source",
+    "stop",
+    "supporting",
+    "targeted",
+    "task",
+    "tasks",
+    "that",
+    "the",
+    "their",
+    "them",
+    "then",
+    "there",
+    "these",
+    "they",
+    "this",
+    "those",
+    "todowrite",
+    "tool",
+    "tools",
+    "uncertain",
+    "utility",
+    "vulnerability",
+    "vulnerabilities",
+    "vuln",
+    "vulnerable",
+    "was",
+    "we",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "while",
+    "with",
+    "working",
+    "workflow",
+    "workflows",
+    "workspace",
+    "you",
+    "your",
 }
+_INLINE_DESCRIPTION_EXCLUSION_MARKERS = (
+    " not for:",
+    " strictly excluded:",
+    " do not use for:",
+    " excluded:",
+)
 _VULNERABILITY_TASK_TERMS = {
     "vulnerability",
     "vulnerabilities",
@@ -147,6 +298,27 @@ _SOURCE_PARSER_TASK_TERMS = {
     "over",
     "read",
 }
+_SOURCE_PARSER_SKILL_TERMS = {
+    "avail",
+    "boundary",
+    "bounds",
+    "cur",
+    "end",
+    "fragment",
+    "fragmentation",
+    "guard",
+    "header",
+    "html",
+    "lookahead",
+    "machine",
+    "nd_tcheck",
+    "packet",
+    "parser",
+    "parsing",
+    "protocol",
+    "state",
+    "xml",
+}
 _IDA_INTENT_TERMS = {
     "ida",
     "idalib",
@@ -180,6 +352,27 @@ _FIRMWARE_ROOTFS_TASK_TERMS = {
     "iot",
     "cgi",
     "webvpn",
+}
+_BINARY_REVERSE_SKILL_TERMS = {
+    "binary",
+    "binaries",
+    "cgis",
+    "cgi",
+    "decompiler",
+    "decompile",
+    "elf",
+    "embedded",
+    "firmware",
+    "headless",
+    "hexrays",
+    "hex-rays",
+    "ida",
+    "idalib",
+    "lua",
+    "rootfs",
+    "router",
+    "shell",
+    "triage",
 }
 _SKILLCLAW_META_MARKERS = (
     "available skills",
@@ -223,6 +416,31 @@ def _looks_like_source_parser_task(query_terms: set[str]) -> bool:
 
 def _looks_like_firmware_rootfs_task(query_terms: set[str]) -> bool:
     return bool(query_terms & _FIRMWARE_ROOTFS_TASK_TERMS)
+
+
+def _looks_like_binary_reverse_skill(skill_terms: set[str]) -> bool:
+    return bool(skill_terms & _BINARY_REVERSE_SKILL_TERMS)
+
+
+def _normalize_inline_query_text(task_description: str) -> str:
+    text = str(task_description or "")
+    marker = "\n\nExperiment execution constraints:"
+    if marker in text:
+        text = text.split(marker, 1)[0]
+    return text
+
+
+def _inline_terms(text: str) -> set[str]:
+    return set(_WORD_RE.findall(str(text or "").lower())) - _INLINE_QUERY_STOPWORDS
+
+
+def _split_trigger_description(text: str) -> tuple[str, str]:
+    lowered = str(text or "").lower()
+    for marker in _INLINE_DESCRIPTION_EXCLUSION_MARKERS:
+        idx = lowered.find(marker)
+        if idx >= 0:
+            return text[:idx], text[idx + 1 :]
+    return str(text or ""), ""
 
 # ------------------------------------------------------------------ #
 # Frontmatter parser                                                   #
@@ -889,16 +1107,17 @@ class SkillManager:
 
     def _keyword_retrieve_for_inline(self, task_description: str, top_k: int = 6) -> list[dict]:
         """Rank skills by lightweight lexical overlap for inline injection."""
-        task_text = str(task_description or "").lower()
-        query_terms = set(_WORD_RE.findall(task_text)) - _INLINE_QUERY_STOPWORDS
+        task_text = _normalize_inline_query_text(str(task_description or ""))
+        task_terms_all = set(_WORD_RE.findall(task_text.lower()))
+        query_terms = _inline_terms(task_text)
         if not query_terms:
             return self.retrieve(task_description, top_k=top_k)
-        is_vulnerability_task = bool(query_terms & _VULNERABILITY_TASK_TERMS)
-        is_skillclaw_meta_task = _looks_like_skillclaw_meta_task(task_text)
-        is_source_parser_task = _looks_like_source_parser_task(query_terms)
-        is_firmware_rootfs_task = _looks_like_firmware_rootfs_task(query_terms)
-        has_ida_intent = bool(query_terms & _IDA_INTENT_TERMS)
-        ssh_intent_hits = query_terms & _SSH_INTENT_TERMS
+        is_vulnerability_task = bool(task_terms_all & _VULNERABILITY_TASK_TERMS)
+        is_skillclaw_meta_task = _looks_like_skillclaw_meta_task(task_text.lower())
+        is_source_parser_task = _looks_like_source_parser_task(task_terms_all)
+        is_firmware_rootfs_task = _looks_like_firmware_rootfs_task(task_terms_all)
+        has_ida_intent = bool(task_terms_all & _IDA_INTENT_TERMS)
+        ssh_intent_hits = task_terms_all & _SSH_INTENT_TERMS
 
         scored: list[tuple[float, dict]] = []
         for skill in self.get_all_skills():
@@ -923,19 +1142,39 @@ class SkillManager:
                 continue
             if name == "ssh-password-recon-workflow" and is_vulnerability_task and len(ssh_intent_hits) < 2:
                 continue
-            haystack = " ".join(
-                [
-                    name,
-                    str(skill.get("description") or ""),
-                    str(skill.get("category") or ""),
-                    str(skill.get("content") or "")[:2000],
-                ]
-            ).lower()
-            skill_terms = set(_WORD_RE.findall(haystack))
-            overlap = len(query_terms & skill_terms)
-            if overlap <= 0:
+            description = str(skill.get("description") or "")
+            positive_desc, negative_desc = _split_trigger_description(description)
+            name_terms = _inline_terms(name)
+            desc_terms = _inline_terms(positive_desc)
+            category_terms = _inline_terms(str(skill.get("category") or ""))
+            negative_terms = _inline_terms(negative_desc)
+            positive_skill_terms = name_terms | desc_terms
+            content_terms: set[str] = set()
+            if is_skillclaw_meta_task:
+                content_terms = _inline_terms(str(skill.get("content") or "")[:1200])
+            if (
+                is_source_parser_task
+                and not is_firmware_rootfs_task
+                and _looks_like_binary_reverse_skill(positive_skill_terms)
+                and not (positive_skill_terms & _SOURCE_PARSER_SKILL_TERMS)
+            ):
                 continue
-            score = overlap + self.get_effectiveness(name) * 0.25
+
+            name_overlap = query_terms & name_terms
+            desc_overlap = query_terms & desc_terms
+            category_overlap = query_terms & category_terms
+            negative_overlap = query_terms & negative_terms
+            content_overlap = query_terms & content_terms
+            score = (
+                len(name_overlap) * 4.0
+                + len(desc_overlap) * 2.0
+                + len(category_overlap) * 0.5
+                + len(content_overlap) * 1.0
+                - len(negative_overlap) * 1.5
+            )
+            if score <= 0:
+                continue
+            score += self.get_effectiveness(name) * 0.25
             # Local enhancement: prefer source-level parser boundary workflows
             # for tasks that ask about parser/header/OOB bugs in source trees.
             # Generic ELF/IDA triage skills are useful fallback guidance, but
@@ -951,7 +1190,7 @@ class SkillManager:
             scored.append((score, skill))
 
         if not scored:
-            return self.retrieve(task_description, top_k=top_k)
+            return []
         scored.sort(key=lambda item: item[0], reverse=True)
         return [skill for _, skill in scored[:top_k]]
 
