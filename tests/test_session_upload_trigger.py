@@ -244,12 +244,47 @@ def test_skill_reload_polling_starts_only_in_poll_mode(monkeypatch) -> None:
         return FakeTask()
 
     import asyncio
+    from skillclaw import runtime_state
 
     monkeypatch.setattr(asyncio, "create_task", fake_create_task)
+    monkeypatch.setattr(runtime_state, "is_git_managed_path", lambda _path: False)
     server._start_skill_reload_polling()
 
     assert len(created) == 1
     created[0].close()
+
+
+def test_skill_reload_polling_does_not_start_for_git_managed_skills_dir(monkeypatch, caplog) -> None:
+    created = []
+
+    class FakeTask:
+        def done(self):
+            return False
+
+    def fake_create_task(coro):
+        created.append(coro)
+        return FakeTask()
+
+    import asyncio
+    from skillclaw import runtime_state
+
+    monkeypatch.setattr(asyncio, "create_task", fake_create_task)
+    monkeypatch.setattr(runtime_state, "is_git_managed_path", lambda _path: True)
+
+    server = object.__new__(SkillClawAPIServer)
+    server.config = SkillClawConfig(
+        sharing_enabled=True,
+        sharing_skill_reload_mode="poll",
+        skills_dir="D:/Code/SkillClaw/SkillClaw/Skills",
+    )
+    server._skill_reload_task = None
+    server._skill_reload_interval_seconds = 30
+
+    with caplog.at_level("INFO"):
+        server._start_skill_reload_polling()
+
+    assert created == []
+    assert "skill reload polling disabled because skills_dir is git-managed" in caplog.text
 
 
 def test_skill_reload_polling_does_not_start_when_disabled_or_callback(monkeypatch) -> None:

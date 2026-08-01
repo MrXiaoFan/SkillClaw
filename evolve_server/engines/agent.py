@@ -351,6 +351,8 @@ class AgentEvolveServer(EvolveEngineMixin):
         """
         logger.info("[AgentEvolveServer] === starting evolution cycle ===")
         t0 = time.monotonic()
+        manifest = await self._call_storage(self._load_remote_skills)
+        self._id_registry.prune_unpublished_placeholders(set(manifest))
 
         # ---- 1. drain ------------------------------------------------ #
         sessions, session_keys = await self._drain_sessions()
@@ -379,7 +381,6 @@ class AgentEvolveServer(EvolveEngineMixin):
         if self.config.fresh:
             self._workspace.reset()
 
-        manifest = await self._call_storage(self._load_remote_skills)
         existing_skills = await self._call_storage(self._fetch_all_skills, manifest)
 
         agents_md_text = self._load_agents_md()

@@ -67,9 +67,15 @@ class SkillClawLauncher:
         from .api_server import SkillClawAPIServer
         from .prm_scorer import PRMScorer
         from .skill_manager import SkillManager
+        from . import skillspace
 
         skill_manager: Optional[SkillManager] = None
         if cfg.use_skills:
+            if skillspace.is_skillspace_live_dir(cfg.skills_dir):
+                if skillspace.live_has_skills(cfg.skills_dir):
+                    logger.info("[Launcher] preserving existing runtime live skills at %s", cfg.skills_dir)
+                else:
+                    skillspace.seed_live_from_source(log=logger)
             Path(cfg.skills_dir).mkdir(parents=True, exist_ok=True)
             skill_manager = SkillManager(
                 skills_dir=cfg.skills_dir,

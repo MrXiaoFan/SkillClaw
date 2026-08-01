@@ -27,6 +27,7 @@ try:
     )
     from evaluation.runs.score_case_output import score_output
     from evaluation.postprocess.finalize_record import _select_injection, _select_injection_history
+    from evaluation.postprocess.finalize_record import normalize_prediction_fields
     from evaluation.utils.check_case_runtime import check_case_environment
     from evaluation.utils.render_case_prompt import get_case_prompt
     from evaluation.validation.core import assess_skill_relevance, build_feedback
@@ -41,6 +42,7 @@ except ImportError:  # pragma: no cover - direct script execution from copied fo
     )
     from evaluation.runs.score_case_output import score_output
     from evaluation.postprocess.finalize_record import _select_injection, _select_injection_history
+    from evaluation.postprocess.finalize_record import normalize_prediction_fields
     from evaluation.utils.check_case_runtime import check_case_environment
     from evaluation.utils.render_case_prompt import get_case_prompt
     from evaluation.validation.core import assess_skill_relevance, build_feedback
@@ -349,6 +351,7 @@ def build_final_record(
         "max_score": score.get("max_score"),
         "checks": score.get("checks"),
         "predictions": score.get("predictions"),
+        "agent_json": score.get("agent_json"),
         "skill_injection": injection,
         "skill_injection_history": injection_history,
         "skill_relevance": skill_relevance,
@@ -365,7 +368,7 @@ def build_final_record(
         skill_injection=injection,
         skill_relevance=skill_relevance,
     )
-    return record
+    return normalize_prediction_fields(record)
 
 
 def run_case(args: argparse.Namespace) -> dict[str, Any]:

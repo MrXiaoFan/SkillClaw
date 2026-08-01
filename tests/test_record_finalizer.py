@@ -86,6 +86,54 @@ def test_finalize_record_accepts_session_snapshot(tmp_path):
     assert updated["skill_injection"]["available_skill_count"] == 35
 
 
+def test_finalize_record_restores_prediction_fields_from_legacy_prediction_text(tmp_path):
+    case = {"id": "demo-case"}
+    final_record = {
+        "case_id": "demo-case",
+        "run": {
+            "start": "2026-07-25T12:00:00+00:00",
+            "end": "2026-07-25T12:05:00+00:00",
+        },
+        "score": 8.0,
+        "max_score": 10.0,
+        "checks": {},
+        "validation": {"status": "passed", "checks": []},
+        "predictions": {
+            "cves": ["CVE-2020-23922"],
+            "files": ["util/gif2rgb.c"],
+            "functions": ["DumpScreen2RGB"],
+            "evidence": ["legacy evidence"],
+            "raw_text": [
+                json.dumps(
+                    {
+                        "predicted_cves": ["CVE-2016-3977"],
+                        "predicted_files": ["util/gif2rgb.c"],
+                        "predicted_functions": ["GIF2RGB", "DumpScreen2RGB"],
+                        "root_cause": "unchecked color map index",
+                        "evidence": "line 304 dereferences Colors without bounds check",
+                        "confidence": "high",
+                    },
+                    ensure_ascii=False,
+                )
+            ],
+        },
+    }
+    session_snapshot = {
+        "session_id": "snapshot-session",
+        "timestamp": "2026-07-25T12:07:02Z",
+        "turns": [],
+    }
+
+    updated = finalize_record(case=case, final_record=final_record, injection_value=session_snapshot)
+
+    assert updated["predicted_cves"] == ["CVE-2016-3977"]
+    assert updated["predicted_files"] == ["util/gif2rgb.c"]
+    assert updated["predicted_functions"] == ["GIF2RGB", "DumpScreen2RGB"]
+    assert updated["root_cause"] == "unchecked color map index"
+    assert updated["evidence"] == "line 304 dereferences Colors without bounds check"
+    assert updated["confidence"] == "high"
+
+
 def test_finalize_main_writes_finalized_and_compare_outputs(tmp_path):
     case_path = tmp_path / "case.json"
     before_path = tmp_path / "before.json"

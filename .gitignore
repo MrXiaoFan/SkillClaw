@@ -35,3 +35,6 @@ uv.lock
 .local-share/
 .skillclaw_backups/
 .skillclaw_pull_stage_*/
+skillspace/live/
+skillspace/share/
+skillspace/state/

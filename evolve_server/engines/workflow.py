@@ -1095,6 +1095,8 @@ class EvolveServer(EvolveEngineMixin):
         started_at = time.monotonic()
 
         feedback_keys: list[str] = []
+        manifest = await self._call_storage(self._load_remote_skills)
+        self._id_registry.prune_unpublished_placeholders(set(manifest))
         queue_status = {
             "ready_pairs": 0,
             "active_sessions": 0,
@@ -1126,7 +1128,6 @@ class EvolveServer(EvolveEngineMixin):
             no_skill_sessions = grouped_sessions.pop(NO_SKILL_KEY, [])
             skill_group_count = len(grouped_sessions)
 
-            manifest = await self._call_storage(self._load_remote_skills)
             existing_skill_names = [item.get("name", "") for item in manifest.values()]
 
             if grouped_sessions:
@@ -1318,9 +1319,8 @@ class EvolveServer(EvolveEngineMixin):
 
         @app.get("/status")
         async def status():
-            entries = (
-                self._load_remote_skills() if self._uses_nacos_skill_registry() else self._id_registry.all_entries()
-            )
+            published_entries = self._load_remote_skills()
+            registry_entries = self._id_registry.all_entries()
             pending_keys = await self._call_storage(list_session_keys, self._bucket, self._prefix)
             feedback_keys = await self._call_storage(list_run_feedback_keys, self._bucket, self._prefix)
             pair_status = None
@@ -1341,13 +1341,15 @@ class EvolveServer(EvolveEngineMixin):
                         "min_mean_score": self.config.validation_min_mean_score,
                         "max_rejections": self.config.validation_max_rejections,
                     },
-                    "registered_skills": len(entries),
+                    "published_skills": len(published_entries),
+                    "registered_skills": len(registry_entries),
+                    "stale_registry_entries": max(0, len(registry_entries) - len(published_entries)),
                     "skills": {
                         name: {
                             "skill_id": item.get("skill_id") or item.get("name") or name,
                             "version": item.get("version") or (item.get("labels") or {}).get("latest") or 0,
                         }
-                        for name, item in entries.items()
+                        for name, item in published_entries.items()
                     },
                 }
             )

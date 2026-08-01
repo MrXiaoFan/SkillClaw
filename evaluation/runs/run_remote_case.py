@@ -28,9 +28,11 @@ try:
         _default_finalized_out,
         _load_optional_json,
         finalize_record as build_finalized_record,
+        normalize_prediction_fields,
     )
     from evaluation.remote import RemoteExperimentVmClient, RemoteExperimentVmConfig
     from evaluation.runs.run_single_case import make_run_id
+    from skillclaw import skillspace
 except ImportError:  # pragma: no cover - direct script execution.
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from evaluation.cases.loader import load_case_definition, resolve_source_root
@@ -39,9 +41,11 @@ except ImportError:  # pragma: no cover - direct script execution.
         _default_finalized_out,
         _load_optional_json,
         finalize_record as build_finalized_record,
+        normalize_prediction_fields,
     )
     from evaluation.remote import RemoteExperimentVmClient, RemoteExperimentVmConfig
     from evaluation.runs.run_single_case import make_run_id
+    from skillclaw import skillspace
 
 
 SYNC_PATHS = ("evaluation", "benchmarks")
@@ -290,7 +294,7 @@ def _default_local_import_root() -> Path:
 
 
 def _default_local_session_dir() -> Path:
-    return _repo_root() / ".local-share" / "default" / "sessions"
+    return skillspace.default_layout().share_dir / "default" / "sessions"
 
 
 def _default_local_record_log() -> Path:
@@ -386,6 +390,21 @@ def enrich_downloaded_final(
         return None
 
     final_record = _load_json_object(final_path)
+    agent_path_text = str(downloaded_artifacts.get("agent_json") or "").strip()
+    if agent_path_text:
+        agent_path = Path(agent_path_text)
+        if agent_path.is_file():
+            final_record["agent_json"] = _load_json_object(agent_path)
+    score_path_text = str(downloaded_artifacts.get("score") or "").strip()
+    if score_path_text:
+        score_path = Path(score_path_text)
+        if score_path.is_file():
+            score_record = _load_json_object(score_path)
+            if not isinstance(final_record.get("predictions"), dict) and isinstance(score_record.get("predictions"), dict):
+                final_record["predictions"] = score_record["predictions"]
+            if not isinstance(final_record.get("agent_json"), dict) and isinstance(score_record.get("agent_json"), dict):
+                final_record["agent_json"] = score_record["agent_json"]
+    final_record = normalize_prediction_fields(final_record)
     enriched = build_finalized_record(
         case=case,
         final_record=final_record,

@@ -2307,6 +2307,12 @@ class SkillClawAPIServer:
         mode = str(getattr(self.config, "sharing_skill_reload_mode", "") or "poll").strip().lower()
         if mode != "poll":
             return
+        if runtime_state.is_git_managed_path(self.config.skills_dir):
+            logger.info(
+                "[SkillHub] skill reload polling disabled because skills_dir is git-managed: %s",
+                self.config.skills_dir,
+            )
+            return
         if self._skill_reload_task is not None and not self._skill_reload_task.done():
             return
         self._skill_reload_task = asyncio.create_task(self._skill_reload_poll_loop())

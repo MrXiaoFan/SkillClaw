@@ -8,21 +8,32 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from . import skillspace
+
 
 def _state_dir() -> Path:
     return Path.home() / ".skillclaw"
 
 
 def workspace_runtime_dir(skills_dir: str) -> Path:
+    managed_state_dir = skillspace.skillspace_state_dir_for(skills_dir)
+    if managed_state_dir is not None:
+        return managed_state_dir.parent
     return Path(str(skills_dir)).expanduser().resolve().parent / "runtime"
 
 
 def workspace_state_dir(skills_dir: str) -> Path:
     """Preferred workspace-local runtime state directory."""
+    managed_state_dir = skillspace.skillspace_state_dir_for(skills_dir)
+    if managed_state_dir is not None:
+        return managed_state_dir
     return workspace_runtime_dir(skills_dir) / "state"
 
 
 def legacy_workspace_state_dir(skills_dir: str) -> Path:
+    managed_state_dir = skillspace.skillspace_state_dir_for(skills_dir)
+    if managed_state_dir is not None:
+        return managed_state_dir
     return Path(str(skills_dir)).expanduser().resolve().parent / "state"
 
 
@@ -44,6 +55,8 @@ def legacy_skill_stats_path(skills_dir: str) -> Path:
 
 def is_git_managed_path(path: str) -> bool:
     current = Path(str(path)).expanduser().resolve()
+    if skillspace.is_skillspace_mutable_path(current):
+        return False
     for candidate in (current, *current.parents):
         if (candidate / ".git").exists():
             return True
@@ -175,13 +188,14 @@ def daemon_start_lock():
     try:
         yield
     finally:
+        should_release = True
         try:
             holder = _coerce_pid(path.read_text(encoding="utf-8").strip())
         except FileNotFoundError:
-            return
+            should_release = False
         except Exception:
             path.unlink(missing_ok=True)
-            return
+            should_release = False
 
-        if holder == owner_pid or holder is None:
+        if should_release and (holder == owner_pid or holder is None):
             path.unlink(missing_ok=True)

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import SkillClawConfig
+from . import skillspace
 
 CONFIG_DIR = Path.home() / ".skillclaw"
 CONFIG_FILE = CONFIG_DIR / "config.yaml"
@@ -223,11 +224,21 @@ def resolve_skills_dir(skills_dir: Any, *, claw_type: str) -> str:
 
     if raw:
         expanded = Path(raw).expanduser()
+        if skillspace.is_repo_managed_skill_path(expanded):
+            return skillspace.resolve_runtime_skills_dir(expanded)
         if normalized_claw in {"hermes", "codex", "claude", "opencode"} and expanded == generic_default:
             return str(default_skills_dir_for_claw(normalized_claw))
         return str(expanded)
 
     return str(default_skills_dir_for_claw(claw_type))
+
+
+def resolve_sharing_local_root(local_root: Any) -> str:
+    raw = str(local_root or "").strip()
+    if not raw:
+        return ""
+    expanded = Path(raw).expanduser()
+    return skillspace.resolve_share_root(expanded)
 
 
 def _default_served_model_name(llm_model_id: str) -> str:
@@ -325,7 +336,7 @@ class ConfigStore:
         sharing_secret_access_key = _first_non_empty(sharing, "secret_access_key")
         sharing_region = _first_non_empty(sharing, "region")
         sharing_session_token = _first_non_empty(sharing, "session_token")
-        sharing_local_root = _first_non_empty(sharing, "local_root")
+        sharing_local_root = resolve_sharing_local_root(_first_non_empty(sharing, "local_root"))
         sharing_skill_backend = _first_non_empty(sharing, "skill_backend")
         sharing_session_backend = _first_non_empty(sharing, "session_backend")
         effective_skill_backend = sharing_skill_backend or sharing_backend
@@ -493,6 +504,7 @@ class ConfigStore:
         ]
         sharing = data.get("sharing", {})
         validation = data.get("validation", {})
+        effective_sharing_local_root = resolve_sharing_local_root(sharing.get("local_root", ""))
         if sharing.get("enabled"):
             backend = _infer_sharing_backend(sharing) or "unknown"
             skill_backend = str(sharing.get("skill_backend", "") or "").strip().lower()
@@ -505,7 +517,7 @@ class ConfigStore:
                 lines.append(f"sharing.skill_backend: {skill_backend}")
             if backend == "local":
                 lines += [
-                    f"sharing.local_root: {sharing.get('local_root', '?')}",
+                    f"sharing.local_root: {effective_sharing_local_root or '?'}",
                 ]
             elif backend in {"s3", "oss"}:
                 lines += [

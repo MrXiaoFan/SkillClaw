@@ -155,3 +155,33 @@ class SkillIDRegistry:
 
     def all_entries(self) -> dict[str, dict[str, Any]]:
         return dict(self._map)
+
+    def prune_unpublished_placeholders(self, published_skill_names: set[str] | list[str]) -> list[str]:
+        """Remove registry placeholders that never became published skills.
+
+        A placeholder is considered safe to prune only when all of the following
+        hold:
+        - the skill name is absent from the shared manifest
+        - ``version`` is 0 or missing
+        - ``content_sha`` is empty
+        - ``history`` is empty
+        """
+        published = {str(name).strip() for name in published_skill_names if str(name).strip()}
+        removed: list[str] = []
+        for name, entry in list(self._map.items()):
+            if name in published:
+                continue
+            version = int(entry.get("version", 0) or 0)
+            content_sha = str(entry.get("content_sha", "") or "").strip()
+            history = entry.get("history")
+            if version > 0 or content_sha or history:
+                continue
+            self._map.pop(name, None)
+            removed.append(name)
+        if removed:
+            logger.info(
+                "[SkillIDRegistry] pruned %d unpublished placeholder entries: %s",
+                len(removed),
+                ", ".join(sorted(removed)),
+            )
+        return removed

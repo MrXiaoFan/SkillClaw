@@ -7,6 +7,7 @@ import pytest
 
 from evaluation.evolution import EvolutionHandoffError, build_run_feedback_bundle, handoff_validated_run
 from evaluation.runs.run_remote_case import (
+    _default_local_session_dir,
     build_manual_claude_command,
     build_remote_layout,
     build_remote_prepare_command,
@@ -16,6 +17,7 @@ from evaluation.runs.run_remote_case import (
 )
 from evolve_server.engines.workflow import EvolveServer
 from skillclaw.object_store import LocalObjectStore
+from skillclaw import skillspace
 
 
 def test_build_remote_layout_preserves_repo_relative_case_path(tmp_path):
@@ -39,6 +41,15 @@ def test_build_remote_layout_preserves_repo_relative_case_path(tmp_path):
     assert layout.remote_prompt_path.endswith("/demo-run/prompt.txt")
     assert layout.remote_raw_path.endswith("/demo-run/raw.txt")
     assert layout.local_import_dir == repo_root / "runtime" / "imports" / "remote_vm" / "demo-run"
+
+
+def test_default_local_session_dir_uses_skillspace_share_root(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "evaluation.runs.run_remote_case.skillspace.default_layout",
+        lambda: SimpleNamespace(share_dir=tmp_path / "skillspace" / "share"),
+    )
+
+    assert _default_local_session_dir() == tmp_path / "skillspace" / "share" / "default" / "sessions"
 
 
 def test_build_manual_claude_command_quotes_paths():
@@ -146,6 +157,66 @@ def test_enrich_downloaded_final_uses_local_session_snapshots(tmp_path):
     enriched = json.loads(Path(enriched_path).read_text(encoding="utf-8"))
     assert enriched["session_id"] == "snapshot-session"
     assert enriched["skill_injection"]["selected_skill_names"] == ["source-parser-state-machine-oob"]
+
+
+def test_enrich_downloaded_final_backfills_prediction_fields_from_agent_json(tmp_path):
+    final_path = tmp_path / "demo-final.json"
+    agent_path = tmp_path / "demo-agent.json"
+    session_dir = tmp_path / "sessions"
+    session_dir.mkdir()
+    (session_dir / "snapshot-session.json").write_text(
+        json.dumps(
+            {
+                "session_id": "snapshot-session",
+                "timestamp": "2026-07-25T12:07:02Z",
+                "turns": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    final_path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo-case",
+                "run": {
+                    "start": "2026-07-25T12:00:00+00:00",
+                    "end": "2026-07-25T12:05:00+00:00",
+                },
+                "score": 10.0,
+                "max_score": 10.0,
+                "checks": {},
+                "predictions": {"cves": ["CVE-legacy"]},
+                "validation": {"status": "passed", "checks": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+    agent_path.write_text(
+        json.dumps(
+            {
+                "predicted_cves": ["CVE-2016-3977"],
+                "predicted_files": ["util/gif2rgb.c"],
+                "predicted_functions": ["DumpScreen2RGB"],
+                "root_cause": "unchecked color map index",
+                "evidence": "line 304 uses GifRow[j] directly",
+                "confidence": "high",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    enriched_path = enrich_downloaded_final(
+        case={"id": "demo-case"},
+        downloaded_artifacts={"final": str(final_path), "agent_json": str(agent_path)},
+        local_session_dir=session_dir,
+    )
+
+    enriched = json.loads(Path(enriched_path).read_text(encoding="utf-8"))
+    assert enriched["predicted_cves"] == ["CVE-2016-3977"]
+    assert enriched["predicted_files"] == ["util/gif2rgb.c"]
+    assert enriched["predicted_functions"] == ["DumpScreen2RGB"]
+    assert enriched["root_cause"] == "unchecked color map index"
+    assert enriched["confidence"] == "high"
 
 
 def test_enrich_downloaded_final_falls_back_to_conversation_log_when_session_dir_empty(tmp_path, monkeypatch):
@@ -315,6 +386,89 @@ def test_enrich_downloaded_final_merges_session_snapshots_with_conversation_log(
         "elf-plt-reloc-sink-scan",
         "elf-cwe120-plt-analysis",
     ]
+
+
+def test_enrich_downloaded_final_prefers_latest_attribution_eligible_turn(tmp_path, monkeypatch):
+    final_path = tmp_path / "demo-final.json"
+    session_dir = tmp_path / "sessions"
+    session_dir.mkdir()
+    records_dir = tmp_path / "runtime" / "records"
+    records_dir.mkdir(parents=True)
+    conversations_path = records_dir / "conversations.jsonl"
+    session_id = "remote-session"
+    conversations_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "session_id": session_id,
+                        "client_session_id": session_id,
+                        "timestamp": "2026-07-28 16:15:45",
+                        "turn": 2,
+                        "selected_skill_names": [
+                            "source-parser-state-machine-oob",
+                            "elf-cwe120-plt-analysis",
+                        ],
+                        "skill_injection": {
+                            "selected_skill_names": [
+                                "source-parser-state-machine-oob",
+                                "elf-cwe120-plt-analysis",
+                            ],
+                            "skill_prompt_hash": "abc123",
+                            "attribution_eligible": True,
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "session_id": session_id,
+                        "client_session_id": session_id,
+                        "timestamp": "2026-07-28 16:19:43",
+                        "turn": 12,
+                        "selected_skill_names": [],
+                        "skill_injection": {
+                            "selected_skill_names": [],
+                            "skill_prompt_hash": "abc123",
+                            "attribution_eligible": False,
+                        },
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    final_path.write_text(
+        json.dumps(
+            {
+                "case_id": "demo-case",
+                "run": {
+                    "start": "2026-07-28T08:15:35+00:00",
+                    "end": "2026-07-28T08:20:01+00:00",
+                },
+                "score": 8.0,
+                "max_score": 10.0,
+                "checks": {},
+                "validation": {"status": "passed", "checks": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr("evaluation.runs.run_remote_case._repo_root", lambda: tmp_path)
+    enriched_path = enrich_downloaded_final(
+        case={"id": "demo-case"},
+        downloaded_artifacts={"final": str(final_path)},
+        local_session_dir=session_dir,
+    )
+
+    assert enriched_path is not None
+    enriched = json.loads(Path(enriched_path).read_text(encoding="utf-8"))
+    assert enriched["selected_skill_names"] == [
+        "source-parser-state-machine-oob",
+        "elf-cwe120-plt-analysis",
+    ]
+    assert enriched["skill_injection"]["turn"] == 2
 
 
 def _write_evolution_record(path: Path) -> None:

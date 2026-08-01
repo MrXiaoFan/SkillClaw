@@ -60,6 +60,134 @@ def _load_optional_json(path: Path | None) -> Any:
         return rows
 
 
+def _as_clean_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item).strip()]
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def _first_non_empty_list(*values: Any) -> list[str]:
+    for value in values:
+        cleaned = _as_clean_list(value)
+        if cleaned:
+            return cleaned
+    return []
+
+
+def _first_non_empty_text(*values: Any) -> str:
+    for value in values:
+        if isinstance(value, list):
+            text = "\n".join(str(item) for item in value if str(item).strip()).strip()
+        else:
+            text = str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _extract_json_object_from_text(text: str) -> dict[str, Any]:
+    stripped = str(text or "").lstrip("\ufeff").strip()
+    if not stripped:
+        return {}
+    try:
+        obj = json.loads(stripped)
+        return obj if isinstance(obj, dict) else {}
+    except json.JSONDecodeError:
+        pass
+    if "```" in stripped:
+        parts = stripped.split("```")
+        for idx, part in enumerate(parts):
+            candidate = part
+            if idx % 2 == 1 and candidate.lstrip().lower().startswith("json"):
+                candidate = candidate.lstrip()[4:]
+            candidate = candidate.strip()
+            if not candidate:
+                continue
+            try:
+                obj = json.loads(candidate)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                return obj
+    decoder = json.JSONDecoder()
+    for idx, char in enumerate(stripped):
+        if char != "{":
+            continue
+        try:
+            obj, _ = decoder.raw_decode(stripped[idx:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            return obj
+    return {}
+
+
+def _extract_agent_json(final_record: dict[str, Any]) -> dict[str, Any]:
+    direct = final_record.get("agent_json")
+    if isinstance(direct, dict):
+        return direct
+    predictions = final_record.get("predictions")
+    if not isinstance(predictions, dict):
+        return {}
+    raw_text_items = predictions.get("raw_text")
+    if not isinstance(raw_text_items, list):
+        return {}
+    for item in raw_text_items:
+        obj = _extract_json_object_from_text(str(item or ""))
+        if obj:
+            return obj
+    return {}
+
+
+def normalize_prediction_fields(final_record: dict[str, Any]) -> dict[str, Any]:
+    record = dict(final_record)
+    predictions = record.get("predictions")
+    prediction_map = predictions if isinstance(predictions, dict) else {}
+    agent_json = _extract_agent_json(record)
+    if agent_json and not isinstance(record.get("agent_json"), dict):
+        record["agent_json"] = agent_json
+
+    record["predicted_cves"] = _first_non_empty_list(
+        record.get("predicted_cves"),
+        agent_json.get("predicted_cves"),
+        agent_json.get("predicted_cve"),
+        agent_json.get("cve"),
+        prediction_map.get("cves"),
+    )
+    record["predicted_files"] = _first_non_empty_list(
+        record.get("predicted_files"),
+        agent_json.get("predicted_files"),
+        agent_json.get("predicted_file"),
+        agent_json.get("file"),
+        prediction_map.get("files"),
+    )
+    record["predicted_functions"] = _first_non_empty_list(
+        record.get("predicted_functions"),
+        agent_json.get("predicted_functions"),
+        agent_json.get("predicted_function"),
+        agent_json.get("function"),
+        prediction_map.get("functions"),
+    )
+    record["root_cause"] = _first_non_empty_text(
+        record.get("root_cause"),
+        agent_json.get("root_cause"),
+        agent_json.get("analysis"),
+    )
+    record["evidence"] = _first_non_empty_text(
+        record.get("evidence"),
+        agent_json.get("evidence"),
+        prediction_map.get("evidence"),
+    )
+    record["confidence"] = _first_non_empty_text(
+        record.get("confidence"),
+        agent_json.get("confidence"),
+    )
+    return record
+
+
 def _looks_like_session_snapshot(value: dict[str, Any]) -> bool:
     return isinstance(value.get("turns"), list) and bool(str(value.get("session_id") or "").strip())
 
@@ -135,18 +263,48 @@ def _normalize_injection_rows(value: Any) -> list[dict[str, Any]]:
     return rows
 
 
+def _row_selected_skill_names(row: dict[str, Any]) -> list[str]:
+    selected = row.get("selected_skill_names")
+    if isinstance(selected, list):
+        return [str(item) for item in selected if str(item).strip()]
+    nested = row.get("skill_injection")
+    if isinstance(nested, dict):
+        selected = nested.get("selected_skill_names")
+        if isinstance(selected, list):
+            return [str(item) for item in selected if str(item).strip()]
+    return []
+
+
+def _row_attribution_eligible(row: dict[str, Any]) -> bool | None:
+    if "attribution_eligible" in row:
+        return bool(row.get("attribution_eligible"))
+    nested = row.get("skill_injection")
+    if isinstance(nested, dict) and "attribution_eligible" in nested:
+        return bool(nested.get("attribution_eligible"))
+    return None
+
+
 def _select_injection(value: Any, session_id: str) -> dict[str, Any] | None:
     candidates = _normalize_injection_rows(value)
     if session_id:
-        for item in reversed(candidates):
-            candidate_ids = {
+        candidates = [
+            item
+            for item in candidates
+            if session_id
+            in {
                 str(item.get("session_id") or ""),
                 str(item.get("client_session_id") or ""),
             }
-            if session_id in candidate_ids:
-                return item
+        ]
+    if not candidates:
         return None
-    return candidates[-1] if candidates else None
+
+    attributable = [item for item in candidates if _row_attribution_eligible(item) is True]
+    pool = attributable or candidates
+    with_selected_skills = [item for item in pool if _row_selected_skill_names(item)]
+    if with_selected_skills:
+        pool = with_selected_skills
+    return pool[-1]
 
 
 def _select_injection_history(value: Any, session_id: str) -> list[dict[str, Any]]:
@@ -282,6 +440,7 @@ def attach_injection(
     injection_value: Any,
     session_id: str = "",
 ) -> dict[str, Any]:
+    final_record = normalize_prediction_fields(final_record)
     effective_session_id = session_id or str(final_record.get("session_id") or "")
     session_id_source = "explicit" if effective_session_id else "missing"
     if not effective_session_id:
