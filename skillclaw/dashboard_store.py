@@ -23,6 +23,16 @@ def _json_loads(raw: str | None, default: Any) -> Any:
         return default
 
 
+def _snapshot_replay_gate_jobs(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    primary = snapshot.get("replay_gate_jobs")
+    if isinstance(primary, list):
+        return [item for item in primary if isinstance(item, dict)]
+    legacy = snapshot.get("validation_jobs")
+    if isinstance(legacy, list):
+        return [item for item in legacy if isinstance(item, dict)]
+    return []
+
+
 class DashboardStore:
     """Materialized dashboard snapshot stored in SQLite."""
 
@@ -274,7 +284,8 @@ class DashboardStore:
                     ),
                 )
 
-            for job in snapshot.get("validation_jobs") or []:
+            replay_gate_jobs = _snapshot_replay_gate_jobs(snapshot)
+            for job in replay_gate_jobs:
                 conn.execute(
                     """
                     INSERT INTO validation_jobs (
@@ -308,7 +319,8 @@ class DashboardStore:
             meta["generated_at"] = str(snapshot.get("generated_at", "") or "")
             meta["skill_count"] = len(snapshot.get("skills") or [])
             meta["session_count"] = len(snapshot.get("sessions") or [])
-            meta["validation_job_count"] = len(snapshot.get("validation_jobs") or [])
+            meta["replay_gate_job_count"] = len(replay_gate_jobs)
+            meta["validation_job_count"] = len(replay_gate_jobs)
             for key, value in meta.items():
                 conn.execute(
                     "INSERT INTO meta (key, value) VALUES (?, ?)",
@@ -319,7 +331,8 @@ class DashboardStore:
             "generated_at": str(snapshot.get("generated_at", "") or ""),
             "skills": len(snapshot.get("skills") or []),
             "sessions": len(snapshot.get("sessions") or []),
-            "validation_jobs": len(snapshot.get("validation_jobs") or []),
+            "replay_gate_jobs": len(replay_gate_jobs),
+            "validation_jobs": len(replay_gate_jobs),
             "warnings": list((snapshot.get("meta") or {}).get("warnings") or []),
         }
 
@@ -553,7 +566,7 @@ class DashboardStore:
         ]
         return payload
 
-    def list_validation_jobs(
+    def list_replay_gate_jobs(
         self,
         *,
         status: str = "",
@@ -585,6 +598,14 @@ class DashboardStore:
             for row in rows
         ]
 
+    def list_validation_jobs(
+        self,
+        *,
+        status: str = "",
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
+        return self.list_replay_gate_jobs(status=status, limit=limit)
+
     def get_overview(self) -> dict[str, Any]:
         self.initialize()
         with self._connect() as conn:
@@ -593,8 +614,8 @@ class DashboardStore:
                 "local_skills": int(conn.execute("SELECT COUNT(*) FROM skills WHERE has_local = 1").fetchone()[0]),
                 "shared_skills": int(conn.execute("SELECT COUNT(*) FROM skills WHERE has_remote = 1").fetchone()[0]),
                 "sessions": int(conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0]),
-                "validation_jobs": int(conn.execute("SELECT COUNT(*) FROM validation_jobs").fetchone()[0]),
-                "open_validation_jobs": int(
+                "replay_gate_jobs": int(conn.execute("SELECT COUNT(*) FROM validation_jobs").fetchone()[0]),
+                "open_replay_gate_jobs": int(
                     conn.execute(
                         "SELECT COUNT(*) FROM validation_jobs WHERE status IN ('pending', 'review')"
                     ).fetchone()[0]
@@ -610,6 +631,8 @@ class DashboardStore:
                     conn.execute("SELECT COALESCE(SUM(modified_count), 0) FROM skills").fetchone()[0]
                 ),
             }
+            counts["validation_jobs"] = counts["replay_gate_jobs"]
+            counts["open_validation_jobs"] = counts["open_replay_gate_jobs"]
             top_skills = conn.execute(
                 """
                 SELECT *

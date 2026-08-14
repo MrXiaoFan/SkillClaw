@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Build evolver-ready skill feedback bundles from final experiment records.
 
 The gate report is good for human triage.  This bundle is a stricter machine
@@ -16,10 +16,11 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from evaluation.validation.core import classify_skill_role
+    from evaluation.confirmation.core import classify_skill_role
 except ImportError:  # pragma: no cover - direct script execution.
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-    from evaluation.validation.core import classify_skill_role
+    from evaluation.confirmation.core import classify_skill_role
+NO_SKILL_KEY = "__no_skill__"
 
 
 def _load_json(path: Path) -> Any:
@@ -80,14 +81,17 @@ def _feedback(record: dict[str, Any]) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def _validation(record: dict[str, Any]) -> dict[str, Any]:
+def _confirmation(record: dict[str, Any]) -> dict[str, Any]:
+    confirmation = record.get("confirmation")
+    if isinstance(confirmation, dict) and str(confirmation.get("status") or "").strip():
+        return confirmation
     value = record.get("validation")
     return value if isinstance(value, dict) else {}
 
 
-def _validation_checks(record: dict[str, Any]) -> list[dict[str, Any]]:
-    validation = _validation(record)
-    checks = validation.get("checks")
+def _confirmation_checks(record: dict[str, Any]) -> list[dict[str, Any]]:
+    confirmation = _confirmation(record)
+    checks = confirmation.get("checks")
     return [item for item in checks if isinstance(item, dict)] if isinstance(checks, list) else []
 
 
@@ -107,7 +111,7 @@ def _normalized(record: dict[str, Any]) -> float | None:
 
 
 def _record_evidence(record: dict[str, Any]) -> dict[str, Any]:
-    validation = _validation(record)
+    confirmation = _confirmation(record)
     feedback = _feedback(record)
     validator_checks = [
         {
@@ -116,7 +120,7 @@ def _record_evidence(record: dict[str, Any]) -> dict[str, Any]:
             "status": item.get("status"),
             "allow_failure": bool(item.get("allow_failure")),
         }
-        for item in _validation_checks(record)
+        for item in _confirmation_checks(record)
     ]
     return {
         "case_id": record.get("case_id"),
@@ -129,7 +133,8 @@ def _record_evidence(record: dict[str, Any]) -> dict[str, Any]:
         "feedback_decision": feedback.get("decision"),
         "suggested_action": feedback.get("suggested_action"),
         "quality_flags": list(feedback.get("quality_flags") or []),
-        "validation_status": validation.get("status"),
+        "confirmation_status": confirmation.get("status"),
+        "validation_status": confirmation.get("status"),
         "hits": {
             "cve": _hit(record, "cve"),
             "file": _hit(record, "file"),
@@ -191,6 +196,7 @@ def _new_bundle(skill: str, gate: dict[str, Any] | None) -> dict[str, Any]:
             "root_cause_success": 0,
             "validator_passed": 0,
             "validator_failed": 0,
+            "dynamic_or_bundle_confirmation_passed": 0,
             "dynamic_or_bundle_validation_passed": 0,
             "artifact_generated": 0,
             "artifact_execution_passed": 0,
@@ -271,14 +277,14 @@ def build_feedback_bundles(
             continue
         selected = _selected_skills(record)
         if not selected:
-            continue
+            selected = [NO_SKILL_KEY]
         feedback = _feedback(record)
         decision = str(feedback.get("decision") or "neutral")
         if decision not in {"positive", "neutral", "negative"}:
             decision = "neutral"
         evidence = _record_evidence(record)
         normalized = evidence.get("normalized_score")
-        validation_status = evidence.get("validation_status")
+        confirmation_status = evidence.get("confirmation_status") or evidence.get("validation_status")
         quality_flags = set(evidence.get("quality_flags") or [])
         dynamic_pass = any(
             item.get("status") == "passed" and str(item.get("type") or "") in {"bundle_script", "asan_command"}
@@ -322,11 +328,12 @@ def build_feedback_bundles(
                 dimensions["evidence_success"] += 1
             if evidence["hits"]["root_cause"]:
                 dimensions["root_cause_success"] += 1
-            if validation_status == "passed":
+            if confirmation_status == "passed":
                 dimensions["validator_passed"] += 1
-            elif validation_status == "failed":
+            elif confirmation_status == "failed":
                 dimensions["validator_failed"] += 1
             if dynamic_pass:
+                dimensions["dynamic_or_bundle_confirmation_passed"] += 1
                 dimensions["dynamic_or_bundle_validation_passed"] += 1
             if artifact_generated:
                 dimensions["artifact_generated"] += 1

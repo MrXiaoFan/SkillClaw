@@ -20,7 +20,7 @@ from skillclaw.skill_bundle import (
     bundle_tree_sha256,
 )
 
-from ..core.config import EvolveServerConfig
+from ..core.config import EvolveServerConfig, feedback_bundle_candidates
 from ..core.llm_client import AsyncLLMClient
 from ..core.skill_registry import SkillIDRegistry
 from ..core.utils import build_skill_md
@@ -231,11 +231,22 @@ class AgentEvolveServer(EvolveEngineMixin):
         raw_path = str(self.config.feedback_bundle_path or "").strip()
         if not raw_path:
             return None
-        path = Path(raw_path)
-        if not path.is_file():
+        candidates = feedback_bundle_candidates(raw_path)
+        path: Path | None = None
+        for idx, candidate in enumerate(candidates):
+            if candidate.is_file():
+                path = candidate
+                if idx > 0:
+                    logger.info(
+                        "[AgentEvolveServer] feedback bundle not found at %s; falling back to %s",
+                        candidates[0],
+                        candidate,
+                    )
+                break
+        if path is None:
             logger.info(
-                "[AgentEvolveServer] feedback bundle not found at %s; continuing without it",
-                path,
+                "[AgentEvolveServer] feedback bundle not found at any candidate path (%s); continuing without it",
+                ", ".join(str(candidate) for candidate in candidates),
             )
             return None
         try:

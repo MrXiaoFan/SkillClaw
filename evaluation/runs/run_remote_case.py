@@ -20,6 +20,8 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 try:
     from evaluation.cases.loader import load_case_definition, resolve_source_root
@@ -353,6 +355,104 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     return value
 
 
+def _request_json(
+    url: str,
+    *,
+    method: str = "GET",
+    api_key: str = "",
+    timeout: float = 30.0,
+    json_body: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    headers = {"Accept": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    if json_body is not None:
+        headers["Content-Type"] = "application/json"
+        data = json.dumps(json_body, ensure_ascii=False).encode("utf-8")
+    else:
+        data = b"" if method.upper() in {"POST", "PUT", "PATCH"} else None
+    request = Request(url, data=data, headers=headers, method=method.upper())
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            payload = response.read().decode("utf-8", errors="replace")
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"{method.upper()} {url} failed: HTTP {exc.code} {detail}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"{method.upper()} {url} failed: {exc.reason}") from exc
+    value = json.loads(payload) if payload else {}
+    if not isinstance(value, dict):
+        raise RuntimeError(f"{method.upper()} {url} returned non-object JSON")
+    return value
+
+
+def _parse_server_force_skills(raw_value: str) -> list[str]:
+    parts = [str(item).strip() for item in str(raw_value or "").split(",")]
+    return [item for item in parts if item]
+
+
+def _load_server_inline_skills(path: Path | None) -> list[dict[str, Any]]:
+    if path is None:
+        return []
+    value = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
+    if isinstance(value, dict) and isinstance(value.get("inline_skills"), list):
+        value = value["inline_skills"]
+    elif isinstance(value, dict) and isinstance(value.get("candidate_skill"), dict):
+        value = [value["candidate_skill"]]
+    elif isinstance(value, dict):
+        value = [value]
+    if not isinstance(value, list):
+        raise ValueError(f"{path} must contain a skill object, a skill list, or an inline_skills wrapper")
+    skills: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        skills.append(item)
+    return skills
+
+
+def _build_session_override_payload(args: argparse.Namespace) -> dict[str, Any] | None:
+    disable_skills = bool(getattr(args, "server_disable_skills", False))
+    forced_skill_names = _parse_server_force_skills(str(getattr(args, "server_force_skills", "") or ""))
+    inline_skill_path = getattr(args, "server_inline_skill_json", None)
+    inline_skills = _load_server_inline_skills(inline_skill_path) if inline_skill_path else []
+    mode_count = sum(1 for enabled in (disable_skills, bool(forced_skill_names), bool(inline_skills)) if enabled)
+    if mode_count == 0:
+        return None
+    if mode_count > 1:
+        raise ValueError("Only one server override mode may be used at a time")
+    payload: dict[str, Any] = {
+        "note": str(getattr(args, "server_override_note", "") or "").strip(),
+    }
+    if disable_skills:
+        payload["disable_skills"] = True
+    elif forced_skill_names:
+        payload["forced_skill_names"] = forced_skill_names
+    else:
+        payload["inline_skills"] = inline_skills
+    return payload
+
+
+def _register_session_override(
+    *,
+    session_id: str,
+    payload: dict[str, Any] | None,
+    skillclaw_url: str,
+    skillclaw_key: str,
+) -> dict[str, Any] | None:
+    if payload is None:
+        return None
+    if not skillclaw_url.strip():
+        raise ValueError("skillclaw_url is required when using a server-side session override")
+    return _request_json(
+        f"{skillclaw_url.rstrip('/')}/v1/session-overrides/{session_id}",
+        method="POST",
+        api_key=skillclaw_key,
+        timeout=30.0,
+        json_body=payload,
+    )
+
+
 def _sync_local_manifest_with_final(manifest_path: Path, final_record: dict[str, Any]) -> None:
     if not manifest_path.is_file():
         return
@@ -423,6 +523,20 @@ def enrich_downloaded_final(
     return str(final_path)
 
 
+def _persist_evolution_handoff(enriched_path: str | None, evolution_handoff: dict[str, Any] | None) -> None:
+    if not enriched_path or not evolution_handoff:
+        return
+    path = Path(enriched_path)
+    if not path.is_file():
+        return
+    try:
+        record = _load_json_object(path)
+    except Exception:
+        return
+    record["evolution_handoff"] = evolution_handoff
+    path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def _handoff_after_run(args: argparse.Namespace, repo_root: Path, enriched_path: str | None) -> dict[str, Any] | None:
     if not args.evolve_after_run or not enriched_path:
         return None
@@ -441,6 +555,12 @@ def prepare_manual_run(args: argparse.Namespace) -> dict[str, Any]:
     case_id = str(case.get("case_id") or args.case.stem)
     run_id = args.run_id or make_run_id(case_id, args.mode)
     client_session_id = _session_id_for_run(run_id, args.session_id)
+    session_override = _register_session_override(
+        session_id=client_session_id,
+        payload=_build_session_override_payload(args),
+        skillclaw_url=args.skillclaw_url or "http://127.0.0.1:30000",
+        skillclaw_key=args.skillclaw_key or os.environ.get("SKILLCLAW_API_KEY", ""),
+    )
     config = RemoteExperimentVmConfig.from_args(args)
 
     with RemoteExperimentVmClient(config) as client:
@@ -488,6 +608,7 @@ def prepare_manual_run(args: argparse.Namespace) -> dict[str, Any]:
         "action": "prepare-manual",
         "run_id": run_id,
         "client_session_id": client_session_id,
+        "session_override": session_override,
         "sync": sync_result,
         "prepare": prepare_result,
         "render_prompt": render_result,
@@ -522,6 +643,7 @@ def _download_artifacts(
         "raw": remote_raw_path or layout.remote_raw_path,
         "final": _join_remote(remote_output_dir, f"{layout.run_id}-final.json"),
         "score": _join_remote(remote_output_dir, f"{layout.run_id}-score.json"),
+        "confirmation": _join_remote(remote_output_dir, f"{layout.run_id}-confirmation.json"),
         "validation": _join_remote(remote_output_dir, f"{layout.run_id}-validation.json"),
         "agent_json": _join_remote(remote_output_dir, f"{layout.run_id}-agent.json"),
         "manifest": _join_remote(remote_output_dir, f"{layout.run_id}-manifest.json"),
@@ -590,6 +712,7 @@ def finalize_manual_run(args: argparse.Namespace) -> dict[str, Any]:
         local_session_dir=args.local_session_dir,
     )
     evolution_handoff = _handoff_after_run(args, repo_root, enriched_path)
+    _persist_evolution_handoff(enriched_path, evolution_handoff)
     return {
         "action": "finalize-manual",
         "run_id": run_id,
@@ -609,6 +732,12 @@ def run_auto(args: argparse.Namespace) -> dict[str, Any]:
     case_id = str(case.get("case_id") or args.case.stem)
     run_id = args.run_id or make_run_id(case_id, args.mode)
     client_session_id = _session_id_for_run(run_id, args.session_id)
+    session_override = _register_session_override(
+        session_id=client_session_id,
+        payload=_build_session_override_payload(args),
+        skillclaw_url=args.skillclaw_url or "http://127.0.0.1:30000",
+        skillclaw_key=args.skillclaw_key or os.environ.get("SKILLCLAW_API_KEY", ""),
+    )
     config = RemoteExperimentVmConfig.from_args(args)
     with RemoteExperimentVmClient(config) as client:
         remote_home = _get_remote_home(client)
@@ -658,10 +787,12 @@ def run_auto(args: argparse.Namespace) -> dict[str, Any]:
         local_session_dir=args.local_session_dir,
     )
     evolution_handoff = _handoff_after_run(args, repo_root, enriched_path)
+    _persist_evolution_handoff(enriched_path, evolution_handoff)
     return {
         "action": "run-auto",
         "run_id": run_id,
         "client_session_id": client_session_id,
+        "session_override": session_override,
         "sync": sync_result,
         "remote_command": command,
         "run_result": run_result,
@@ -699,6 +830,12 @@ def _build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--mode", default="blind-skillclaw-inline-guarded")
     prepare.add_argument("--run-id", default="")
     prepare.add_argument("--session-id", default="", help="Existing Claude session UUID; omitted for a new blind run.")
+    prepare.add_argument("--skillclaw-url", default="http://127.0.0.1:30000")
+    prepare.add_argument("--skillclaw-key", default="")
+    prepare.add_argument("--server-disable-skills", action="store_true")
+    prepare.add_argument("--server-force-skills", default="", help="Comma-separated live skill names to force for this session.")
+    prepare.add_argument("--server-inline-skill-json", type=Path, default=None, help="JSON file containing one candidate skill or a list of inline skills.")
+    prepare.add_argument("--server-override-note", default="")
 
     finalize = subparsers.add_parser(
         "finalize-manual",
@@ -731,6 +868,10 @@ def _build_parser() -> argparse.ArgumentParser:
     auto.add_argument("--skillclaw-url", default="")
     auto.add_argument("--skillclaw-key", default="")
     auto.add_argument("--expected-skill-count", type=int, default=None)
+    auto.add_argument("--server-disable-skills", action="store_true")
+    auto.add_argument("--server-force-skills", default="", help="Comma-separated live skill names to force for this session.")
+    auto.add_argument("--server-inline-skill-json", type=Path, default=None, help="JSON file containing one candidate skill or a list of inline skills.")
+    auto.add_argument("--server-override-note", default="")
     auto.add_argument(
         "--evolve-after-run",
         action="store_true",

@@ -44,7 +44,8 @@ def _selected_skills(record: dict[str, Any]) -> str:
 
 
 def _record_view(path: Path, record: dict[str, Any]) -> dict[str, Any]:
-    validation = record.get("validation") if isinstance(record.get("validation"), dict) else {}
+    confirmation = record.get("confirmation") if isinstance(record.get("confirmation"), dict) else {}
+    validation = confirmation if confirmation else (record.get("validation") if isinstance(record.get("validation"), dict) else {})
     feedback = record.get("feedback") if isinstance(record.get("feedback"), dict) else {}
     return {
         "path": str(path.resolve()),
@@ -55,6 +56,7 @@ def _record_view(path: Path, record: dict[str, Any]) -> dict[str, Any]:
         "score": record.get("score"),
         "max_score": record.get("max_score"),
         "score_text": _score_text(record),
+        "confirmation": str(validation.get("status") or ""),
         "validation": str(validation.get("status") or ""),
         "skill_relevance": str((record.get("skill_relevance") or {}).get("status") or ""),
         "decision": str(feedback.get("decision") or ""),
@@ -122,7 +124,7 @@ def build_paired_rows(manifest: dict[str, Any], record_views: list[dict[str, Any
             if matched is None:
                 row[f"{prefix}_status"] = "missing"
                 row[f"{prefix}_score_text"] = ""
-                row[f"{prefix}_validation"] = ""
+                row[f"{prefix}_confirmation"] = ""
                 row[f"{prefix}_skill_relevance"] = ""
                 row[f"{prefix}_decision"] = ""
                 row[f"{prefix}_action"] = ""
@@ -133,7 +135,7 @@ def build_paired_rows(manifest: dict[str, Any], record_views: list[dict[str, Any
 
             row[f"{prefix}_status"] = "present"
             row[f"{prefix}_score_text"] = matched.get("score_text", "")
-            row[f"{prefix}_validation"] = matched.get("validation", "")
+            row[f"{prefix}_confirmation"] = matched.get("confirmation", matched.get("validation", ""))
             row[f"{prefix}_skill_relevance"] = matched.get("skill_relevance", "")
             row[f"{prefix}_decision"] = matched.get("decision", "")
             row[f"{prefix}_action"] = matched.get("action", "")
@@ -163,12 +165,12 @@ def write_markdown(rows: list[dict[str, Any]], manifest: dict[str, Any], out_pat
         "case_id",
         "skillclaw_inline_guarded_status",
         "skillclaw_inline_guarded_score_text",
-        "skillclaw_inline_guarded_validation",
+        "skillclaw_inline_guarded_confirmation",
         "skillclaw_inline_guarded_match_type",
         "skillclaw_inline_guarded_skill_relevance",
         "direct_deepseek_guarded_status",
         "direct_deepseek_guarded_score_text",
-        "direct_deepseek_guarded_validation",
+        "direct_deepseek_guarded_confirmation",
         "direct_deepseek_guarded_match_type",
         "score_delta_skill_minus_direct",
     ]
@@ -206,7 +208,7 @@ def write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
         "case_id",
         "skillclaw_inline_guarded_status",
         "skillclaw_inline_guarded_score_text",
-        "skillclaw_inline_guarded_validation",
+        "skillclaw_inline_guarded_confirmation",
         "skillclaw_inline_guarded_match_type",
         "skillclaw_inline_guarded_skill_relevance",
         "skillclaw_inline_guarded_decision",
@@ -215,7 +217,7 @@ def write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
         "skillclaw_inline_guarded_record",
         "direct_deepseek_guarded_status",
         "direct_deepseek_guarded_score_text",
-        "direct_deepseek_guarded_validation",
+        "direct_deepseek_guarded_confirmation",
         "direct_deepseek_guarded_match_type",
         "direct_deepseek_guarded_skill_relevance",
         "direct_deepseek_guarded_decision",

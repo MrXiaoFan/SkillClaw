@@ -1589,6 +1589,7 @@ class SkillClawAPIServer:
         self._session_last_active: dict[str, float] = {}  # session -> unix_ts
         self._session_segments: dict[str, dict[str, Any]] = {}
         self._session_inline_skill_cache: dict[str, dict[str, Any]] = {}
+        self._session_skill_overrides: dict[str, dict[str, Any]] = {}
         self._closing_sessions: set[str] = set()  # session ids currently being closed
         self._background_tasks: set[asyncio.Task] = set()  # transient async tasks (upload, submit)
         self._responses_store: dict[str, dict[str, Any]] = {}  # response_id -> stored response/history
@@ -1765,6 +1766,65 @@ class SkillClawAPIServer:
                         }
                     )
             raise HTTPException(status_code=404, detail="skill not found")
+
+        @app.get("/v1/session-overrides/{session_id}")
+        async def get_session_override(
+            session_id: str,
+            request: Request,
+            authorization: Optional[str] = Header(default=None),
+            x_api_key: Optional[str] = Header(default=None, alias="x-api-key"),
+        ):
+            owner: SkillClawAPIServer = request.app.state.owner
+            auth_header = authorization or (f"Bearer {x_api_key}" if x_api_key else None)
+            await owner._check_auth(auth_header)
+            override = copy.deepcopy(owner._session_skill_overrides.get(session_id) or {})
+            return JSONResponse(
+                content={
+                    "session_id": session_id,
+                    "has_override": bool(override),
+                    "override": override or None,
+                }
+            )
+
+        @app.post("/v1/session-overrides/{session_id}")
+        async def set_session_override(
+            session_id: str,
+            request: Request,
+            authorization: Optional[str] = Header(default=None),
+            x_api_key: Optional[str] = Header(default=None, alias="x-api-key"),
+        ):
+            owner: SkillClawAPIServer = request.app.state.owner
+            auth_header = authorization or (f"Bearer {x_api_key}" if x_api_key else None)
+            await owner._check_auth(auth_header)
+            payload = await request.json()
+            if not isinstance(payload, dict):
+                raise HTTPException(status_code=400, detail="override payload must be a JSON object")
+            override = owner._set_session_skill_override(session_id, payload)
+            return JSONResponse(
+                content={
+                    "session_id": session_id,
+                    "has_override": True,
+                    "override": override,
+                }
+            )
+
+        @app.delete("/v1/session-overrides/{session_id}")
+        async def clear_session_override(
+            session_id: str,
+            request: Request,
+            authorization: Optional[str] = Header(default=None),
+            x_api_key: Optional[str] = Header(default=None, alias="x-api-key"),
+        ):
+            owner: SkillClawAPIServer = request.app.state.owner
+            auth_header = authorization or (f"Bearer {x_api_key}" if x_api_key else None)
+            await owner._check_auth(auth_header)
+            existed = owner._clear_session_skill_override(session_id)
+            return JSONResponse(
+                content={
+                    "session_id": session_id,
+                    "cleared": existed,
+                }
+            )
 
         @app.post("/v1/chat/completions")
         async def chat_completions(
@@ -2108,6 +2168,178 @@ class SkillClawAPIServer:
         token = authorization.split(" ", 1)[1].strip()
         if token != self._expected_api_key:
             raise HTTPException(status_code=401, detail="invalid api key")
+
+    @staticmethod
+    def _normalize_inline_override_skills(raw_value: Any) -> list[dict[str, Any]]:
+        items = raw_value if isinstance(raw_value, list) else [raw_value]
+        normalized: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or "").strip()
+            if not name or name in seen:
+                continue
+            normalized.append(
+                {
+                    "name": name,
+                    "description": str(item.get("description") or "").strip(),
+                    "content": str(item.get("content") or "").strip(),
+                    "category": str(item.get("category") or "general").strip() or "general",
+                    "extra_frontmatter": item.get("extra_frontmatter") if isinstance(item.get("extra_frontmatter"), dict) else {},
+                }
+            )
+            seen.add(name)
+        return normalized
+
+    def _set_session_skill_override(self, session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        session_id = str(session_id or "").strip()
+        if not session_id:
+            raise HTTPException(status_code=400, detail="session_id is required")
+
+        disable_skills = bool(payload.get("disable_skills"))
+        forced_skill_names = [
+            str(name).strip()
+            for name in (payload.get("forced_skill_names") or [])
+            if str(name).strip()
+        ]
+        inline_skills = self._normalize_inline_override_skills(payload.get("inline_skills") or [])
+        mode_count = sum(
+            1
+            for enabled in (disable_skills, bool(forced_skill_names), bool(inline_skills))
+            if enabled
+        )
+        if mode_count != 1:
+            raise HTTPException(
+                status_code=400,
+                detail="exactly one override mode is required: disable_skills, forced_skill_names, or inline_skills",
+            )
+
+        mode = "disable" if disable_skills else "force_names" if forced_skill_names else "inline_skills"
+        override = {
+            "mode": mode,
+            "disable_skills": disable_skills,
+            "forced_skill_names": forced_skill_names,
+            "inline_skills": inline_skills,
+            "note": str(payload.get("note") or "").strip(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self._session_inline_skill_cache.pop(session_id, None)
+        self._session_skill_overrides[session_id] = override
+        logger.info(
+            "[SkillManager] registered session override session=%s mode=%s forced=%s inline=%d",
+            session_id,
+            mode,
+            ",".join(forced_skill_names)[:200],
+            len(inline_skills),
+        )
+        return copy.deepcopy(override)
+
+    def _clear_session_skill_override(self, session_id: str) -> bool:
+        session_id = str(session_id or "").strip()
+        if not session_id:
+            return False
+        existed = session_id in self._session_skill_overrides
+        self._session_skill_overrides.pop(session_id, None)
+        return existed
+
+    def _resolve_session_skill_override(
+        self,
+        *,
+        session_id: str,
+        max_skill_chars: int,
+    ) -> tuple[str, list[str], dict[str, Any]] | None:
+        if not session_id:
+            return None
+        override = self._session_skill_overrides.get(session_id)
+        if not isinstance(override, dict):
+            return None
+
+        mode = str(override.get("mode") or "").strip()
+        note = str(override.get("note") or "").strip()
+        if mode == "disable":
+            return (
+                "",
+                [],
+                {
+                    "enabled": False,
+                    "override_mode": "disable",
+                    "override_note": note,
+                    "selected_skill_names": [],
+                },
+            )
+
+        if not self.skill_manager:
+            return (
+                "",
+                [],
+                {
+                    "enabled": False,
+                    "override_mode": mode or "unknown",
+                    "override_note": note,
+                    "selected_skill_names": [],
+                    "override_error": "skill manager unavailable",
+                },
+            )
+
+        if mode == "inline_skills":
+            selected = self._normalize_inline_override_skills(override.get("inline_skills") or [])
+            skill_text = self.skill_manager.format_inline_skills_for_prompt(selected, max_chars=max_skill_chars)
+            skill_names = [str(skill.get("name") or "") for skill in selected if str(skill.get("name") or "").strip()]
+            return (
+                skill_text,
+                skill_names,
+                {
+                    "enabled": bool(skill_text),
+                    "override_mode": "inline_skills",
+                    "override_note": note,
+                    "selected_skill_names": list(skill_names),
+                    "override_requested_skill_names": list(skill_names),
+                    "override_matched_skill_names": list(skill_names),
+                    "override_unmatched_skill_names": [],
+                },
+            )
+
+        if mode == "force_names":
+            requested = [
+                str(name).strip()
+                for name in (override.get("forced_skill_names") or [])
+                if str(name).strip()
+            ]
+            skills_by_name = {
+                str(skill.get("name") or ""): skill
+                for skill in self.skill_manager.get_all_skills()
+                if isinstance(skill, dict) and str(skill.get("name") or "").strip()
+            }
+            selected = [skills_by_name[name] for name in requested if name in skills_by_name]
+            matched = [str(skill.get("name") or "") for skill in selected]
+            unmatched = [name for name in requested if name not in skills_by_name]
+            skill_text = self.skill_manager.format_inline_skills_for_prompt(selected, max_chars=max_skill_chars) if selected else ""
+            return (
+                skill_text,
+                matched,
+                {
+                    "enabled": bool(skill_text),
+                    "override_mode": "force_names",
+                    "override_note": note,
+                    "selected_skill_names": list(matched),
+                    "override_requested_skill_names": list(requested),
+                    "override_matched_skill_names": list(matched),
+                    "override_unmatched_skill_names": list(unmatched),
+                },
+            )
+
+        return (
+            "",
+            [],
+            {
+                "enabled": False,
+                "override_mode": mode or "unknown",
+                "override_note": note,
+                "selected_skill_names": [],
+                "override_error": "unsupported override mode",
+            },
+        )
 
     def _mark_request_activity(self) -> None:
         self._last_request_at = time.time()
@@ -2454,6 +2686,7 @@ class SkillClawAPIServer:
                 self._safe_create_task(self._pull_skills_from_cloud(skip_names=modified_skill_names))
             self._session_last_active.pop(session_id, None)
             self._session_inline_skill_cache.pop(session_id, None)
+            self._session_skill_overrides.pop(session_id, None)
             self._session_segments.pop(session_id, None)
             for key, meta in list(self._tui_session_meta.items()):
                 if isinstance(meta, dict) and meta.get("session_id") == session_id:
@@ -3654,6 +3887,46 @@ class SkillClawAPIServer:
         current_user_instruction = _extract_last_user_instruction(messages)
         reminder_only_turn = _is_transient_skill_reminder(current_user_instruction)
         allow_session_stability = bool(session_id and not reminder_only_turn)
+        override_result = self._resolve_session_skill_override(
+            session_id=session_id,
+            max_skill_chars=max_skill_chars,
+        )
+        if override_result is not None:
+            skill_text, skill_names, skill_injection_meta = override_result
+            all_skill_count = 0
+            try:
+                all_skill_count = len(self.skill_manager.get_all_skills())
+            except Exception:
+                all_skill_count = len(skill_names)
+            if skill_injection_meta.get("enabled") and skill_text:
+                self.skill_manager.record_injection(skill_names)
+                messages = list(messages)
+                sys_indices = [i for i, m in enumerate(messages) if m.get("role") == "system"]
+                if sys_indices:
+                    idx = sys_indices[0]
+                    existing = _flatten_message_content(messages[idx].get("content", ""))
+                    messages[idx] = {**messages[idx], "content": existing + "\n\n" + skill_text}
+                else:
+                    messages.insert(0, {"role": "system", "content": skill_text})
+            skill_injection_meta.setdefault("available_skill_count", all_skill_count)
+            skill_injection_meta.setdefault("skill_prompt_chars", len(skill_text))
+            skill_injection_meta.setdefault(
+                "skill_prompt_hash",
+                hashlib.sha256(skill_text.encode("utf-8")).hexdigest()[:16] if skill_text else "",
+            )
+            skill_injection_meta.setdefault("injection_mode", "inline-override")
+            skill_injection_meta.setdefault("top_k", None)
+            skill_injection_meta.setdefault("stable_session", False)
+            skill_injection_meta.setdefault("stable_action", "override")
+            skill_injection_meta.setdefault("stable_generation", stable_generation)
+            skill_injection_meta.setdefault("attribution_eligible", not reminder_only_turn)
+            logger.info(
+                "[SkillManager] session override mode=%s selected=%s",
+                skill_injection_meta.get("override_mode"),
+                ", ".join(skill_names)[:400],
+            )
+            return messages, skill_names, skill_injection_meta
+
         if injection_mode in {"inline", "server", "server-inline"}:
             # Local enhancement: inline selected SKILL.md content for remote
             # clients whose filesystem cannot read the server's skill paths.

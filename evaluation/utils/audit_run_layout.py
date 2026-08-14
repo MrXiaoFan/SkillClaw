@@ -13,6 +13,7 @@ RUN_SIGNAL_SUFFIXES = (
     "-final.json",
     "-final-enriched.json",
     "-final-with-injection.json",
+    "-confirmation.json",
     "-validation.json",
     "-score.json",
     "-prompt.txt",
@@ -33,19 +34,19 @@ def _looks_like_run_file(path: Path) -> bool:
 def _scan_run_directory(path: Path) -> dict[str, Any]:
     files = sorted(child.name for child in path.iterdir() if child.is_file())
     has_final = any(name.endswith(("-final.json", "-final-enriched.json", "-final-with-injection.json")) for name in files)
-    has_validation = any(name.endswith("-validation.json") for name in files)
+    has_confirmation = any(name.endswith(("-confirmation.json", "-validation.json")) for name in files)
     has_score = any(name.endswith("-score.json") for name in files)
     has_prompt = any(name.endswith("-prompt.txt") for name in files)
     has_manifest = "manifest.json" in files or any(name.endswith("-manifest.json") for name in files)
     has_run_index = "run_index.json" in files
-    quality = "complete" if has_final and (has_validation or has_score or has_manifest) else "partial"
+    quality = "complete" if has_final and (has_confirmation or has_score or has_manifest) else "partial"
     return {
         "name": path.name,
         "type": "run_directory",
         "quality": quality,
         "file_count": len(files),
         "has_final": has_final,
-        "has_validation": has_validation,
+        "has_confirmation": has_confirmation,
         "has_score": has_score,
         "has_prompt": has_prompt,
         "has_manifest": has_manifest,
@@ -99,12 +100,12 @@ def _render_markdown(report: dict[str, Any]) -> str:
         "",
         "## Run Directories",
         "",
-        "| name | quality | files | final | validation | score | manifest | run_index | prompt |",
+        "| name | quality | files | final | confirmation | score | manifest | run_index | prompt |",
         "| --- | --- | ---: | --- | --- | --- | --- | --- | --- |",
     ]
     for item in report["run_directories"]:
         lines.append(
-            "| {name} | {quality} | {file_count} | {has_final} | {has_validation} | {has_score} | {has_manifest} | {has_run_index} | {has_prompt} |".format(
+            "| {name} | {quality} | {file_count} | {has_final} | {has_confirmation} | {has_score} | {has_manifest} | {has_run_index} | {has_prompt} |".format(
                 **item
             )
         )

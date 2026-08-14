@@ -1,8 +1,8 @@
 ﻿#!/usr/bin/env python3
 """Run case-level dynamic or semi-dynamic validators.
 
-This CLI is a thin wrapper around `evaluation.validation`.  It supports multiple
-validator modes through a registry:
+This CLI is a thin wrapper around `evaluation.confirmation`. It supports multiple
+confirmation check modes through a registry:
 
 - content_match: search the final agent output for ground-truth signals
 - source_contains: check source files for required symbols/patterns
@@ -24,11 +24,11 @@ from typing import Any
 
 try:
     from evaluation.cases.loader import load_case_definition, resolve_source_root
-    from evaluation.validation.runner import run_case_validators
+    from evaluation.confirmation.runner import run_case_confirmation
 except ImportError:  # pragma: no cover - direct script execution on remote VM.
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from evaluation.cases.loader import load_case_definition, resolve_source_root
-    from evaluation.validation.runner import run_case_validators
+    from evaluation.confirmation.runner import run_case_confirmation
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -55,7 +55,7 @@ def run_validators(
 ) -> dict[str, Any]:
     """Compatibility wrapper used by tests and older scripts."""
 
-    return run_case_validators(
+    return run_case_confirmation(
         case,
         root,
         case_path=case_path,

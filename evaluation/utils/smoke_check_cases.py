@@ -1,9 +1,9 @@
 ﻿#!/usr/bin/env python3
-"""Smoke-test the benchmark validation pipeline without an LLM or VM target.
+"""Smoke-test the benchmark confirmation pipeline without an LLM or VM target.
 
 The real benchmark cases point at remote VM source trees.  This script creates
 tiny synthetic source trees that contain the ground-truth symbols needed by the
-case validators, then runs the case-level validation pipeline.  It is intended
+case confirmation checks, then runs the case-level confirmation pipeline. It is intended
 as the first command a collaborator runs after cloning the repository.
 """
 
@@ -18,11 +18,11 @@ from typing import Any
 
 try:
     from evaluation.cases.loader import load_case_definition
-    from evaluation.validation.runner import run_case_validators
+    from evaluation.confirmation.runner import run_case_confirmation
 except ImportError:  # pragma: no cover - direct script execution.
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from evaluation.cases.loader import load_case_definition
-    from evaluation.validation.runner import run_case_validators
+    from evaluation.confirmation.runner import run_case_confirmation
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -275,7 +275,7 @@ def smoke_cases(cases_dir: Path) -> list[dict[str, Any]]:
         with tempfile.TemporaryDirectory(prefix=f"skillclaw-smoke-{case_path.stem}-") as tmp:
             root = Path(tmp)
             _prepare_fixture(case, root)
-            result = run_case_validators(
+            result = run_case_confirmation(
                 case,
                 root,
                 case_path=case_path,

@@ -25,13 +25,13 @@ try:
         resolve_blind_validator_root,
         resolve_source_root,
     )
+    from evaluation.confirmation.core import assess_skill_relevance, build_feedback
+    from evaluation.confirmation.runner import run_case_confirmation
     from evaluation.runs.score_case_output import score_output
     from evaluation.postprocess.finalize_record import _select_injection, _select_injection_history
     from evaluation.postprocess.finalize_record import normalize_prediction_fields
     from evaluation.utils.check_case_runtime import check_case_environment
     from evaluation.utils.render_case_prompt import get_case_prompt
-    from evaluation.validation.core import assess_skill_relevance, build_feedback
-    from evaluation.validation.runner import run_case_validators
 except ImportError:  # pragma: no cover - direct script execution from copied folders.
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from evaluation.cases.loader import (
@@ -40,13 +40,13 @@ except ImportError:  # pragma: no cover - direct script execution from copied fo
         resolve_blind_validator_root,
         resolve_source_root,
     )
+    from evaluation.confirmation.core import assess_skill_relevance, build_feedback
+    from evaluation.confirmation.runner import run_case_confirmation
     from evaluation.runs.score_case_output import score_output
     from evaluation.postprocess.finalize_record import _select_injection, _select_injection_history
     from evaluation.postprocess.finalize_record import normalize_prediction_fields
     from evaluation.utils.check_case_runtime import check_case_environment
     from evaluation.utils.render_case_prompt import get_case_prompt
-    from evaluation.validation.core import assess_skill_relevance, build_feedback
-    from evaluation.validation.runner import run_case_validators
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -118,6 +118,7 @@ def run_paths(output_dir: Path, run_id: str) -> dict[str, Path]:
         "meta": output_dir / f"{run_id}-run.meta",
         "agent_json": output_dir / f"{run_id}-agent.json",
         "score": output_dir / f"{run_id}-score.json",
+        "confirmation": output_dir / f"{run_id}-confirmation.json",
         "validation": output_dir / f"{run_id}-validation.json",
         "preflight": output_dir / f"{run_id}-preflight.json",
         "final": output_dir / f"{run_id}-final.json",
@@ -135,7 +136,7 @@ def build_run_manifest(
     validator_root: Path,
     meta: dict[str, Any],
     score: dict[str, Any],
-    validation: dict[str, Any],
+    confirmation_result: dict[str, Any],
     final: dict[str, Any],
     paths: dict[str, Path],
 ) -> dict[str, Any]:
@@ -153,7 +154,8 @@ def build_run_manifest(
         "end": meta.get("end"),
         "score": score.get("score"),
         "max_score": score.get("max_score"),
-        "validation_status": validation.get("status"),
+        "confirmation_status": confirmation_result.get("status"),
+        "validation_status": confirmation_result.get("status"),
         "session_id": final.get("session_id") or "",
         "session_id_source": final.get("session_id_source") or "",
         "confirmation_maturity": final.get("confirmation_maturity") or "",
@@ -331,12 +333,12 @@ def build_final_record(
     model: str,
     session_id: str,
     score: dict[str, Any],
-    validation: dict[str, Any],
+    confirmation_result: dict[str, Any],
     injection_value: Any,
 ) -> dict[str, Any]:
     injection = _select_injection(injection_value, session_id)
     injection_history = _select_injection_history(injection_value, session_id)
-    confirmation = case.get("confirmation") if isinstance(case.get("confirmation"), dict) else {}
+    confirmation_spec = case.get("confirmation") if isinstance(case.get("confirmation"), dict) else {}
     selected_skills = []
     if isinstance(injection, dict):
         selected_skills = list(injection.get("selected_skill_names") or [])
@@ -355,16 +357,17 @@ def build_final_record(
         "skill_injection": injection,
         "skill_injection_history": injection_history,
         "skill_relevance": skill_relevance,
-        "validation": validation,
-        "confirmation": confirmation,
-        "confirmation_maturity": str(confirmation.get("maturity") or ""),
-        "confirmation_current_claim": str(confirmation.get("current_claim") or ""),
+        "confirmation": confirmation_result,
+        "validation": confirmation_result,
+        "confirmation_spec": confirmation_spec,
+        "confirmation_maturity": str(confirmation_spec.get("maturity") or ""),
+        "confirmation_current_claim": str(confirmation_spec.get("current_claim") or ""),
     }
     if isinstance(injection, dict) and injection.get("session_segment_id"):
         record["session_segment_id"] = str(injection["session_segment_id"])
     record["feedback"] = build_feedback(
         score_result=score,
-        validation_result=validation,
+        confirmation_result=confirmation_result,
         skill_injection=injection,
         skill_relevance=skill_relevance,
     )
@@ -472,14 +475,15 @@ def run_case(args: argparse.Namespace) -> dict[str, Any]:
     score["mode"] = args.mode
     write_json(paths["score"], score)
 
-    validation = run_case_validators(
+    confirmation_result = run_case_confirmation(
         case,
         validator_root,
         case_path=args.case,
         agent_output_path=paths["agent_json"] if agent_json is not None else paths["raw"],
         skip_commands=args.skip_commands,
     )
-    write_json(paths["validation"], validation)
+    write_json(paths["confirmation"], confirmation_result)
+    write_json(paths["validation"], confirmation_result)
 
     injection_value = load_optional_json(args.injection_json)
     if not effective_session_id:
@@ -494,7 +498,7 @@ def run_case(args: argparse.Namespace) -> dict[str, Any]:
         model=model,
         session_id=effective_session_id,
         score=score,
-        validation=validation,
+        confirmation_result=confirmation_result,
         injection_value=injection_value,
     )
     final["session_id_source"] = session_id_source
@@ -512,7 +516,7 @@ def run_case(args: argparse.Namespace) -> dict[str, Any]:
         validator_root=validator_root,
         meta=meta,
         score=score,
-        validation=validation,
+        confirmation_result=confirmation_result,
         final=final,
         paths=paths,
     )
@@ -570,7 +574,11 @@ def main(argv: list[str] | None = None) -> int:
 
     final = run_case(args)
     print(json.dumps(final, ensure_ascii=False, indent=2))
-    if args.strict_exit and final.get("validation", {}).get("status") == "failed":
+    confirmation_status = (
+        (final.get("confirmation") or {}).get("status")
+        or (final.get("validation") or {}).get("status")
+    )
+    if args.strict_exit and confirmation_status == "failed":
         return 1
     return 0
 

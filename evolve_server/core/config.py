@@ -14,6 +14,7 @@ from pathlib import Path
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _PACKAGE_DIR.parent.parent
+_DEFAULT_FEEDBACK_BUNDLE_PATH = _REPO_ROOT / "reports" / "current" / "skill_feedback_bundle.json"
 _DEFAULT_AGENT_EVOLVE_BASE_URL = "https://api.openai.com/v1"
 _DEFAULT_AGENT_EVOLVE_MODEL = "gpt-5.4"
 _NACOS_PUBLISH_MODES = {"draft", "review", "direct"}
@@ -66,6 +67,18 @@ def _infer_storage_backend(endpoint: str, bucket: str, local_root: str) -> str:
 def _normalize_choice(value: str, allowed: set[str], default: str) -> str:
     normalized = str(value or "").strip().lower()
     return normalized if normalized in allowed else default
+
+
+def feedback_bundle_candidates(raw_path: str | Path | None) -> list[Path]:
+    """Return configured/default feedback bundle paths in fallback order."""
+    candidates: list[Path] = []
+    configured = str(raw_path or "").strip()
+    if configured:
+        candidates.append(Path(configured))
+    default = _DEFAULT_FEEDBACK_BUNDLE_PATH
+    if not candidates or candidates[0].resolve() != default.resolve():
+        candidates.append(default)
+    return candidates
 
 
 @dataclass
@@ -162,9 +175,7 @@ class EvolveServerConfig:
         )
         self.validation_max_rejections = max(1, int(self.validation_max_rejections or 1))
         if not self.feedback_bundle_path:
-            self.feedback_bundle_path = str(
-                _REPO_ROOT / "reports" / "current" / "skill_feedback_bundle.json"
-            )
+            self.feedback_bundle_path = str(_DEFAULT_FEEDBACK_BUNDLE_PATH)
         if self.engine == "agent":
             if not self.llm_model or self.llm_model == "gpt-4o":
                 self.llm_model = _DEFAULT_AGENT_EVOLVE_MODEL

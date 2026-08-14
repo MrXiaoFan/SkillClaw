@@ -242,6 +242,15 @@ _INLINE_DESCRIPTION_EXCLUSION_MARKERS = (
     " do not use for:",
     " excluded:",
 )
+# Matches conditional-exclusion clauses embedded inside the positive
+# description, e.g. "it does NOT mention source code, crafted input,
+# or any file-format parser."  Terms inside these clauses are negative
+# (the skill explicitly says it should NOT be used when they appear),
+# so they must be moved to the negative part to avoid false matches.
+_NEGATIVE_CLAUSE_RE = re.compile(
+    r"(?:it\s+)?does\s+not\s+(?:mention|perform|contain|include|require|handle|support)\b[^.]*\.",
+    re.IGNORECASE,
+)
 _VULNERABILITY_TASK_TERMS = {
     "vulnerability",
     "vulnerabilities",
@@ -439,8 +448,25 @@ def _split_trigger_description(text: str) -> tuple[str, str]:
     for marker in _INLINE_DESCRIPTION_EXCLUSION_MARKERS:
         idx = lowered.find(marker)
         if idx >= 0:
-            return text[:idx], text[idx + 1 :]
-    return str(text or ""), ""
+            positive = text[:idx]
+            negative = text[idx + 1 :]
+            break
+    else:
+        positive = str(text or "")
+        negative = ""
+
+    # Extract "does not mention/perform/etc." clauses from the positive
+    # part and move them to the negative part.  Skills often phrase
+    # exclusions as conditional requirements (e.g. "it does NOT mention
+    # source code, crafted input"), and without this extraction those
+    # terms would be treated as positive, causing false skill matches on
+    # general vulnerability-analysis prompts.
+    extracted = _NEGATIVE_CLAUSE_RE.findall(positive)
+    if extracted:
+        positive = _NEGATIVE_CLAUSE_RE.sub("", positive)
+        negative = negative + " " + " ".join(extracted)
+
+    return positive, negative
 
 # ------------------------------------------------------------------ #
 # Frontmatter parser                                                   #

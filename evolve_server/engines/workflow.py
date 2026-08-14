@@ -1,4 +1,4 @@
-"""
+﻿"""
 Core orchestrator for the current session-level evolve_server pipeline.
 
 Active flow:
@@ -16,6 +16,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 import time
 import uuid
 from datetime import datetime, timezone
@@ -25,9 +26,9 @@ from typing import Any, Optional
 from fastapi import FastAPI, HTTPException, Request
 
 from skillclaw.skill_bundle import bundle_tree_sha256
-from skillclaw.validation_store import ValidationStore
+from skillclaw.replay_gate_store import ReplayGateStore
 
-from ..core.config import EvolveServerConfig
+from ..core.config import EvolveServerConfig, feedback_bundle_candidates
 from ..core.constants import NO_SKILL_KEY, DecisionAction
 from ..core.llm_client import AsyncLLMClient
 from ..core.skill_registry import SkillIDRegistry
@@ -57,6 +58,9 @@ from .common import EvolveEngineMixin
 
 logger = logging.getLogger(__name__)
 
+_STALE_CLOSED_SESSION_GRACE_SECONDS = 2 * 60 * 60
+_REPLAY_BASH_ONLY_RE = re.compile(r"^\s*(?:<bash>.*?</bash>|```bash.*?```)\s*$", re.DOTALL | re.IGNORECASE)
+
 
 class EvolveServer(EvolveEngineMixin):
     """Session-level evolve server backed by shared object storage."""
@@ -79,7 +83,7 @@ class EvolveServer(EvolveEngineMixin):
             max_tokens=config.llm_max_tokens,
             temperature=config.llm_temperature,
         )
-        self._validation_store = ValidationStore(
+        self._validation_store = ReplayGateStore(
             backend=self.config.storage_backend,
             endpoint=self.config.storage_endpoint,
             bucket=self.config.storage_bucket,
@@ -103,11 +107,22 @@ class EvolveServer(EvolveEngineMixin):
         raw_path = str(self.config.feedback_bundle_path or "").strip()
         if not raw_path:
             return None
-        path = Path(raw_path)
-        if not path.is_file():
+        candidates = feedback_bundle_candidates(raw_path)
+        path: Path | None = None
+        for idx, candidate in enumerate(candidates):
+            if candidate.is_file():
+                path = candidate
+                if idx > 0:
+                    logger.info(
+                        "[EvolveServer] feedback bundle not found at %s; falling back to %s",
+                        candidates[0],
+                        candidate,
+                    )
+                break
+        if path is None:
             logger.info(
-                "[EvolveServer] feedback bundle not found at %s; continuing without it",
-                path,
+                "[EvolveServer] feedback bundle not found at any candidate path (%s); continuing without it",
+                ", ".join(str(candidate) for candidate in candidates),
             )
             return None
         try:
@@ -139,6 +154,30 @@ class EvolveServer(EvolveEngineMixin):
             if str(item.get("skill") or "").strip()
         }
 
+    @staticmethod
+    def _parse_queue_timestamp(raw_value: Any) -> datetime | None:
+        text = str(raw_value or "").strip()
+        if not text:
+            return None
+        normalized = text.replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    @classmethod
+    def _is_stale_closed_session(cls, session: dict[str, Any]) -> bool:
+        closed_at = cls._parse_queue_timestamp(
+            session.get("segment_closed_at") or session.get("timestamp") or session.get("segment_started_at")
+        )
+        if closed_at is None:
+            return False
+        age_seconds = (datetime.now(timezone.utc) - closed_at).total_seconds()
+        return age_seconds >= _STALE_CLOSED_SESSION_GRACE_SECONDS
+
     async def _load_validated_pairs(
         self,
     ) -> tuple[list[dict[str, Any]], list[str], list[str], dict[str, int]]:
@@ -157,6 +196,8 @@ class EvolveServer(EvolveEngineMixin):
         ready_session_keys: list[str] = []
         ready_feedback_keys: list[str] = []
         closed_unmatched = 0
+        stale_closed_unmatched = 0
+        stale_session_keys: list[str] = []
         active_sessions = 0
         matched_segments: set[str] = set()
         for key in session_keys:
@@ -175,7 +216,11 @@ class EvolveServer(EvolveEngineMixin):
                 or str(item[1].get("client_session_id") or "").strip() == client_session_id
             ]
             if not matches:
-                closed_unmatched += 1
+                if self._is_stale_closed_session(session):
+                    stale_closed_unmatched += 1
+                    stale_session_keys.append(key)
+                else:
+                    closed_unmatched += 1
                 continue
             paired = dict(session)
             paired["validator_feedback"] = [payload for _, payload in matches]
@@ -193,8 +238,10 @@ class EvolveServer(EvolveEngineMixin):
             "ready_pairs": len(ready_sessions),
             "active_sessions": active_sessions,
             "closed_sessions_waiting_feedback": closed_unmatched,
+            "stale_closed_sessions_without_feedback": stale_closed_unmatched,
             "feedback_waiting_session": unmatched_feedback,
         }
+        self._stale_session_keys = stale_session_keys
         return ready_sessions, ready_session_keys, ready_feedback_keys, queue
 
     @classmethod
@@ -683,11 +730,110 @@ class EvolveServer(EvolveEngineMixin):
             evidence.append(item)
         return evidence
 
-    def _build_replay_cases(self, sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        preferred: list[dict[str, Any]] = []
-        fallback: list[dict[str, Any]] = []
+    _case_registry: dict[str, dict[str, Any]] | None = None
 
-        for session in sessions[:6]:
+    def _load_case_registry(self) -> dict[str, dict[str, Any]]:
+        """Load case definitions from benchmarks/cases/*.json (cached)."""
+        if self._case_registry is not None:
+            return self._case_registry
+        import glob
+        registry: dict[str, dict[str, Any]] = {}
+        # Resolve benchmarks/cases relative to the repo root
+        repo_root = Path(__file__).resolve().parents[2]
+        cases_dir = repo_root / "benchmarks" / "cases"
+        if not cases_dir.is_dir():
+            self._case_registry = registry
+            return registry
+        for case_file in sorted(cases_dir.glob("*.json")):
+            try:
+                case_def = json.loads(case_file.read_text(encoding="utf-8-sig", errors="replace"))
+                case_id = str(case_def.get("case_id") or case_file.stem)
+                gt = case_def.get("ground_truth") or {}
+                registry[case_id] = {
+                    "case_id": case_id,
+                    "cves": [str(c).lower() for c in (gt.get("cves") or [])],
+                    "files": [str(f).lower() for f in (gt.get("files") or [])],
+                    "functions": [str(fn).lower() for fn in (gt.get("functions") or [])],
+                    "ground_truth": gt,
+                }
+            except Exception:
+                continue
+        self._case_registry = registry
+        logger.info("[EvolveServer] loaded %d case definitions for replay matching", len(registry))
+        return registry
+
+    def _match_session_to_case(self, reference_response: str) -> tuple[str, dict[str, Any]]:
+        """Match a session's reference response to a case definition by identifier overlap.
+
+        Returns (case_id, ground_truth) or ("", {}).
+        """
+        registry = self._load_case_registry()
+        if not registry or not reference_response:
+            return "", {}
+        text_lower = reference_response.lower()
+
+        best_case_id = ""
+        best_score = 0
+        best_gt: dict[str, Any] = {}
+
+        for case_id, info in registry.items():
+            score = 0
+            # CVE matching (highest weight)
+            for cve in info.get("cves", []):
+                if cve in text_lower:
+                    score += 3
+            # File matching
+            for f in info.get("files", []):
+                # Match on basename to handle path differences
+                basename = f.rsplit("/", 1)[-1]
+                if basename and basename in text_lower:
+                    score += 2
+            # Function matching
+            for fn in info.get("functions", []):
+                if len(fn) >= 4 and fn in text_lower:
+                    score += 1
+            if score > best_score:
+                best_score = score
+                best_case_id = case_id
+                best_gt = info.get("ground_truth", {})
+
+        if best_score >= 2:
+            return best_case_id, best_gt
+        return "", {}
+
+    def _build_replay_cases(self, sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        preferred: list[tuple[int, int, dict[str, Any]]] = []
+        fallback: list[tuple[int, dict[str, Any]]] = []
+
+        def _looks_like_final_answer(text: str) -> bool:
+            normalized = str(text or "").strip()
+            if not normalized:
+                return False
+            required_terms = ("predicted_cves", "predicted_files", "root_cause", "evidence")
+            return all(term in normalized for term in required_terms)
+
+        def _looks_like_shell_only_response(text: str) -> bool:
+            normalized = str(text or "").strip()
+            if not normalized:
+                return False
+            return bool(_REPLAY_BASH_ONLY_RE.match(normalized))
+
+        # Sort sessions by score ascending so low-score cases (where baseline
+        # has room to improve) enter the replay pool.  Without this the first
+        # 6 sessions are taken as-is, which biases toward high-score "final
+        # answer" turns where baseline already hits ceiling and no candidate
+        # can ever show strict improvement (candidate_mean > baseline_mean).
+        def _session_replay_score(s: dict[str, Any]) -> float:
+            judge = s.get("_judge_scores")
+            if isinstance(judge, dict) and isinstance(judge.get("overall_score"), (int, float)):
+                return float(judge["overall_score"])
+            prm = s.get("_avg_prm")
+            if isinstance(prm, (int, float)):
+                return float(prm)
+            return 1.0  # conservative: unknown-score sessions treated as high
+
+        ordered_sessions = sorted(sessions, key=_session_replay_score)
+        for session in ordered_sessions[:6]:
             session_id = str(session.get("session_id", "") or "")
             turns = session.get("turns") or []
             if not isinstance(turns, list):
@@ -699,24 +845,81 @@ class EvolveServer(EvolveEngineMixin):
                 reference_response = str(turn.get("response_text", "") or "").strip()
                 if not instruction or not reference_response:
                     continue
+                # Prefer explicit case_id from feedback envelope (authoritative).
+                # Fall back to text matching only if no envelope case_id is present.
+                envelope_case_id = ""
+                for envelope in session.get("validator_feedback") or []:
+                    if isinstance(envelope, dict):
+                        cid = str(envelope.get("case_id") or "").strip()
+                        if cid:
+                            envelope_case_id = cid
+                            break
+                if envelope_case_id:
+                    registry = self._load_case_registry()
+                    entry = registry.get(envelope_case_id)
+                    matched_case_id = envelope_case_id
+                    matched_gt = (entry or {}).get("ground_truth", {}) if entry else {}
+                    if not matched_gt:
+                        matched_gt = {}
+                else:
+                    matched_case_id, matched_gt = self._match_session_to_case(reference_response)
                 case = {
                     "session_id": session_id,
                     "turn_num": int(turn.get("turn_num", 0) or 0),
                     "instruction": instruction[:3000],
                     "reference_response": reference_response[:4000],
+                    "raw_turn_kind": str(turn.get("raw_turn_kind", "") or ""),
+                    "attribution_eligible": bool(turn.get("attribution_eligible", False)),
                     "had_tool_calls": bool(turn.get("tool_calls")),
                     "had_tool_results": bool(turn.get("tool_results") or turn.get("tool_observations")),
+                    "case_id": matched_case_id,
+                    "ground_truth": matched_gt,
                 }
-                if not case["had_tool_calls"] and not case["had_tool_results"]:
-                    preferred.append(case)
+                turn_num = int(case["turn_num"])
+                raw_turn_kind = str(case["raw_turn_kind"] or "").strip().lower()
+                attribution_eligible = bool(case["attribution_eligible"])
+                response_len = len(reference_response)
+                shell_only = _looks_like_shell_only_response(reference_response)
+                final_answer = _looks_like_final_answer(reference_response)
+
+                priority: int | None = None
+                if final_answer:
+                    priority = 0
+                elif (
+                    raw_turn_kind == "final"
+                    and attribution_eligible
+                    and not case["had_tool_calls"]
+                    and response_len >= 160
+                    and not shell_only
+                ):
+                    priority = 1
+                elif (
+                    raw_turn_kind == "final"
+                    and not case["had_tool_calls"]
+                    and response_len >= 220
+                    and not shell_only
+                ):
+                    priority = 2
+                elif (
+                    not case["had_tool_calls"]
+                    and not case["had_tool_results"]
+                    and response_len >= 320
+                    and not shell_only
+                ):
+                    priority = 3
+
+                if priority is not None:
+                    preferred.append((priority, -turn_num, case))
                 else:
-                    fallback.append(case)
-                if len(preferred) >= 3:
-                    return preferred[:3]
+                    fallback.append((-turn_num, case))
 
         if preferred:
-            return preferred[:3]
-        return fallback[:3]
+            preferred.sort(key=lambda item: (item[0], item[1]))
+            return [case for _, _, case in preferred[:3]]
+        if fallback:
+            fallback.sort(key=lambda item: item[0])
+            return [case for _, case in fallback[:3]]
+        return []
 
     def _queue_validation_job(
         self,
@@ -730,6 +933,69 @@ class EvolveServer(EvolveEngineMixin):
     ) -> dict[str, Any]:
         name = str(skill.get("name", "") or "")
         skill_id = self._id_registry.get_or_create(name)
+
+        # --- content-hash dedup (content-identical, name-agnostic) ---
+        # Compare the rendered SKILL.md of the new candidate against every
+        # existing validation job.  If an identical content hash already
+        # exists (pending or decided), skip -- regardless of skill name.
+        candidate_md = build_skill_md(skill)
+        content_hash = hashlib.sha256(candidate_md.encode("utf-8")).hexdigest()
+        for existing in self._validation_store.list_jobs():
+            existing_job_id = str(existing.get("job_id", "") or "")
+            if not existing_job_id:
+                continue
+            existing_skill = existing.get("candidate_skill")
+            if not isinstance(existing_skill, dict):
+                continue
+            existing_md = build_skill_md(existing_skill)
+            if hashlib.sha256(existing_md.encode("utf-8")).hexdigest() != content_hash:
+                continue
+            existing_name = str(existing.get("candidate_skill_name", "") or "")
+            existing_decision = self._validation_store.load_decision(existing_job_id)
+            if not existing_decision:
+                logger.info(
+                    "[EvolveServer] skip duplicate candidate (content-identical, "
+                    "name=%s vs existing=%s, pending job %s)",
+                    name, existing_name, existing_job_id,
+                )
+                return {
+                    "action": "skipped_duplicate",
+                    "proposed_action": action_type,
+                    "skill_name": name,
+                    "skill_id": skill_id,
+                    "version": None,
+                    "session_ids": [session.get("session_id", "") for session in sessions],
+                    "rationale": rationale,
+                    "source": source,
+                    "edit_summary": skill.get("edit_summary"),
+                    "uploaded": False,
+                    "validation_job_id": existing_job_id,
+                    "dedup_reason": "identical_content_pending",
+                    "dedup_existing_name": existing_name,
+                }
+            logger.info(
+                "[EvolveServer] skip duplicate candidate (content-identical, "
+                "name=%s vs existing=%s, decided job %s, status=%s)",
+                name, existing_name, existing_job_id,
+                existing_decision.get("status"),
+            )
+            return {
+                "action": "skipped_duplicate",
+                "proposed_action": action_type,
+                "skill_name": name,
+                "skill_id": skill_id,
+                "version": None,
+                "session_ids": [session.get("session_id", "") for session in sessions],
+                "rationale": rationale,
+                "source": source,
+                "edit_summary": skill.get("edit_summary"),
+                "uploaded": False,
+                "validation_job_id": existing_job_id,
+                "dedup_reason": "identical_content_decided",
+                "dedup_existing_name": existing_name,
+            }
+        # --- end dedup ---
+
         job_id = self._validation_store.make_job_id(name)
         job = {
             "job_id": job_id,
@@ -1071,8 +1337,13 @@ class EvolveServer(EvolveEngineMixin):
         self,
         sessions: list[dict],
         existing_skill_names: list[str],
+        *,
+        feedback_context: Optional[dict[str, Any]] = None,
     ) -> list[dict]:
-        result = await create_skill_from_sessions(self._llm, sessions, existing_skill_names)
+        result = await create_skill_from_sessions(
+            self._llm, sessions, existing_skill_names,
+            feedback_context=feedback_context,
+        )
         if not result or result.get("action") == DecisionAction.SKIP:
             logger.info("[EvolveServer] no-skill sessions: LLM decided to skip")
             return []
@@ -1101,8 +1372,10 @@ class EvolveServer(EvolveEngineMixin):
             "ready_pairs": 0,
             "active_sessions": 0,
             "closed_sessions_waiting_feedback": 0,
+            "stale_closed_sessions_without_feedback": 0,
             "feedback_waiting_session": 0,
         }
+        self._stale_session_keys: list[str] = []
         if self.config.publish_mode == "validated":
             sessions, session_keys, feedback_keys, queue_status = await self._load_validated_pairs()
         else:
@@ -1112,6 +1385,7 @@ class EvolveServer(EvolveEngineMixin):
         no_skill_sessions: list[dict] = []
         evolution_records: list[dict] = []
         had_processing_error = False
+        processing_errors: list[dict[str, str]] = []
         if self.config.publish_mode == "validated":
             feedback_bundle = None
             feedback_by_skill = self._paired_feedback_map(sessions)
@@ -1143,6 +1417,14 @@ class EvolveServer(EvolveEngineMixin):
                 except Exception as exc:
                     logger.error("[EvolveServer] skill '%s' evolve failed: %s", skill_name, exc)
                     had_processing_error = True
+                    processing_errors.append(
+                        {
+                            "stage": "skill_group",
+                            "skill_name": str(skill_name or ""),
+                            "error_type": type(exc).__name__,
+                            "message": str(exc),
+                        }
+                    )
                     continue
                 if record:
                     if feedback_by_skill.get(skill_name):
@@ -1157,11 +1439,22 @@ class EvolveServer(EvolveEngineMixin):
                 logger.info("[EvolveServer] processing %d no-skill sessions", len(no_skill_sessions))
                 try:
                     evolution_records.extend(
-                        await self._handle_no_skill_sessions(no_skill_sessions, existing_skill_names)
+                        await self._handle_no_skill_sessions(
+                            no_skill_sessions, existing_skill_names,
+                            feedback_context=feedback_by_skill.get(NO_SKILL_KEY),
+                        )
                     )
                 except Exception as exc:
                     logger.error("[EvolveServer] no-skill evolve failed: %s", exc)
                     had_processing_error = True
+                    processing_errors.append(
+                        {
+                            "stage": "no_skill",
+                            "skill_name": "",
+                            "error_type": type(exc).__name__,
+                            "message": str(exc),
+                        }
+                    )
         else:
             logger.info("[EvolveServer] queue empty - checking pending validation publish jobs")
 
@@ -1180,6 +1473,15 @@ class EvolveServer(EvolveEngineMixin):
                 "[EvolveServer] retaining %d session(s) in queue because this cycle had processing errors",
                 len(session_keys),
             )
+
+        # Stale closed sessions (closed > 2h without matching feedback) are cleaned
+        # unconditionally ? they will never match feedback and only accumulate.
+        if self._stale_session_keys:
+            logger.info(
+                "[EvolveServer] cleaning %d stale closed session(s) without feedback",
+                len(self._stale_session_keys),
+            )
+            await self._call_storage(delete_session_keys, self._bucket, self._stale_session_keys)
 
         elapsed = round(time.monotonic() - started_at, 1)
         uploaded_skills = sum(1 for record in all_records if record.get("uploaded"))
@@ -1207,6 +1509,7 @@ class EvolveServer(EvolveEngineMixin):
             "feedback_bundle_skill_count": len(feedback_by_skill),
             "validated_pair_queue": queue_status,
             "had_processing_error": had_processing_error,
+            "processing_errors": processing_errors,
         }
         self._append_history(summary)
         logger.info(
@@ -1331,6 +1634,8 @@ class EvolveServer(EvolveEngineMixin):
                     "engine": "workflow",
                     "running": self._running,
                     "publish_mode": self.config.publish_mode,
+                    "llm_model": self.config.llm_model,
+                    "llm_base_url": self.config.llm_base_url,
                     "feedback_bundle_path": self.config.feedback_bundle_path,
                     "pending_sessions": len(pending_keys),
                     "pending_run_feedback": len(feedback_keys),

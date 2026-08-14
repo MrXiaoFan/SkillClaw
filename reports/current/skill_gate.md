@@ -5,12 +5,8 @@
 
 | skill | gate_decision | selected_count | positive | neutral | negative | mean_score | cve_hits | file_hits | function_hits | reasons | suggestions |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| source-parser-state-machine-oob | keep | 4 | 2 | 2 | 0 | 0.875 | 4 | 3 | 3 | 2 次正向样本，平均分 0.875; 共有 1 次运行选中了该技能，但与任务并不对齐; 共有 4 次 validator 通过 | 暂时保留启用，但在提升前仍需更多案例; 增加更窄的触发条件，减少过度选中 |
-| elf-plt-reloc-sink-scan | demote | 3 | 0 | 3 | 0 | 0.833 | 3 | 2 | 2 | 共有 3 次错配选中，且没有任务对齐证据; 共有 3 次运行选中了该技能，但与任务并不对齐; 共有 3 次 validator 通过 | 收紧检索条件，或重命名技能，让它不再被当前任务族误选; 增加更窄的触发条件，减少过度选中 |
-| cwe120-analysis-verification | demote | 2 | 0 | 2 | 0 | 0.75 | 2 | 1 | 1 | 共有 2 次错配选中，且没有任务对齐证据; 共有 2 次运行选中了该技能，但与任务并不对齐; 共有 2 次 validator 通过 | 收紧检索条件，或重命名技能，让它不再被当前任务族误选; 增加更窄的触发条件，减少过度选中 |
-| elf-cwe120-plt-analysis | insufficient_evidence | 1 | 0 | 1 | 0 | 1.0 | 1 | 1 | 1 | 仅有 1 次样本，低于最少要求 2; 共有 1 次运行选中了该技能，但与任务并不对齐; 共有 1 次 validator 通过 | 先补更多 benchmark 运行，再决定是否调整其状态; 增加更窄的触发条件，减少过度选中 |
-| verify-rootfs-full-enumeration | insufficient_evidence | 1 | 0 | 1 | 0 | 1.0 | 1 | 1 | 1 | 仅有 1 次样本，低于最少要求 2; 共有 1 次运行选中了该技能，但与任务并不对齐; 共有 1 次 validator 通过 | 先补更多 benchmark 运行，再决定是否调整其状态; 增加更窄的触发条件，减少过度选中 |
-| vuln-hunting | insufficient_evidence | 1 | 0 | 1 | 0 | 1.0 | 1 | 1 | 1 | 仅有 1 次样本，低于最少要求 2; 共有 1 次运行选中了该技能，但与任务并不对齐; 共有 1 次 validator 通过 | 先补更多 benchmark 运行，再决定是否调整其状态; 增加更窄的触发条件，减少过度选中 |
+| source-parser-state-machine-oob | revise | 5 | 1 | 3 | 1 | 0.68 | 1 | 3 | 4 | 存在 1 次负向反馈; 并非每次被选中的运行都命中了所需证据; 共有 1 次运行选中了该技能，但与任务并不对齐 | 修改技能内容，减少误导性步骤或表述; 把证据检查清单明确写进技能; 增加更窄的触发条件，减少过度选中 |
+| elf-cwe120-plt-analysis | demote | 6 | 0 | 6 | 0 | 0.733 | 2 | 4 | 5 | 共有 6 次错配选中，且没有任务对齐证据; 并非每次被选中的运行都命中了所需证据; 共有 6 次运行选中了该技能，但与任务并不对齐 | 收紧检索条件，或重命名技能，让它不再被当前任务族误选; 把证据检查清单明确写进技能; 增加更窄的触发条件，减少过度选中 |
 
 ## Gate 含义
 

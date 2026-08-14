@@ -15,6 +15,8 @@ from .engines.workflow import EvolveServer
 
 logger = logging.getLogger("evolve_server")
 
+_DEEPSEEK_MODELS = {"deepseek-v4-pro", "deepseek-v4-flash"}
+
 
 def _build_config_from_args(args: argparse.Namespace) -> EvolveServerConfig:
     """Merge CLI args, environment variables, and optionally skillclaw config."""
@@ -234,6 +236,16 @@ def _build_server(
     return EvolveServer(config, mock=mock, mock_root=mock_root)
 
 
+def _validate_llm_runtime_config(config: EvolveServerConfig) -> None:
+    base_url = str(config.llm_base_url or "").strip().lower()
+    model = str(config.llm_model or "").strip()
+    if "api.deepseek.com" in base_url and model not in _DEEPSEEK_MODELS:
+        raise SystemExit(
+            "DeepSeek base URL requires --model deepseek-v4-pro or deepseek-v4-flash. "
+            "Use --use-skillclaw-config or pass --model explicitly."
+        )
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
@@ -244,6 +256,14 @@ def main() -> None:
     )
 
     config = _build_config_from_args(args)
+    _validate_llm_runtime_config(config)
+    logger.info(
+        "[EvolveServer] resolved llm base=%s model=%s publish_mode=%s storage=%s",
+        config.llm_base_url,
+        config.llm_model,
+        config.publish_mode,
+        config.storage_backend or "(unset)",
+    )
 
     if not args.mock:
         backend = (config.storage_backend or "").strip().lower()

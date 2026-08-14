@@ -1,0 +1,70 @@
+[
+  {
+    "skill": "source-parser-state-machine-oob",
+    "gate_decision": "revise",
+    "selected_count": 3,
+    "positive": 0,
+    "neutral": 2,
+    "negative": 1,
+    "mean_score": 0.6,
+    "cve_hits": 0,
+    "file_hits": 2,
+    "function_hits": 2,
+    "evidence_hits": 2,
+    "root_cause_hits": 3,
+    "validation_passed": 3,
+    "validation_failed": 0,
+    "relevant_selected": 2,
+    "mismatched_selected": 1,
+    "infra_selected": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977, libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2018-14469",
+    "modes": "blind-skillclaw-inline-guarded",
+    "reasons": [
+      "存在 1 次负向反馈",
+      "已有定位证据，但缺少精确 CVE 身份确认",
+      "并非每次被选中的运行都命中了所需证据",
+      "共有 1 次运行选中了该技能，但与任务并不对齐",
+      "共有 3 次 validator 通过"
+    ],
+    "suggestions": [
+      "修改技能内容，减少误导性步骤或表述",
+      "补充规则：只有在 advisory、patch 或版本元数据支持时，才能输出精确 CVE",
+      "把证据检查清单明确写进技能",
+      "增加更窄的触发条件，减少过度选中"
+    ]
+  },
+  {
+    "skill": "elf-cwe120-plt-analysis",
+    "gate_decision": "demote",
+    "selected_count": 3,
+    "positive": 0,
+    "neutral": 3,
+    "negative": 0,
+    "mean_score": 0.6,
+    "cve_hits": 0,
+    "file_hits": 2,
+    "function_hits": 2,
+    "evidence_hits": 2,
+    "root_cause_hits": 3,
+    "validation_passed": 3,
+    "validation_failed": 0,
+    "relevant_selected": 0,
+    "mismatched_selected": 3,
+    "infra_selected": 0,
+    "cases": "giflib-5.1.2-cve-2016-3977, libxml2-2.9.4-cve-2017-8872, tcpdump-4.9.1-cve-2018-14469",
+    "modes": "blind-skillclaw-inline-guarded",
+    "reasons": [
+      "共有 3 次错配选中，且没有任务对齐证据",
+      "已有定位证据，但缺少精确 CVE 身份确认",
+      "并非每次被选中的运行都命中了所需证据",
+      "共有 3 次运行选中了该技能，但与任务并不对齐",
+      "共有 3 次 validator 通过"
+    ],
+    "suggestions": [
+      "收紧检索条件，或重命名技能，让它不再被当前任务族误选",
+      "补充规则：只有在 advisory、patch 或版本元数据支持时，才能输出精确 CVE",
+      "把证据检查清单明确写进技能",
+      "增加更窄的触发条件，减少过度选中"
+    ]
+  }
+]

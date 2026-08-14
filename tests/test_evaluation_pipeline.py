@@ -31,7 +31,7 @@ from evaluation.utils.bundle_script_bridge import resolve_bundle_script, run_bun
 from evaluation.reporting.research.build_research_claims import build_claims, write_markdown as write_claim_markdown
 from evaluation.reporting.current.build_result_matrix import collect_rows, write_csv, write_markdown
 from evaluation.reporting.feedback.build_skill_summary import build_skill_feedback
-from evaluation.validation.core import assess_skill_relevance, build_feedback, summarize_checks
+from evaluation.confirmation.core import assess_skill_relevance, build_feedback, summarize_checks
 from skillclaw import runtime_state
 from skillclaw.skill_manager import SkillManager
 
@@ -1853,6 +1853,66 @@ def test_assess_skill_relevance_uses_task_profile_when_enabled(monkeypatch):
     assert relevance["relevant_skills"] == ["source-parser-state-machine-oob"]
     assert "vuln-hunting" in relevance["mismatched_skills"]
     assert "verify-rootfs-full-enumeration" in relevance["mismatched_skills"]
+
+
+def test_assess_skill_relevance_marks_embedded_cgi_skill_relevant_for_firmware_cgi_case():
+    relevance = assess_skill_relevance(
+        case={
+            "target": {
+                "project": "firmware2",
+                "binary": "vul_file/wireless.cgi",
+                "build": "Embedded lighttpd CGI sample",
+            },
+            "ground_truth": {
+                "files": ["vul_file/wireless.cgi"],
+                "functions": ["sub_402E04"],
+                "vulnerability_type": "embedded CGI command injection",
+                "root_cause": "HTTP POST body reaches page-based CGI shell command execution",
+            },
+            "task_profile": {
+                "workspace": "firmware_rootfs",
+                "target_component": "firmware_service",
+                "analysis_mode": "binary_reverse",
+                "bug_class": "command_injection",
+                "input_vector": "network_request",
+            },
+        },
+        selected_skills=["embedded-cgi-command-injection-triage"],
+    )
+
+    assert relevance["status"] == "has_task_relevant_skill"
+    assert relevance["relevant_skills"] == ["embedded-cgi-command-injection-triage"]
+    assert relevance["mismatched_skills"] == []
+
+
+def test_assess_skill_relevance_marks_lua_skill_mismatched_for_firmware_cgi_case():
+    relevance = assess_skill_relevance(
+        case={
+            "target": {
+                "project": "firmware2",
+                "binary": "vul_file/wireless.cgi",
+                "build": "Embedded lighttpd CGI sample",
+            },
+            "ground_truth": {
+                "files": ["vul_file/wireless.cgi"],
+                "functions": ["sub_402E04"],
+                "vulnerability_type": "embedded CGI command injection",
+                "root_cause": "HTTP POST body reaches page-based CGI shell command execution",
+            },
+            "task_profile": {
+                "workspace": "firmware_rootfs",
+                "target_component": "firmware_service",
+                "analysis_mode": "binary_reverse",
+                "bug_class": "command_injection",
+                "input_vector": "network_request",
+            },
+        },
+        selected_skills=["firmware-embedded-lua-shell-extraction"],
+    )
+
+    assert relevance["status"] == "no_task_relevant_skill"
+    assert relevance["relevant_skills"] == []
+    assert relevance["mismatched_skills"] == ["firmware-embedded-lua-shell-extraction"]
 
 
 def test_build_feedback_marks_no_skill_as_baseline_positive():

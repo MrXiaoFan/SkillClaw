@@ -106,7 +106,12 @@ def _relevance_fields(record: dict[str, Any], selected_skills: list[str]) -> tup
 
 def _record_row(path: Path, record: dict[str, Any]) -> dict[str, Any]:
     feedback = record.get("feedback") if isinstance(record.get("feedback"), dict) else {}
-    validation = record.get("validation") if isinstance(record.get("validation"), dict) else {}
+    confirmation = record.get("confirmation") if isinstance(record.get("confirmation"), dict) else {}
+    confirmation_result = (
+        confirmation
+        if confirmation
+        else (record.get("validation") if isinstance(record.get("validation"), dict) else {})
+    )
     run = record.get("run") if isinstance(record.get("run"), dict) else {}
     selected_skills = _selected_skills(record)
     relevance_status, relevant_skills, mismatched_skills, infra_skills = _relevance_fields(record, selected_skills)
@@ -122,7 +127,8 @@ def _record_row(path: Path, record: dict[str, Any]) -> dict[str, Any]:
         "score": record.get("score"),
         "max_score": record.get("max_score"),
         "score_text": _score_text(record),
-        "validation": validation.get("status") or "",
+        "confirmation": confirmation_result.get("status") or "",
+        "validation": confirmation_result.get("status") or "",
         "decision": feedback.get("decision") or "",
         "action": feedback.get("suggested_action") or "",
         "first_selected_skills": _join(first_selected),
@@ -180,7 +186,7 @@ def write_markdown(rows: list[dict[str, Any]], out_path: Path) -> None:
         "function_hit",
         "evidence_hit",
         "root_cause_hit",
-        "validation",
+        "confirmation",
         "confirmation_maturity",
         "selected_skills",
         "first_selected_skills",
@@ -210,6 +216,7 @@ def write_markdown(rows: list[dict[str, Any]], out_path: Path) -> None:
     lines.append("## 说明")
     lines.append("")
     lines.append("- `Y/N` 列表示该维度是否命中案例真值。")
+    lines.append("- `confirmation` 表示动态确认链路最终给出的运行结果状态。")
     lines.append("- `confirmation_maturity` 表示当前案例声称达到的确认层级，例如 `behavior-backed` 或 `intermediate-confirmed-path`。")
     lines.append("- `confirmation_current_claim` 与 `confirmation_accepted_runtime_claim` 可能不同：前者是当前工程上诚实的总体表述，后者是当前接受的运行时确认路径。")
     lines.append("- `skill_relevance=only_infra_skills` 表示 SkillClaw 选到的是框架/自检类技能，而不是任务相关漏洞分析技能。")
@@ -233,7 +240,7 @@ def write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
         "function_hit",
         "evidence_hit",
         "root_cause_hit",
-        "validation",
+        "confirmation",
         "confirmation_maturity",
         "confirmation_current_claim",
         "confirmation_accepted_runtime_claim",

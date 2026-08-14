@@ -1,0 +1,22 @@
+{
+  "name": "skillclaw-paper-blind-runset-v1",
+  "runset_purpose": "paper-blind-remote-validation-evolution",
+  "publication_only": true,
+  "eligibility_note": "该 runset 只收录 2026 年 8 月 1 日通过远端 VM、blind prompt、SkillClaw 注入与 validator 确认链路完成的三组代表性运行，用于论文中的闭环可行性与失败模式分析。",
+  "min_samples": 2,
+  "promote_samples": 3,
+  "records": [
+    "../../runtime/imports/remote_vm/giflib-paper-20260801a/giflib-paper-20260801a-final-enriched.json",
+    "../../runtime/imports/remote_vm/libxml2-paper-20260801a/libxml2-paper-20260801a-final-enriched.json",
+    "../../runtime/imports/remote_vm/tcpdump-paper-20260801a/tcpdump-paper-20260801a-final-enriched.json"
+  ],
+  "outputs": {
+    "matrix_md": "paper_blind_result_matrix.md",
+    "feedback_md": "paper_blind_skill_feedback.md",
+    "gate_md": "paper_blind_skill_gate.md",
+    "gate_json": "paper_blind_skill_gate.json",
+    "bundle_md": "paper_blind_skill_feedback_bundle.md",
+    "bundle_json": "paper_blind_skill_feedback_bundle.json",
+    "runset_md": "paper_blind_runset.md"
+  }
+}

@@ -553,12 +553,12 @@ def validation():
 
 @validation.command(name="status")
 def validation_status():
-    """Show background validation configuration and current availability."""
-    from .validation_worker import ValidationWorker
+    """Show background replay gate configuration and current availability."""
+    from .replay_gate_worker import ReplayGateWorker
 
     cs = ConfigStore()
     cfg = cs.to_skillclaw_config()
-    worker = ValidationWorker(cfg)
+    worker = ReplayGateWorker(cfg)
     snapshot = worker.status_snapshot()
     for key, value in snapshot.items():
         click.echo(f"{key}: {value}")
@@ -567,14 +567,14 @@ def validation_status():
 @validation.command(name="run-once")
 @click.option("--force", is_flag=True, help="Run one validation poll even if the client is not idle.")
 def validation_run_once(force: bool):
-    """Run one background validation polling iteration."""
+    """Run one background replay gate polling iteration."""
     import asyncio
 
-    from .validation_worker import ValidationWorker
+    from .replay_gate_worker import ReplayGateWorker
 
     cs = ConfigStore()
     cfg = cs.to_skillclaw_config()
-    worker = ValidationWorker(cfg)
+    worker = ReplayGateWorker(cfg)
     result = asyncio.run(worker.run_once(force=force))
     for key, value in result.items():
         click.echo(f"{key}: {value}")

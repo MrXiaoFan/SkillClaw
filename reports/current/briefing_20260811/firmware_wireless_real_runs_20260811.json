@@ -1,0 +1,229 @@
+{
+  "date": "2026-08-11",
+  "case_id": "firmware2-wireless-cgi-cve-2026-2529",
+  "fixed_conditions": {
+    "mode": "blind-skillclaw-inline-guarded",
+    "vm_host": "192.168.1.4",
+    "skillclaw_url": "http://10.12.189.47:30000",
+    "evolve_url": "http://127.0.0.1:8787",
+    "remote_command_log": "runtime/logs/remote_vm_commands.log"
+  },
+  "pre_gate_fix_runs": [
+    {
+      "run_id": "firmware2-wireless-live-20260811f",
+      "forced_skills": [
+        "embedded-cgi-command-injection-triage"
+      ],
+      "score": 2.0,
+      "selected_skills_observed": [
+        "embedded-cgi-command-injection-triage"
+      ],
+      "final_record": "runtime/imports/remote_vm/firmware2-wireless-live-20260811f/firmware2-wireless-live-20260811f-final-enriched.json",
+      "gate_decision": "skillspace/share/default/gate_decisions/20260811105315-embedded-cgi-command-injection-triage-6bcae203.json",
+      "published": true
+    },
+    {
+      "run_id": "firmware2-wireless-wrong-20260811f",
+      "forced_skills": [
+        "firmware-embedded-lua-shell-extraction"
+      ],
+      "score": 2.0,
+      "selected_skills_observed": [
+        "firmware-embedded-lua-shell-extraction"
+      ],
+      "final_record": "runtime/imports/remote_vm/firmware2-wireless-wrong-20260811f/firmware2-wireless-wrong-20260811f-final-enriched.json",
+      "gate_decision": "skillspace/share/default/gate_decisions/20260811105841-firmware-embedded-lua-shell-extraction-a8289270.json",
+      "published": true
+    },
+    {
+      "run_id": "firmware2-wireless-none-20260811f",
+      "forced_skills": [],
+      "score": 4.0,
+      "selected_skills_observed": [],
+      "final_record": "runtime/imports/remote_vm/firmware2-wireless-none-20260811f/firmware2-wireless-none-20260811f-final-enriched.json",
+      "gate_decision": null,
+      "published": false
+    }
+  ],
+  "post_gate_fix_runs": [
+    {
+      "run_id": "firmware2-wireless-live-20260811g",
+      "forced_skills": [
+        "embedded-cgi-command-injection-triage"
+      ],
+      "score": 3.0,
+      "selected_skills_observed": [
+        "embedded-cgi-command-injection-triage"
+      ],
+      "skill_relevance": "has_task_relevant_skill",
+      "feedback_decision": "negative",
+      "candidate_count": 1,
+      "next_stage": "candidate_validation",
+      "gate_decision": "skillspace/share/default/gate_decisions/20260811131326-embedded-cgi-command-injection-triage-08e71168.json",
+      "gate_result": "skillspace/share/default/gate_results/20260811131326-embedded-cgi-command-injection-triage-08e71168/Fan.json",
+      "published": false,
+      "final_record": "runtime/imports/remote_vm/firmware2-wireless-live-20260811g/firmware2-wireless-live-20260811g-final-enriched.json"
+    },
+    {
+      "run_id": "firmware2-wireless-wrong-20260811g",
+      "forced_skills": [
+        "firmware-embedded-lua-shell-extraction"
+      ],
+      "score": 5.0,
+      "selected_skills_observed": [
+        "firmware-embedded-lua-shell-extraction"
+      ],
+      "skill_relevance": "no_task_relevant_skill",
+      "feedback_decision": "neutral",
+      "candidate_count": 0,
+      "next_stage": "no_candidate",
+      "gate_decision": null,
+      "gate_result": null,
+      "published": false,
+      "final_record": "runtime/imports/remote_vm/firmware2-wireless-wrong-20260811g/firmware2-wireless-wrong-20260811g-final-enriched.json"
+    },
+    {
+      "run_id": "firmware2-wireless-live-20260811h",
+      "forced_skills": [
+        "embedded-cgi-command-injection-triage"
+      ],
+      "score": 2,
+      "selected_skills_observed": [
+        "embedded-cgi-command-injection-triage"
+      ],
+      "skill_relevance": "has_task_relevant_skill",
+      "feedback_decision": "negative",
+      "candidate_count": 1,
+      "next_stage": "candidate_validation",
+      "gate_decision": "skillspace/share/default/gate_decisions/20260811151108-embedded-cgi-command-injection-triage-55516b78.json",
+      "gate_result": "skillspace/share/default/gate_results/20260811151108-embedded-cgi-command-injection-triage-55516b78/Fan.json",
+      "published": false,
+      "final_record": "runtime/imports/remote_vm/firmware2-wireless-live-20260811h/firmware2-wireless-live-20260811h-final-enriched.json"
+    },
+    {
+      "run_id": "firmware2-wireless-none-20260812c",
+      "forced_skills": [],
+      "score": 2.0,
+      "selected_skills_observed": [],
+      "skill_relevance": "no_selected_skills",
+      "feedback_decision": "neutral",
+      "candidate_count": 0,
+      "next_stage": "no_candidate",
+      "handoff_status": "handed_off",
+      "consumption_status": "consumed",
+      "attribution_status": "no_selected_skills_control",
+      "gate_decision": null,
+      "gate_result": null,
+      "published": false,
+      "final_record": "runtime/imports/remote_vm/firmware2-wireless-none-20260812c/firmware2-wireless-none-20260812c-final-enriched.json"
+    },
+    {
+      "run_id": "firmware2-wireless-seed-20260812a",
+      "forced_skills": [
+        "embedded-cgi-command-injection-triage"
+      ],
+      "score": 3.0,
+      "selected_skills_observed": [
+        "embedded-cgi-command-injection-triage"
+      ],
+      "skill_relevance": "has_task_relevant_skill",
+      "feedback_decision": "negative",
+      "candidate_count": 1,
+      "next_stage": "candidate_validation",
+      "handoff_status": "handed_off",
+      "consumption_status": "consumed",
+      "attribution_status": "observational",
+      "gate_decision": "skillspace/share/default/gate_decisions/20260812045011-embedded-cgi-command-injection-triage-7c320ce2.json",
+      "gate_result": "skillspace/share/default/gate_results/20260812045011-embedded-cgi-command-injection-triage-7c320ce2/Fan.json",
+      "published": false,
+      "final_record": "runtime/imports/remote_vm/firmware2-wireless-seed-20260812a/firmware2-wireless-seed-20260812a-final-enriched.json"
+    },
+    {
+      "run_id": "firmware2-wireless-wrong-20260812h",
+      "forced_skills": [
+        "firmware-embedded-lua-shell-extraction"
+      ],
+      "score": 2.0,
+      "selected_skills_observed": [
+        "firmware-embedded-lua-shell-extraction"
+      ],
+      "skill_relevance": "no_task_relevant_skill",
+      "feedback_decision": "neutral",
+      "candidate_count": 1,
+      "next_stage": "candidate_validation",
+      "handoff_status": "handed_off",
+      "consumption_status": "consumed",
+      "attribution_status": "observational",
+      "gate_decision": "skillspace/share/default/gate_decisions/20260812055115-firmware-embedded-lua-shell-extraction-213c18d3.json",
+      "gate_result": "skillspace/share/default/gate_results/20260812055115-firmware-embedded-lua-shell-extraction-213c18d3/Fan.json",
+      "published": false,
+      "final_record": "runtime/imports/remote_vm/firmware2-wireless-wrong-20260812h/firmware2-wireless-wrong-20260812h-final-enriched.json"
+    },
+    {
+      "run_id": "firmware2-wireless-live-20260812i",
+      "forced_skills": [
+        "embedded-cgi-command-injection-triage"
+      ],
+      "score": 3.0,
+      "selected_skills_observed": [
+        "embedded-cgi-command-injection-triage"
+      ],
+      "skill_relevance": "has_task_relevant_skill",
+      "feedback_decision": "negative",
+      "candidate_count": 0,
+      "next_stage": "no_candidate",
+      "handoff_status": "handed_off",
+      "consumption_status": "consumed",
+      "attribution_status": "observational",
+      "gate_decision": null,
+      "gate_result": null,
+      "published": false,
+      "final_record": "runtime/imports/remote_vm/firmware2-wireless-live-20260812i/firmware2-wireless-live-20260812i-final-enriched.json"
+    }
+  ],
+  "key_findings": {
+    "remote_loop_real": true,
+    "post_fix_gate_requires_strict_improvement": true,
+    "wrong_skill_auto_publish_fixed": true,
+    "blank_skill_control_handoff_real": true,
+    "weak_skill_control_candidate_real": true,
+    "skill_value_proven": false,
+    "candidate_rejection_reason_is_no_improvement": true,
+    "skill_relevance_rule_tightened": true,
+    "wrong_skill_classified_mismatched": true,
+    "current_four_way_set_complete": true,
+    "selected_skill_recording_verified": true,
+    "wrong_skill_candidate_real": true,
+    "live_skill_no_candidate_real": true
+  },
+  "current_conclusion": {
+    "summary": "The remote blind firmware path has already proved that the SkillClaw -> Evolve -> replay-gate engineering loop is real under no-skill, weak-skill, wrong-skill, and current-live-skill control conditions, but it still does not prove positive skill gain or skill necessity.",
+    "engineering_status": "four_way_remote_loop_real_but_no_positive_skill_gain",
+    "research_status": "skill_necessity_not_yet_established",
+    "main_blockers": [
+      "weak skill can generate a candidate, but the replay gate rejected it because the candidate did not outperform the baseline",
+      "wrong skill can also generate a candidate, so candidate generation alone is not evidence that a skill is useful",
+      "current live skill can be consumed by Evolve without producing a candidate, so task relevance does not yet imply effective improvement",
+      "there is still no accepted candidate that has been published into the live skill area and then reused in a later run with measurable improvement"
+    ]
+  },
+  "evidence_files": [
+    "runtime/imports/remote_vm/firmware2-wireless-live-20260811g/firmware2-wireless-live-20260811g-final-enriched.json",
+    "runtime/imports/remote_vm/firmware2-wireless-wrong-20260811g/firmware2-wireless-wrong-20260811g-final-enriched.json",
+    "runtime/imports/remote_vm/firmware2-wireless-none-20260811f/firmware2-wireless-none-20260811f-final-enriched.json",
+    "skillspace/share/default/gate_decisions/20260811131326-embedded-cgi-command-injection-triage-08e71168.json",
+    "skillspace/share/default/gate_results/20260811131326-embedded-cgi-command-injection-triage-08e71168/Fan.json",
+    "runtime/logs/remote_vm_commands.log",
+    "runtime/imports/remote_vm/firmware2-wireless-live-20260811h/firmware2-wireless-live-20260811h-final-enriched.json",
+    "skillspace/share/default/gate_decisions/20260811151108-embedded-cgi-command-injection-triage-55516b78.json",
+    "skillspace/share/default/gate_results/20260811151108-embedded-cgi-command-injection-triage-55516b78/Fan.json",
+    "runtime/imports/remote_vm/firmware2-wireless-none-20260812c/firmware2-wireless-none-20260812c-final-enriched.json",
+    "runtime/imports/remote_vm/firmware2-wireless-seed-20260812a/firmware2-wireless-seed-20260812a-final-enriched.json",
+    "skillspace/share/default/gate_decisions/20260812045011-embedded-cgi-command-injection-triage-7c320ce2.json",
+    "skillspace/share/default/gate_results/20260812045011-embedded-cgi-command-injection-triage-7c320ce2/Fan.json",
+    "runtime/imports/remote_vm/firmware2-wireless-wrong-20260812h/firmware2-wireless-wrong-20260812h-final-enriched.json",
+    "runtime/imports/remote_vm/firmware2-wireless-live-20260812i/firmware2-wireless-live-20260812i-final-enriched.json",
+    "skillspace/share/default/gate_decisions/20260812055115-firmware-embedded-lua-shell-extraction-213c18d3.json",
+    "skillspace/share/default/gate_results/20260812055115-firmware-embedded-lua-shell-extraction-213c18d3/Fan.json"
+  ]
+}

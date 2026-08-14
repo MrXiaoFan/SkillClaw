@@ -80,6 +80,71 @@ def _contains_any(haystack_items: list[str], needles: list[str]) -> tuple[bool, 
     return bool(matched), matched
 
 
+_ROOT_CAUSE_STOP_WORDS = frozenset({
+    "the", "and", "for", "with", "that", "this", "from", "into", "via",
+    "without", "which", "overflows", "overflow", "buffer", "stack",
+    "stack-based", "handler", "parameter", "not", "sanitized", "any",
+    "length", "check", "checked", "bounds", "checking", "read", "reads",
+    "passes", "using", "used", "uses", "then", "when", "while", "after",
+    "before", "during", "through", "allowing", "allows", "can", "may",
+    "will", "shall", "must", "should", "would", "could", "has", "have",
+    "been", "being", "was", "were", "are", "its", "their", "such",
+    "also", "but", "however", "therefore", "thus", "hence", "since",
+    "because", "due", "based", "user-provided", "user", "provided",
+    "directly", "indirectly", "further", "moreover", "additionally",
+    "resulting", "results", "result", "causes", "caused", "cause",
+    "executes", "executed", "execute", "execution", "formats", "formatted",
+    "format", "command", "commands", "string", "strings", "value",
+    "values", "field", "fields", "data", "bytes", "byte", "memory",
+    "access", "accesses", "accessed", "accessing", "insufficient",
+    "insufficiently", "validated", "validates", "validate", "validation",
+    "verified", "verifies", "verify", "verification", "guaranteeing",
+    "guarantees", "guarantee", "performs", "performed", "perform",
+    "leaves", "leave", "left", "never", "advances", "advance", "advanced",
+    "global", "regex", "substitution", "empty-string", "match", "matches",
+    "matched", "matching", "name", "zero", "forward", "progress",
+    "subsequent", "url", "path", "request", "requests", "response",
+    "responses", "http", "post", "body", "header", "headers",
+    "function", "functions", "call", "calls", "called", "calling",
+    "returns", "returned", "return", "wrapper", "wrappers",
+    "system", "sprintf", "vsprintf", "vsnprintf", "strcpy", "strncpy",
+    "memcpy", "memset", "malloc", "free", "printf", "fprintf",
+    "itself", "they", "them", "these", "those", "each", "both",
+    "only", "just", "even", "still", "yet", "now", "here", "there",
+    "where", "what", "how", "why", "who", "all", "some", "none",
+    "many", "few", "more", "most", "less", "least", "other", "another",
+    "same", "different", "new", "old", "first", "last", "next", "previous",
+    "following", "above", "below", "upon", "within", "without",
+})
+
+
+def _extract_meaningful_root_terms(text):
+    """Extract discriminative terms from a root-cause description.
+
+    Filters out common English stop-words and generic vulnerability jargon
+    so that the root_cause scoring dimension actually distinguishes between
+    analyses that identify the *specific* vulnerability mechanism and those
+    that only produce generic boilerplate.
+    """
+    raw_terms = re.split(r"[,;\s()]+", text)
+    meaningful = []
+    seen = set()
+    for term in raw_terms:
+        cleaned = term.strip().rstrip(".,;:")
+        lower = cleaned.lower()
+        if len(cleaned) < 4:
+            continue
+        if lower in _ROOT_CAUSE_STOP_WORDS:
+            continue
+        if cleaned.replace("-", "").replace(".", "").isdigit():
+            continue
+        if lower in seen:
+            continue
+        seen.add(lower)
+        meaningful.append(cleaned)
+    return meaningful[:20]
+
+
 def score_output(case: dict[str, Any], raw_text: str) -> dict[str, Any]:
     case = normalize_case(case)
     obj = _extract_json_object(raw_text)
@@ -99,7 +164,9 @@ def score_output(case: dict[str, Any], raw_text: str) -> dict[str, Any]:
             score += float(weights.get("cve", 2))
 
     files = [str(file) for file in truth.get("files", [])]
-    hit, matched = _contains_any(predictions["files"] + predictions["raw_text"], files)
+    # Also check basename match (e.g. expected "vul_file/wireless.cgi", predicted "wireless.cgi")
+    file_basenames = [f.rsplit("/", 1)[-1] for f in files]
+    hit, matched = _contains_any(predictions["files"] + predictions["raw_text"], files + file_basenames)
     checks["file"] = {"hit": hit, "matched": matched, "expected": files}
     if hit:
         score += float(weights.get("file", 2))
@@ -119,9 +186,17 @@ def score_output(case: dict[str, Any], raw_text: str) -> dict[str, Any]:
 
     root_cause = str(truth.get("root_cause", "") or "")
     if root_cause:
-        root_terms = [term for term in re.split(r"[,;，；。.\s]+", root_cause) if len(term) >= 3]
-        hit, matched = _contains_any(predictions["evidence"] + predictions["raw_text"], root_terms[:12])
-        checks["root_cause"] = {"hit": hit, "matched": matched, "expected_terms": root_terms[:12]}
+        root_terms = _extract_meaningful_root_terms(root_cause)
+        # Require at least 2 meaningful terms to match (not just 1 generic word)
+        hit, matched = _contains_any(predictions["evidence"] + predictions["raw_text"], root_terms)
+        min_required = min(2, len(root_terms)) if root_terms else 1
+        hit = len(matched) >= min_required
+        checks["root_cause"] = {
+            "hit": hit,
+            "matched": matched,
+            "expected_terms": root_terms,
+            "min_required": min_required,
+        }
         if hit:
             score += float(weights.get("root_cause", 2))
 

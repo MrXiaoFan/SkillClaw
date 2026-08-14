@@ -31,8 +31,8 @@ class SkillClawLauncher:
         self.cs = config_store
         self._api_server = None
         self._stop_event = threading.Event()
-        self._validation_worker = None
-        self._validation_task = None
+        self._replay_gate_worker = None
+        self._replay_gate_task = None
 
     # ------------------------------------------------------------------ #
     # Public interface                                                     #
@@ -47,9 +47,9 @@ class SkillClawLauncher:
 
     def stop(self):
         self._stop_event.set()
-        if self._validation_worker is not None:
+        if self._replay_gate_worker is not None:
             try:
-                self._validation_worker.stop()
+                self._replay_gate_worker.stop()
             except Exception:
                 pass
         if self._api_server is not None:
@@ -186,27 +186,27 @@ class SkillClawLauncher:
 
         if getattr(cfg, "validation_enabled", False):
             try:
-                from .validation_worker import ValidationWorker
+                from .replay_gate_worker import ReplayGateWorker
 
-                self._validation_worker = ValidationWorker(
+                self._replay_gate_worker = ReplayGateWorker(
                     cfg,
                     idle_provider=server,
                 )
-                self._validation_task = asyncio.create_task(self._validation_worker.run())
-                logger.info("[Launcher] background validation worker started")
+                self._replay_gate_task = asyncio.create_task(self._replay_gate_worker.run())
+                logger.info("[Launcher] background replay gate worker started")
             except Exception as e:
-                logger.warning("[Launcher] failed to start validation worker: %s", e)
+                logger.warning("[Launcher] failed to start replay gate worker: %s", e)
 
         try:
             while not self._stop_event.is_set():
                 await asyncio.sleep(1.0)
         finally:
-            if self._validation_worker is not None:
-                self._validation_worker.stop()
-            if self._validation_task is not None:
-                await asyncio.gather(self._validation_task, return_exceptions=True)
-                self._validation_task = None
-            self._validation_worker = None
+            if self._replay_gate_worker is not None:
+                self._replay_gate_worker.stop()
+            if self._replay_gate_task is not None:
+                await asyncio.gather(self._replay_gate_task, return_exceptions=True)
+                self._replay_gate_task = None
+            self._replay_gate_worker = None
 
     # ------------------------------------------------------------------ #
     # PID / signals                                                        #

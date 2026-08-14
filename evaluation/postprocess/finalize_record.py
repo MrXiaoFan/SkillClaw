@@ -12,11 +12,11 @@ from typing import Any
 
 try:
     from evaluation.postprocess.compare_records import compare_records, render_markdown
-    from evaluation.validation.core import assess_skill_relevance, build_feedback
+    from evaluation.confirmation.core import assess_skill_relevance, build_feedback
 except ImportError:  # pragma: no cover - direct script execution.
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from evaluation.postprocess.compare_records import compare_records, render_markdown
-    from evaluation.validation.core import assess_skill_relevance, build_feedback
+    from evaluation.confirmation.core import assess_skill_relevance, build_feedback
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -338,6 +338,24 @@ def _select_validation(value: Any, case_id: str) -> dict[str, Any] | None:
     return candidates[-1] if candidates else None
 
 
+def _select_confirmation_result(value: Any, case_id: str) -> dict[str, Any] | None:
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, list):
+        return None
+    candidates = [item for item in value if isinstance(item, dict)]
+    confirmation_rows = [
+        item for item in candidates if item.get("confirmation_mode") or item.get("validator_mode")
+    ]
+    if case_id:
+        for item in reversed(confirmation_rows):
+            if str(item.get("case_id") or "") == case_id:
+                return item
+    if confirmation_rows:
+        return confirmation_rows[-1]
+    return candidates[-1] if candidates else None
+
+
 def _default_finalized_out(path: Path) -> Path:
     if path.stem.endswith("-final"):
         return path.with_name(f"{path.stem}-enriched{path.suffix}")
@@ -478,9 +496,12 @@ def attach_injection(
     final_record["skill_prompt_hash"] = skill_prompt_hash
     final_record["available_skill_count"] = available_skill_count
     final_record["skill_relevance"] = assess_skill_relevance(case=case, selected_skills=selected_skills)
+    confirmation_result = final_record.get("confirmation")
+    if not (isinstance(confirmation_result, dict) and str(confirmation_result.get("status") or "").strip()):
+        confirmation_result = final_record.get("validation")
     final_record["feedback"] = build_feedback(
         score_result=final_record,
-        validation_result=final_record.get("validation"),
+        confirmation_result=confirmation_result,
         skill_injection=injection,
         skill_relevance=final_record["skill_relevance"],
     )
@@ -505,11 +526,11 @@ def build_finalized_record(
         injection_value=injection_value,
         session_id=session_id,
     )
-    confirmation = _confirmation_snapshot(case)
-    finalized["confirmation"] = confirmation
-    finalized["confirmation_maturity"] = str(confirmation.get("maturity") or "")
-    finalized["confirmation_current_claim"] = str(confirmation.get("current_claim") or "")
-    finalized["confirmation_accepted_runtime_claim"] = str(confirmation.get("accepted_runtime_claim") or "")
+    confirmation_spec = _confirmation_snapshot(case)
+    finalized["confirmation_spec"] = confirmation_spec
+    finalized["confirmation_maturity"] = str(confirmation_spec.get("maturity") or "")
+    finalized["confirmation_current_claim"] = str(confirmation_spec.get("current_claim") or "")
+    finalized["confirmation_accepted_runtime_claim"] = str(confirmation_spec.get("accepted_runtime_claim") or "")
     return finalized
 
 

@@ -1,0 +1,669 @@
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage[hyphens]{url}
+\usepackage{hyperref}
+\usepackage{makecell}
+\usepackage{microtype}
+\usepackage{tabularx}
+\usepackage{xcolor}
+
+\journal{Computers \& Security}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Evidence-Grounded Skill Evolution for\\
+LLM-Based Vulnerability Analysis}
+
+\author[inst1]{Author One}
+\ead{author1@example.com}
+\author[inst1]{Author Two}
+\ead{author2@example.com}
+\address[inst1]{Affiliation, City, Country}
+
+\begin{abstract}
+Large language model (LLM) agents can accumulate reusable natural-language
+skills from past interactions, but vulnerability analysis requires a learning
+signal that is stronger than conversation success alone.  A security agent
+should not only produce a plausible answer, but also connect that answer to
+source or runtime evidence and then decide whether the resulting experience is
+safe to reuse as a future skill.  We study this problem as
+\emph{evidence-grounded skill evolution} for vulnerability analysis.  The goal
+is to build a closed loop that starts from a blind task, retrieves and injects
+domain skills, records localization and root-cause output, confirms the result
+with source-, behavior-, logic-, or sanitizer-backed evidence, and converts
+the outcome into a gated candidate skill revision.  We implement the framework
+as a research extension of SkillClaw with remote blind execution, auditable
+server-side skill injection, structured run finalization, benchmark validators,
+feedback packaging, candidate generation, and separation between live skills
+and candidate revisions.  The current evidence set contains six core remote
+blind cases and a sixteen-run firmware skill-ablation study.  Across the
+six-case runset, the system consistently records end-to-end artifacts from
+injected skills to gate decisions, but queued candidate revisions are still
+rejected before live publication.  The firmware ablation shows that changing
+only the exposed skill profile shifts blind-analysis quality on two CGI
+command-injection cases, with a branch-first seed profile outperforming a
+narrower relevant profile.  These results support a concrete current claim:
+the vulnerability-domain skill lifecycle is now real, auditable, and
+experimentally measurable.  They do not yet support the stronger claim that
+published evolved skills improve held-out tasks.  We therefore frame the next
+stage as a frozen before/after transfer study built on this lifecycle.
+\end{abstract}
+
+\begin{keyword}
+LLM agent \sep vulnerability analysis \sep skill evolution \sep
+external validation \sep dynamic confirmation \sep reusable skills
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+\label{sec:introduction}
+
+LLM agents increasingly use external memories, reusable instructions, and
+natural-language skills to improve over repeated tasks.  Skill-oriented systems
+are attractive because they preserve procedural experience without changing
+model parameters and can share that experience across agents.  SkillClaw, for
+example, extracts and evolves reusable skills from agent sessions and makes them
+available to later runs~\cite{skillclaw}.  Recent work also studies autonomous
+skill construction from context~\cite{ctx2skill} and on-policy skill
+distillation from agent trajectories~\cite{opid}.
+
+Vulnerability analysis is an especially demanding setting for such systems.
+Unlike a general coding task, a vulnerability-analysis agent must localize the
+correct file and function, describe the actual root cause, and support the claim
+with source or runtime evidence.  A plausible but wrong answer is easy to
+produce; a validated answer is much harder.  This observation changes what it
+means for an agent to ``learn'' from experience.  For a vulnerability agent, a
+past run should become a future skill only when its analysis process and
+evidence are strong enough to improve later blind tasks.
+
+This motivates a different research objective from generic skill sharing.  We
+do not merely want the agent to remember successful conversations.  We want a
+framework that can transform vulnerability-analysis outcomes into reusable
+domain skills, test whether those skills survive external confirmation, and then
+reuse them on later unseen cases.  In other words, the scientific question is
+how to build a trustworthy \emph{skill evolution loop} for vulnerability
+discovery.
+
+This paper therefore asks:
+
+\begin{quote}
+\emph{How can an LLM vulnerability agent convert validated analysis outcomes
+into reusable skills that improve later blind vulnerability tasks?}
+\end{quote}
+
+Our answer is a validation-driven skill evolution framework.  A benchmark task
+is executed in a leakage-controlled blind workspace; SkillClaw retrieves and
+injects server-side skills; the agent produces localization and root-cause
+claims; source or runtime validators confirm what actually happened; and the
+result is packaged into structured feedback for the evolution service.  Skill
+updates are generated as candidates rather than written directly into the live
+library, so the next agent only receives revisions that survive follow-up
+checks.  This design makes vulnerability confirmation part of the learning loop
+rather than a separate after-the-fact evaluation.
+
+This work makes four contributions:
+
+\begin{enumerate}[leftmargin=*]
+    \item We formulate vulnerability-domain skill evolution as a closed loop
+    from blind task execution to validator-backed feedback and candidate skill
+    publication.
+    \item We design a multi-evidence confirmation layer that combines
+    structured scoring with source-, behavior-, logic-, and sanitizer-backed
+    validators for later skill feedback.
+    \item We implement the framework as a SkillClaw extension with remote blind
+    execution, auditable skill injection, structured run finalization, and
+    gated candidate publication into a live skill workspace.
+    \item We report current evidence from a six-case remote blind runset and a
+    firmware skill-ablation study, and use that evidence to define the next
+    transfer-oriented experiments needed for a stronger efficacy claim.
+\end{enumerate}
+
+\section{Problem Formulation}
+\label{sec:problem}
+
+\subsection{From Vulnerability Outcome to Reusable Skill}
+
+Let a task run be
+\begin{equation}
+    r = (x, S_r, \tau, y, E),
+\end{equation}
+where $x$ is a blind vulnerability-analysis task, $S_r$ is the set of skills
+selected for the run, $\tau$ is the agent trajectory, $y$ is the final answer,
+and $E$ is externally collected evidence.  A vulnerability-oriented skill
+evolution system should use $r$ to improve later tasks, not only to score the
+current task.  In our setting, improvement means one of the following:
+
+\begin{enumerate}[leftmargin=*]
+    \item creating a new reusable skill for a recurring vulnerability-analysis
+    pattern;
+    \item revising an existing skill's procedure, trigger, or scope;
+    \item demoting or withholding a skill update when the run lacks sufficient
+    supporting evidence.
+\end{enumerate}
+
+This requires the system to preserve more structure than a plain conversation
+log.  The final answer must be linked to task quality, external confirmation,
+selected skills, and any later candidate update derived from that run.  Without
+that linkage, the system cannot tell whether it has actually learned a better
+vulnerability-analysis procedure or merely stored another plausible narrative.
+
+\subsection{Why Conversation-Only Learning Is Insufficient}
+
+We therefore retain a validation vector instead of a single success label:
+\begin{equation}
+    V(r) = \left(q_{\mathrm{task}}, q_{\mathrm{confirm}},
+    a_{r,s}\right).
+\end{equation}
+Here, $q_{\mathrm{task}}$ measures whether the answer localizes and explains the
+ground-truth vulnerability; $q_{\mathrm{confirm}}$ represents the strength of
+external source or runtime evidence; and $a_{r,s}$ records observed relevance
+between skill $s$ and the task.  We intentionally call $a_{r,s}$ observed
+relevance rather than causal contribution.  In the current framework,
+$a_{r,s}$ is used conservatively: it helps decide whether a run can safely
+support a skill update, but it is not the main research target of the paper.
+
+This separation allows outcomes that a scalar reward would hide.  For example,
+a run may have high $q_{\mathrm{task}}$ and high $q_{\mathrm{confirm}}$ while
+$a_{r,s}$ indicates that all selected skills were mismatched.  Such a run is
+strong evidence that the vulnerability was found, but weak evidence for editing
+the currently selected skills.  Conversely, a repeated pattern of successful
+localization plus matching confirmation across related tasks is strong evidence
+that a reusable vulnerability skill exists and should be retained.
+
+\subsection{Research Hypotheses}
+
+The study is guided by three hypotheses:
+
+\begin{description}
+    \item[H1: Evolution utility.] Validator-backed skill evolution can improve
+    later blind vulnerability-analysis tasks relative to a fixed skill library
+    or direct execution without server-side skills.
+    \item[H2: Evidence matters.] External confirmation changes what the system
+    learns compared with conversation-only or answer-only learning signals.
+    \item[H3: Transfer matters.] If an evolved skill captures a real
+    vulnerability-analysis pattern rather than a single benchmark answer, it
+    should transfer to later related cases, including held-out environments.
+\end{description}
+
+\section{Validation-Driven Vulnerability Skill Evolution}
+\label{sec:method}
+
+\subsection{Leakage-Controlled Task Execution}
+
+Each evaluation begins from a benchmark specification containing private ground
+truth and a separately rendered blind prompt.  The agent receives the target
+workspace and the analysis objective, but not the answer fields, confirmation
+scripts, or solution-bearing artifact names.  The benchmark controller retains
+the expected file, function, root cause, and confirmation policy.  This split
+reduces direct answer leakage while still allowing the agent to inspect and
+execute the target as it would in a real analysis environment.
+
+The analysis may run on a remote virtual machine.  This is methodologically
+useful, not merely operational: the agent workspace is separated from the
+benchmark ground truth and from the local service that evaluates the result.
+
+\subsection{Auditable Skill Exposure}
+
+For each run, the system records the selected skill names, the injected prompt
+hash, the request session, and the immutable session segment consumed by the
+evolution process.  These records answer whether a skill was available and
+injected.  They do not, by themselves, claim that the model followed it.
+
+This distinction prevents a common evaluation error.  A comparison between a
+skill-augmented and a direct agent is uninterpretable if the intended skill was
+never selected, changed midway through a session, or cannot be linked to the
+final answer.  Injection auditing is therefore a prerequisite for studying skill
+evolution rather than a performance metric by itself.
+
+\subsection{External Vulnerability Confirmation}
+
+The agent output is evaluated along two complementary dimensions.  First,
+structured scoring checks the predicted vulnerability identity, file, function,
+root cause, and cited evidence.  Second, case validators test claims against the
+target environment.  Current validators support source predicates, executable
+behavior, generated artifacts, harness-based logic checks, and sanitizer-backed
+failures.
+
+We treat these as evidence classes rather than a universal total ordering:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{source-backed evidence} verifies a concrete code predicate or
+    boundary relation;
+    \item \textbf{behavior-backed evidence} reproduces an expected program path
+    or output condition;
+    \item \textbf{logic-backed evidence} exercises a controlled harness for the
+    vulnerable state transition;
+    \item \textbf{sanitizer-backed evidence} reproduces a memory-safety failure
+    with relevant runtime diagnostics.
+\end{itemize}
+
+The distinction matters because a stable logic check and a sanitizer crash make
+different claims.  The framework records the accepted evidence class instead of
+mapping every passing script to the same notion of ``confirmed.''
+
+\subsection{Evidence-Conditioned Skill Feedback}
+
+After validation, the system constructs feedback at the run--skill level.  A
+skill can receive one of four conservative statuses:
+
+\begin{description}
+    \item[Supported:] the task is externally validated and the skill is aligned
+    with the analysis procedure;
+    \item[Mismatched:] the task may be correct, but the skill is unrelated to the
+    target or method;
+    \item[Contradicted:] the skill appears to drive a false localization,
+    unsupported claim, or failed confirmation;
+    \item[Unknown:] the available trace cannot distinguish contribution from
+    coincidence.
+\end{description}
+
+The purpose of this feedback is not only to explain a finished run.  It is to
+produce a reusable learning signal for the evolution service.  A supported
+skill may justify refinement or promotion; a contradicted skill may justify
+demotion or scope narrowing; and a mismatched skill indicates that the run
+should not directly drive a content update for that selected skill.
+
+\subsection{Candidate-Level Validation Gate}
+
+Evolution produces a candidate revision $\Delta s$ rather than directly
+overwriting the live skill.  Publication is allowed only if
+\begin{equation}
+    \mathrm{Publish}(\Delta s) =
+    \mathbb{I}\left[
+      \mathrm{EvidenceSufficient}(\Delta s)
+      \land \mathrm{FollowupPass}(\Delta s)
+    \right].
+\end{equation}
+The follow-up is linked to the exact candidate job generated from the current
+run, preventing unrelated validation results from authorizing a change.  A
+rejected candidate remains an auditable evolution artifact but does not enter
+the skill set used by subsequent agents.
+
+\begin{figure}[t]
+\centering
+\fbox{\begin{minipage}{0.92\linewidth}
+\centering
+Blind task $\rightarrow$ skill-augmented agent $\rightarrow$ answer and trace\\
+$\downarrow$\\
+task scoring $+$ external confirmation $+$ observed skill relevance\\
+$\downarrow$\\
+evidence-conditioned feedback $\rightarrow$ candidate skill change\\
+$\downarrow$\\
+candidate validation $\rightarrow$ publish or reject
+\end{minipage}}
+\caption{Conceptual workflow.  A blind vulnerability-analysis task is executed
+with injected skills, externally validated, converted into structured feedback,
+and finally turned into gated candidate skill updates for later tasks.}
+\label{fig:workflow}
+\end{figure}
+
+\section{Prototype Realization}
+\label{sec:implementation}
+
+We realize the method as a research extension to SkillClaw.  The original
+system supplies request proxying, skill retrieval and injection, session
+capture, skill sharing, and an evolution service.  The extension adds four
+research-facing capabilities: leakage-controlled benchmark cases, remote blind
+execution, heterogeneous vulnerability validators, and a structured handoff
+from finalized runs to validation-gated evolution.
+
+The runtime is divided into an analysis plane and an evidence plane.  A Claude
+Code client on a remote VM analyzes the target through the SkillClaw proxy.  The
+local evidence plane retains private ground truth, finalizes the run record,
+executes validators, and sends a closed session/feedback pair to the evolution
+service.  Client-provided session identifiers are preserved when available, and
+long sessions are archived as incrementally consumable immutable segments.  As
+a result, later interaction can extend a session without rewriting feedback
+already consumed by the evolver.
+
+Live skills, candidate revisions, and shared runtime state are stored separately
+under one skill workspace.  This separation is a safety boundary: evolution can
+produce and reject a candidate without silently changing what the next agent
+will receive.  The prototype is not intended to be a general exploit-generation
+or fuzzing platform.  Case-specific harnesses provide ground-truth evidence for
+evaluation, while the execution, scoring, feedback, and gating logic remain
+shared across cases.
+
+\section{Experimental Methodology}
+\label{sec:evaluation}
+
+\subsection{Research Questions}
+
+\begin{description}
+    \item[RQ1.] Can the framework reliably close the loop from blind
+    vulnerability-analysis execution to gated candidate skill revision?
+    \item[RQ2.] Does changing the exposed skill content change blind-analysis
+    behavior on held benchmark tasks, including firmware CGI cases?
+    \item[RQ3.] What failure modes currently prevent candidate revisions from
+    being promoted into the live skill library?
+    \item[RQ4.] What additional engineering and experimental controls are still
+    required before we can claim held-out improvement from published evolved
+    skills?
+\end{description}
+
+\subsection{Benchmark Scope}
+
+The current evidence has two layers.  The first is a six-case core blind
+benchmark covering image, XML, packet, and archive parsers.  The second is a
+firmware CGI ablation set used to test whether changing only the exposed skill
+profile shifts blind-analysis behavior.  Table~\ref{tab:cases} reports the
+core benchmark cases and the current evidence claim implemented for each case;
+it does not imply that all cases have equal maturity or difficulty.
+
+\begin{table}[t]
+\centering
+\caption{Pilot benchmark cases and their current external evidence.}
+\label{tab:cases}
+\small
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+Target & Vulnerability & Evidence class & Current role \\
+\midrule
+giflib 5.1.2 & CVE-2016-3977 & sanitizer-backed & strongest closed-loop case \\
+libxml2 2.9.4 & CVE-2017-8872 & logic-backed & parser-state revision study \\
+tcpdump 4.9.1 & CVE-2017-13031 & behavior-backed & packet parser localization \\
+tcpdump 4.9.1 & CVE-2018-14469 & behavior-backed & semantic input generation \\
+libarchive 3.8.0 & CVE-2025-60753 & behavior-backed & non-crash confirmation \\
+Exiv2 0.26 & CVE-2017-17725 & partial runtime path & integration candidate \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Conditions and Controls}
+
+The long-term comparison should use the same upstream model under at least
+three conditions: direct execution without server-side skills, SkillClaw with a
+fixed baseline live skill library, and SkillClaw after one or more accepted
+skill revisions.  Blind prompts omit the CVE identifier and
+solution-bearing artifacts.  Repeated trials should use fresh client sessions
+and fixed inference budgets.
+
+The current evidence set already adds a firmware skill-exposure ablation, and
+the larger study should further add three controls:
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{no-evolution:} keep the original skill library fixed;
+    \item \textbf{no-validation feedback:} evolve from conversation or answer
+    records only;
+    \item \textbf{held-out transfer:} evaluate evolved skills on later related
+    cases not used during skill revision.
+\end{enumerate}
+
+These controls test whether the framework improves future tasks because it
+learns better vulnerability procedures, not because a single benchmark run was
+overfit or manually curated after the fact.
+
+\subsection{Measurements}
+
+We report four groups of measurements:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{task quality:} file and function localization, root-cause
+    agreement, evidence quality, and vulnerability-identity accuracy;
+    \item \textbf{confirmation:} validator outcome and accepted evidence class;
+    \item \textbf{evolution outcome:} candidate skills proposed, accepted,
+    rejected, published, and later reused;
+    \item \textbf{transfer and cost:} held-out task performance, tool usage, and
+    case-integration effort.
+\end{itemize}
+
+We additionally record analysis cost, tool calls, and case-integration effort.
+These measurements are needed to distinguish an effective learning method from
+one that merely adds expensive validation machinery.
+
+\section{Preliminary Evidence}
+\label{sec:results}
+
+\subsection{Six Core Blind Runs and a Firmware Ablation Already Reveal the Current Pattern}
+
+We first report the current six-case remote blind runset collected through the
+full path: blind prompt rendering, SkillClaw-backed remote execution, local
+finalization, case validators, feedback packaging, and evolution handoff.
+Table~\ref{tab:paper_runs} summarizes the outcomes.
+
+\begin{table}[t]
+\centering
+\caption{Current six-case remote blind runset used as the paper-facing pilot evidence.}
+\label{tab:paper_runs}
+\small
+\begin{tabularx}{\textwidth}{lcccX}
+\toprule
+Case & Score & Evidence class & Skill relevance & Evolution outcome \\
+\midrule
+giflib 5.1.2 / CVE-2016-3977 & 8/10 & sanitizer-backed &
+\makecell[l]{no task-relevant skill\\selected} &
+\makecell[l]{1 candidate queued;\\rejected by gate} \\
+libxml2 2.9.4 / CVE-2017-8872 & 8/10 & logic-backed &
+\makecell[l]{mixed relevance:\\parser skill relevant,\\ELF skill mismatched} &
+\makecell[l]{2 candidates queued;\\both rejected by gate} \\
+tcpdump 4.9.1 / CVE-2018-14469 & 2/10 & behavior-backed &
+\makecell[l]{mixed relevance:\\parser skill relevant,\\ELF skill mismatched} &
+\makecell[l]{no candidate queued\\for publication} \\
+libarchive 3.8.0 / CVE-2025-60753 & 10/10 & behavior-backed &
+\makecell[l]{no task-relevant skill\\selected} &
+\makecell[l]{1 candidate queued;\\rejected by gate} \\
+tcpdump 4.9.1 / CVE-2017-13031 & 10/10 & behavior-backed &
+\makecell[l]{mixed relevance:\\parser skill relevant,\\ELF skill mismatched} &
+\makecell[l]{1 candidate queued;\\rejected by gate} \\
+Exiv2 0.26 / CVE-2017-17725 & 6/10 & partial runtime path &
+\makecell[l]{mixed relevance:\\parser skill relevant,\\ELF skill mismatched} &
+\makecell[l]{2 candidates queued;\\both rejected by gate} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+This runset already exposes a stable and non-trivial pattern.  First, the
+closed-loop infrastructure works at the artifact level: the runs were
+finalized into structured records, consumed by the evolution service, and
+linked to candidate and gate outcomes.  Second, the current skill library is
+better at structural vulnerability reasoning than at exact vulnerability
+identity.  Several runs correctly localized file, function, or root cause while
+still missing exact CVE identity.  Third, the runset repeatedly shows skill
+mismatch: some high-scoring cases were solved even though no task-relevant
+skill was selected, while other cases selected both a partially relevant parser
+skill and a clearly mismatched ELF skill.
+
+\subsection{Firmware Ablation Shows That Skill Content Already Changes Blind Analysis}
+
+The firmware study currently contains sixteen runs across two CGI
+command-injection cases.  These runs hold the target family fixed and vary only
+the exposed skill profile.  The mean-score summary is already informative.  For
+the wireless case, mean scores were 2.667 with no skill exposure, 3.0 with the
+narrow relevant profile, 3.0 with a wrong profile, and 4.0 with the seed
+profile.  For the login case, mean scores were 4.333 with no skill exposure,
+5.0 with the relevant profile, 4.5 with the wrong profile, and 5.0 with the
+seed profile.  The immediate result is therefore not a strict necessity claim,
+but a cleaner intermediate one: changing only the visible skill content can
+shift blind-analysis quality, and the older branch-first seed profile is more
+stable than the later narrowed relevant profile on the current firmware CGI
+tasks.
+
+\subsection{The Current Learning Signal Is Informative Even When Publication Is Blocked}
+
+The current feedback summary is sufficient to produce differentiated gate
+decisions for the selected skills.  The parser-oriented skill
+\texttt{source-parser-state-machine-oob} was selected in five of the six core
+blind cases and received a \emph{revise} decision: it helped source-level
+localization in several parser-oriented cases, but it was also over-selected
+and did not prevent repeated CVE identity errors.  In contrast,
+\texttt{elf-cwe120-plt-analysis} was selected in all six core blind cases but
+aligned with none of them, and the gate recommended
+\emph{demote}.  This is a strong signal that the framework is not merely
+rewarding any selected skill whenever the task validator passes.
+
+The per-run evolution outcomes make the same point.  The giflib run generated a
+candidate that tried to narrow the parser skill after it was wrongly retrieved
+for a GIF case, and the gate rejected that candidate.  The libxml2 run
+generated two candidates: one to tighten the ELF skill's trigger and one to
+strengthen the parser skill's ``do not guess CVE'' rule.  Both were rejected by
+the same validation-publish mechanism.  The tcpdump run was weaker overall and
+did not yield a promotable candidate at all.  The framework therefore already
+distinguishes among three situations: useful-but-incomplete skill evidence,
+repeated mismatch, and failure too weak to justify any skill change.
+
+\subsection{What the Current Evidence Establishes}
+
+The current evidence is enough to support one concrete claim: the vulnerability
+skill lifecycle is now real and observable end to end.  We can start from a
+blind remote task, inject reusable skills, collect a structured analysis
+record, confirm the result with external evidence, transform that run into
+skill-level feedback, queue candidate revisions, and block those revisions
+before they contaminate the live skill library.
+
+What the evidence does \emph{not} yet establish is that evolved skills improve
+later held-out tasks.  The current core runset is still small, the firmware
+ablation is still a skill-exposure study rather than a published-skill
+before/after study, and the gate has so far rejected every candidate generated
+from the paper-facing runset.  In other words, the prototype has already
+demonstrated a trustworthy learning pipeline, but not yet a measurable
+post-publication improvement effect.  The next experiments must therefore be
+transfer-oriented: fixed-snapshot before/after comparisons, held-out related
+tasks, and stricter no-skill / target-skill / wrong-skill / degraded-skill
+controls on firmware cases.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{The Main Contribution Is the Vulnerability Skill Lifecycle}
+
+The main contribution is not a new PoC generator or a collection of case
+scripts.  Those components instantiate external evidence for known cases.  The
+research object is the complete lifecycle by which a vulnerability-analysis
+experience becomes a reusable skill.  In particular, the framework keeps the
+following stages connected:
+
+\begin{quote}
+task execution; external confirmation; structured feedback; candidate skill
+evolution; validated publication; later skill reuse.
+\end{quote}
+
+Existing agent logs usually stop after the first stage.  Our framework's
+research value is that it makes later stages observable and testable in the
+security domain.
+
+\subsection{Attribution Is a Supporting Problem, Not the Whole Paper}
+
+Observed relevance is only a first filter.  A stronger attribution study should
+combine three mechanisms.  Static metadata and task features can cheaply reject
+obvious mismatches.  An isolated LLM judge can compare the task, skill text,
+trajectory excerpts, and validator evidence, but its context must exclude
+private answers not available during analysis.  Finally, counterfactual reruns
+with the skill removed or substituted provide the strongest empirical evidence.
+
+These mechanisms have different costs and failure modes.  Rule-based filters
+are reproducible but may reject unfamiliar task families.  LLM judgments are
+flexible but introduce another model call and possible leakage.  Counterfactual
+runs are expensive but directly test whether behavior changes.  A promising
+design is a cascade: rules for clear mismatch, isolated judgment for ambiguous
+cases, and reruns only when a proposed update could affect the live library.
+
+\subsection{Generalization Beyond Hand-Written Cases}
+
+Case-specific confirmation does not invalidate the framework, but it limits
+claims about scale.  In the current benchmark, scripts serve as trusted oracles
+for evaluation; they are not the agent's vulnerability-discovery method.  For
+unseen firmware, the system still needs a generic acquisition layer for target
+metadata, service reachability, filesystem snapshots, crash telemetry, and
+replayable network interactions.  The research question is whether those common
+evidence channels can reduce per-case engineering while preserving trustworthy
+feedback.
+
+The planned firmware study should therefore report both analysis quality and
+oracle-construction cost.  A framework that confirms more cases only by adding
+one bespoke verifier per CVE may be useful as a benchmark harness, but it is not
+yet a general autonomous confirmation system.
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Collective and context-derived skills.}
+SkillClaw evolves and shares reusable skills from agent sessions across users
+and environments~\cite{skillclaw}.  Ctx2Skill automatically discovers and
+refines context-specific skills using self-play, generated tasks, and judging,
+with an emphasis on learning useful procedures from complex
+contexts~\cite{ctx2skill}.  Our work starts from a complementary problem:
+how should a vulnerability-analysis system use executable security evidence to
+evolve a reusable skill library for later tasks?
+
+\paragraph{Skill distillation and agent learning.}
+OPID extracts episode- and step-level skills from completed on-policy
+trajectories and uses them as dense supervision for policy
+optimization~\cite{opid}.  We do not train the underlying model policy.  We
+study an external natural-language skill library whose updates are driven by
+vulnerability confirmation and later-task reuse.  The common issue is how to
+convert trajectory experience into reusable skills; the distinction is that our
+security setting can ground those updates in source, behavior, and sanitizer
+evidence unavailable to conversation-only learning.
+
+\paragraph{Execution-grounded security agents.}
+Tool-using security agents can gather source, binary, and runtime evidence, but
+execution-grounded evaluation and persistent skill learning are often treated
+as separate problems.  Our framework connects them: validators do not only
+score a final answer, but also constrain what the persistent skill system is
+allowed to learn from that answer.  A complete related-work revision will add
+current vulnerability-agent benchmarks, autonomous program-analysis systems,
+and execution-based agent evaluation.
+
+\section{Threats to Validity}
+\label{sec:threats}
+
+\paragraph{Internal validity.}
+The pilot runs were collected while the framework and skill library were
+evolving.  Prompt budgets, skill sets, and execution conditions are not yet a
+fully balanced factorial design.  Final experiments must rerun all conditions
+from fixed snapshots with repeated seeds.
+
+\paragraph{Answer leakage.}
+Known-CVE benchmarks can leak through identifiers, artifact names, comments, or
+pre-existing PoCs.  Blind workspaces must be generated automatically and audited
+to exclude solution-bearing material.  Ground truth and validators must remain
+outside the agent-visible workspace.
+
+\paragraph{Attribution validity.}
+Observed relevance is not causal contribution.  The current method is strongest
+at preventing obvious false updates and weakest at distinguishing a useful skill
+from redundant model knowledge.  Counterfactual ablations are therefore useful
+for analysis, but they are not the primary success condition of the framework.
+
+\paragraph{External validity.}
+The current cases are few and mostly source-available parser vulnerabilities.
+Results may not transfer to closed firmware, multi-service systems, or bugs that
+require long-lived state.  The planned firmware dataset should be treated as a
+held-out transfer set rather than folded into skill design before evaluation.
+
+\paragraph{Oracle validity and cost.}
+Case validators encode trusted expectations and may themselves be incomplete.
+We must report validator provenance, evidence class, false acceptance/failure
+analysis, and the human effort needed to add each case.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Vulnerability agents should not learn only from conversation success.  They
+should learn from evidence-grounded analysis outcomes that can be turned into
+reusable skills for later tasks.  We proposed an evidence-grounded skill evolution
+framework that connects blind execution, external confirmation, structured
+feedback, candidate generation, and gated publication into one closed loop.
+Current evidence already shows that the loop can capture both useful revision
+signals and unsupported revisions that should be rejected.  The next phase is
+to move from candidate generation to accepted publication and then quantify how
+much published evolved skills improve later held-out source, binary, and
+firmware vulnerability tasks.  That is the key evidence still needed to argue
+that a vulnerability-analysis agent can not only solve benchmarks, but also
+accumulate trustworthy reusable expertise.
+
+\section*{Acknowledgments}
+Acknowledgments go here.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

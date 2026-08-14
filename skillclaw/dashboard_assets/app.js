@@ -18,7 +18,7 @@ const state = {
   evolve: null,
   skills: [],
   sessions: [],
-  validationJobs: [],
+  replayGateJobs: [],
   skillDetails: Object.create(null),
   sessionDetails: Object.create(null),
   compareSelections: Object.create(null),
@@ -448,7 +448,7 @@ function mySessionItems() {
 }
 
 function candidateItems() {
-  return sortJobs(state.validationJobs)
+  return sortJobs(state.replayGateJobs)
 }
 
 function findSkillById(skillId) {
@@ -464,7 +464,7 @@ function findSkillByName(name) {
 }
 
 function findJobById(jobId) {
-  return state.validationJobs.find((item) => String(item.job_id || "") === String(jobId || "")) || null
+  return state.replayGateJobs.find((item) => String(item.job_id || "") === String(jobId || "")) || null
 }
 
 function findSessionById(sessionId) {
@@ -581,13 +581,13 @@ function jobSessionIds(job) {
 function jobsForSkill(skillName) {
   const normalized = String(skillName || "").trim().toLowerCase()
   return sortJobs(
-    state.validationJobs.filter((job) => String(job.skill_name || "").trim().toLowerCase() === normalized)
+    state.replayGateJobs.filter((job) => String(job.skill_name || "").trim().toLowerCase() === normalized)
   )
 }
 
 function jobsForSession(sessionId) {
   return sortJobs(
-    state.validationJobs.filter((job) => jobSessionIds(job).includes(sessionId))
+    state.replayGateJobs.filter((job) => jobSessionIds(job).includes(sessionId))
   )
 }
 
@@ -999,11 +999,11 @@ async function refreshData({ notice = "", preserveMessage = false } = {}) {
     clearMessage()
   }
   try {
-    const [overview, skillsPayload, sessionsPayload, validationPayload, evolve] = await Promise.all([
+    const [overview, skillsPayload, sessionsPayload, replayGatePayload, evolve] = await Promise.all([
       getJson("/api/v1/overview"),
       getJson("/api/v1/skills?limit=500"),
       getJson("/api/v1/sessions?limit=500"),
-      getJson("/api/v1/validation/jobs?limit=500"),
+      getJson("/api/v1/replay-gate/jobs?limit=500"),
       getJson("/api/v1/evolve/status"),
     ])
 
@@ -1011,7 +1011,7 @@ async function refreshData({ notice = "", preserveMessage = false } = {}) {
     state.evolve = evolve
     state.skills = sortSkills(skillsPayload.items || [])
     state.sessions = sortSessions(sessionsPayload.items || [])
-    state.validationJobs = sortJobs(validationPayload.items || [])
+    state.replayGateJobs = sortJobs(replayGatePayload.items || [])
     state.skillDetails = Object.create(null)
     state.sessionDetails = Object.create(null)
 

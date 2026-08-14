@@ -1,8 +1,10 @@
-﻿import json
+import json
+from types import SimpleNamespace
 
 from evolve_server.__main__ import _build_config_from_args, build_parser
-from evolve_server.core.config import EvolveServerConfig
+from evolve_server.core.config import EvolveServerConfig, feedback_bundle_candidates
 from evolve_server.engines.agent_workspace import AgentWorkspace
+from evolve_server.engines.workflow import EvolveServer
 from evolve_server.pipeline.execution import _build_feedback_context
 
 
@@ -90,6 +92,31 @@ def test_evolve_cli_accepts_runtime_feedback_bundle():
     assert config.feedback_bundle_path == "runtime/evolve/skill_feedback_bundle.json"
 
 
+def test_feedback_bundle_candidates_append_default_report_path():
+    paths = [path.as_posix() for path in feedback_bundle_candidates("runtime/evolve/skill_feedback_bundle.json")]
+
+    assert paths[0] == "runtime/evolve/skill_feedback_bundle.json"
+    assert paths[1].endswith("reports/current/skill_feedback_bundle.json")
+
+
+def test_workflow_feedback_bundle_falls_back_to_current_report(tmp_path, monkeypatch):
+    missing = tmp_path / "runtime" / "evolve" / "skill_feedback_bundle.json"
+    fallback = tmp_path / "reports" / "current" / "skill_feedback_bundle.json"
+    fallback.parent.mkdir(parents=True, exist_ok=True)
+    fallback.write_text('[{"skill":"demo-skill","gate_decision":"revise"}]', encoding="utf-8")
+    monkeypatch.setattr(
+        "evolve_server.engines.workflow.feedback_bundle_candidates",
+        lambda _raw: [missing, fallback],
+    )
+    server = object.__new__(EvolveServer)
+    server.config = SimpleNamespace(feedback_bundle_path=str(missing))
+
+    payload = EvolveServer._load_feedback_bundle(server)
+
+    assert isinstance(payload, list)
+    assert payload[0]["skill"] == "demo-skill"
+
+
 def test_feedback_context_formats_gate_and_directives():
     text = _build_feedback_context(
         {
@@ -118,3 +145,32 @@ def test_feedback_context_formats_gate_and_directives():
     assert "separate localization from exact CVE identity" in text
     assert "cve_identity_miss=1" in text
 
+
+def test_feedback_context_marks_low_score_relevant_skill_as_concrete_defect():
+    text = _build_feedback_context(
+        {
+            "skill": "embedded-cgi-command-injection-triage",
+            "gate_decision": "revise",
+            "summary": {
+                "selected_runs": 1,
+                "mean_score": 0.3,
+                "relevant_selected": 1,
+                "mismatched_selected": 0,
+                "negative": 1,
+            },
+            "dimensions": {
+                "localization_success": 0,
+                "cve_success": 0,
+                "cve_identity_miss": 0,
+                "evidence_success": 1,
+                "root_cause_success": 1,
+                "validator_passed": 1,
+                "validator_failed": 0,
+            },
+        }
+    )
+
+    assert "concrete defect signal" in text
+    assert "Treat this as evidence for a narrow improve_skill edit" in text
+    assert "partial success" in text
+    assert "dispatch narrowing" in text

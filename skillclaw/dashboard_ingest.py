@@ -16,14 +16,14 @@ from typing import Any
 import yaml
 
 from evolve_server.core.skill_registry import SkillIDRegistry
-from evolve_server.core.utils import build_skill_md
 from evolve_server.storage.oss_helpers import fetch_version_bundle, load_version_bundle_record
 from skillclaw.skill_bundle import bundle_entrypoint_text, read_skill_bundle_with_meta
+from skillclaw.skill_markdown import build_skill_md
 
 from .config import SkillClawConfig
 from .runtime_state import legacy_skill_stats_path, resolve_workspace_state_dir, skill_stats_path
 from .skill_hub import SkillHub
-from .validation_store import ValidationStore
+from .replay_gate_store import ReplayGateStore
 
 logger = logging.getLogger(__name__)
 
@@ -608,6 +608,11 @@ def _load_record_sessions(config: SkillClawConfig, warnings: list[str]) -> list[
                 if turn_num <= 0:
                     turn_num = max(group["turns"].keys(), default=0) + 1
 
+                skill_injection = payload.get("skill_injection")
+                injected_skill_names = _extract_skill_names(payload.get("selected_skill_names"))
+                if not injected_skill_names and isinstance(skill_injection, dict):
+                    injected_skill_names = _extract_skill_names(skill_injection.get("selected_skill_names"))
+
                 turn_payload = {
                     "turn_num": turn_num,
                     "prompt_text": _extract_record_instruction(payload),
@@ -620,7 +625,7 @@ def _load_record_sessions(config: SkillClawConfig, warnings: list[str]) -> list[
                     "tool_results_raw": [],
                     "tool_observations": [],
                     "tool_errors": [],
-                    "injected_skills": [],
+                    "injected_skills": injected_skill_names,
                     "prm_score": prm_scores.get((session_id, turn_num)),
                 }
 
@@ -916,10 +921,10 @@ def _load_shared_skills(
     registry_entries = registry.all_entries()
     skills: dict[str, dict[str, Any]] = {}
     candidate_docs_by_skill: dict[str, dict[str, str]] = defaultdict(dict)
-    validation_jobs: list[dict[str, Any]] = []
+    replay_gate_jobs: list[dict[str, Any]] = []
 
     try:
-        validation_store = ValidationStore.from_config(config)
+        validation_store = ReplayGateStore.from_config(config)
         for job in validation_store.list_jobs():
             if not isinstance(job, dict):
                 continue
@@ -958,7 +963,7 @@ def _load_shared_skills(
                     if candidate_md:
                         candidate_docs_by_skill[candidate_name][_hash_text(candidate_md)] = candidate_md
 
-            validation_jobs.append(
+            replay_gate_jobs.append(
                 {
                     "job_id": job_id,
                     "created_at": str(job.get("created_at", "") or ""),
@@ -975,7 +980,7 @@ def _load_shared_skills(
                 }
             )
     except Exception as exc:
-        warnings.append(f"failed to load validation jobs: {exc}")
+        warnings.append(f"failed to load replay gate jobs: {exc}")
 
     for name, record in manifest.items():
         raw = ""
@@ -1148,21 +1153,21 @@ def _load_shared_skills(
         ),
         reverse=True,
     )
-    validation_jobs.sort(
+    replay_gate_jobs.sort(
         key=lambda item: (
             str(item.get("created_at", "") or ""),
             str(item.get("job_id", "") or ""),
         ),
         reverse=True,
     )
-    return skills, sessions, validation_jobs, registry_entries
+    return skills, sessions, replay_gate_jobs, registry_entries
 
 
 def build_dashboard_snapshot(config: SkillClawConfig) -> dict[str, Any]:
     warnings: list[str] = []
     local_skills = _load_local_skills(config, warnings)
     local_sessions = _load_local_sessions(config, warnings)
-    shared_skills, shared_sessions, validation_jobs, registry_entries = _load_shared_skills(config, warnings)
+    shared_skills, shared_sessions, replay_gate_jobs, registry_entries = _load_shared_skills(config, warnings)
 
     skills_by_name: dict[str, dict[str, Any]] = {name: dict(skill) for name, skill in local_skills.items()}
 
@@ -1456,5 +1461,6 @@ def build_dashboard_snapshot(config: SkillClawConfig) -> dict[str, Any]:
         "skills": normalized_skills,
         "sessions": session_summaries,
         "session_skill_links": session_skill_links,
-        "validation_jobs": validation_jobs,
+        "replay_gate_jobs": replay_gate_jobs,
+        "validation_jobs": replay_gate_jobs,
     }

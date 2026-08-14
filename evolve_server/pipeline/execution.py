@@ -124,6 +124,8 @@ Not every failure is a skill deficiency. Before editing, consider whether the fa
 
 Critical anti-pattern to avoid: if the skill ALREADY contains correct environment information (API endpoints, ports, payload formats, tool names) and the agent failed because it did NOT use that information, that is an AGENT problem, not a skill problem. Do NOT delete the correct API information from the skill and replace it with instructions like "go read utils.py" or "inspect the mock service code". The whole point of the skill is to save the agent from having to discover those details.
 
+Important exception to the default skip bias: if validator-backed feedback shows that this skill was task-relevant, the run was confirmed, but the mean score stayed low, treat that as legitimate evidence of a skill defect or omission. In that situation, prefer a narrow improve_skill edit over skip unless the session evidence clearly shows the agent ignored already-correct instructions.
+
 When in doubt, prefer **skip** over a speculative edit.
 
 ## Skill-writing principles (for create_skill)
@@ -355,10 +357,11 @@ def _build_feedback_context(feedback_context: dict | None) -> str:
     skill = str(feedback_context.get("skill") or "").strip()
     if not skill:
         return ""
+    is_no_skill = skill == "__no_skill__"
     lines = [
-        "## Validator-backed feedback for this skill",
+        "## Validator-backed feedback" + ("" if not is_no_skill else " for no-skill sessions"),
         "",
-        f"- Skill: {skill}",
+        f"- Skill: {skill}" + (" (no skill was selected in these sessions)" if is_no_skill else ""),
         f"- Gate decision: {str(feedback_context.get('gate_decision') or 'unknown')}",
     ]
     if str(feedback_context.get("attribution_status") or "") == "observational":
@@ -366,11 +369,17 @@ def _build_feedback_context(feedback_context: dict | None) -> str:
             "- Attribution: observational only; the validator confirms the run outcome, not that this skill caused it."
         )
     summary = feedback_context.get("summary")
+    selected_runs = None
+    mean_score = None
+    mismatched = None
+    relevant = None
+    negative = None
     if isinstance(summary, dict):
         selected_runs = summary.get("selected_runs")
         mean_score = summary.get("mean_score")
         mismatched = summary.get("mismatched_selected")
         relevant = summary.get("relevant_selected")
+        negative = summary.get("negative")
         lines.append(
             "- Summary: selected_runs={runs}, mean_score={score}, relevant_selected={relevant}, mismatched_selected={mismatched}".format(
                 runs=selected_runs,
@@ -386,17 +395,71 @@ def _build_feedback_context(feedback_context: dict | None) -> str:
     if directives:
         lines.extend(["- Revision directives:"] + [f"  - {item}" for item in directives[:8]])
     dimensions = feedback_context.get("dimensions")
+    localization_success = None
+    evidence_success = None
+    root_cause_success = None
+    validator_passed = None
+    validator_failed = None
     if isinstance(dimensions, dict):
+        localization_success = dimensions.get("localization_success")
+        evidence_success = dimensions.get("evidence_success")
+        root_cause_success = dimensions.get("root_cause_success")
+        validator_passed = dimensions.get("validator_passed")
+        validator_failed = dimensions.get("validator_failed")
         lines.append(
             "- Dimensions: localization_success={loc}, cve_success={cve}, cve_identity_miss={miss}, "
-            "validator_passed={vp}, validator_failed={vf}".format(
-                loc=dimensions.get("localization_success"),
+            "evidence_success={evidence}, root_cause_success={root}, validator_passed={vp}, validator_failed={vf}".format(
+                loc=localization_success,
                 cve=dimensions.get("cve_success"),
                 miss=dimensions.get("cve_identity_miss"),
-                vp=dimensions.get("validator_passed"),
-                vf=dimensions.get("validator_failed"),
+                evidence=evidence_success,
+                root=root_cause_success,
+                vp=validator_passed,
+                vf=validator_failed,
             )
         )
+
+    try:
+        mean_score_value = float(mean_score) if mean_score is not None else None
+    except (TypeError, ValueError):
+        mean_score_value = None
+    try:
+        relevant_count = int(relevant) if relevant is not None else 0
+    except (TypeError, ValueError):
+        relevant_count = 0
+    try:
+        negative_count = int(negative) if negative is not None else 0
+    except (TypeError, ValueError):
+        negative_count = 0
+    try:
+        localization_count = int(localization_success) if localization_success is not None else 0
+    except (TypeError, ValueError):
+        localization_count = 0
+    try:
+        evidence_count = int(evidence_success) if evidence_success is not None else 0
+    except (TypeError, ValueError):
+        evidence_count = 0
+    try:
+        root_cause_count = int(root_cause_success) if root_cause_success is not None else 0
+    except (TypeError, ValueError):
+        root_cause_count = 0
+    try:
+        validator_passed_count = int(validator_passed) if validator_passed is not None else 0
+    except (TypeError, ValueError):
+        validator_passed_count = 0
+
+    concrete_defect_signal = (
+        relevant_count > 0
+        and negative_count > 0
+        and mean_score_value is not None
+        and mean_score_value < 0.6
+    )
+    partial_success_signal = (
+        concrete_defect_signal
+        and validator_passed_count > 0
+        and (evidence_count > 0 or root_cause_count > 0)
+        and localization_count == 0
+    )
     lines.extend(
         [
             "",
@@ -407,6 +470,23 @@ def _build_feedback_context(feedback_context: dict | None) -> str:
             "- Do not erase source-validated working guidance unless the feedback explicitly contradicts it.",
         ]
     )
+    if concrete_defect_signal:
+        lines.extend(
+            [
+                "",
+                "This feedback does contain a concrete defect signal:",
+                "- A task-relevant skill was selected, but the resulting confirmed run stayed low-scoring.",
+                "- Treat this as evidence for a narrow improve_skill edit, not an automatic skip.",
+                "- Focus on the smallest guidance change that would steer future runs away from the observed failure mode.",
+            ]
+        )
+    if partial_success_signal:
+        lines.extend(
+            [
+                "- The pattern looks like partial success: the agent found some correct evidence/root cause clues but failed to localize the right file/function/branch.",
+                "- Prefer tightening dispatch narrowing, branch selection, and source-to-sink path guidance instead of rewriting the whole skill.",
+            ]
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -462,10 +542,13 @@ async def create_skill_from_sessions(
     llm: AsyncLLMClient,
     sessions: list[dict],
     existing_skill_names: list[str],
+    feedback_context: Optional[dict] = None,
 ) -> Optional[dict]:
     """Combined decision + execution for the no-skill session bucket."""
     evidence = _build_session_evidence(sessions)
+    feedback_section = _build_feedback_context(feedback_context)
     user_msg = (
+        f"{feedback_section}"
         f"## Session evidence ({len(sessions)} sessions)\n\n"
         f"{evidence}\n\n"
         f"## Existing skill names in the library\n\n"

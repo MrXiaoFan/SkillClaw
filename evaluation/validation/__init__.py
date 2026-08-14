@@ -1,12 +1,9 @@
-"""Validation primitives for benchmark confirmation and feedback."""
+"""Compatibility wrapper for the renamed confirmation package."""
 
-from .core import ValidationContext, build_feedback, summarize_checks
-from .runner import run_case_validators
+from .core import *  # noqa: F401,F403
+from .runner import run_case_confirmation, run_case_validators
 
 __all__ = [
-    "ValidationContext",
-    "build_feedback",
+    "run_case_confirmation",
     "run_case_validators",
-    "summarize_checks",
 ]
-

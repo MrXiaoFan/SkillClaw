@@ -184,11 +184,11 @@ class DashboardService:
         from evolve_server.core.config import EvolveServerConfig
         from evolve_server.engines.workflow import EvolveServer
 
-        from .validation_store import ValidationStore
+        from .replay_gate_store import ReplayGateStore
 
         evolve_config = EvolveServerConfig.from_skillclaw_config(self.config)
         try:
-            validation_store = ValidationStore.from_config(self.config)
+            validation_store = ReplayGateStore.from_config(self.config)
             if validation_store.list_jobs():
                 evolve_config.publish_mode = "validated"
                 evolve_config.__post_init__()
@@ -396,7 +396,7 @@ class DashboardService:
             "sync": sync_result["summary"],
         }
 
-    async def submit_validation_review(
+    async def submit_replay_gate_review(
         self,
         job_id: str,
         *,
@@ -408,12 +408,12 @@ class DashboardService:
         if not self.config.sharing_enabled:
             raise ValueError("skill sharing is not enabled in the current config")
 
-        from .validation_store import ValidationStore
+        from .replay_gate_store import ReplayGateStore
 
-        validation_store = ValidationStore.from_config(self.config)
+        validation_store = ReplayGateStore.from_config(self.config)
         job = validation_store.load_job(job_id)
         if not isinstance(job, dict):
-            raise ValueError(f"validation job not found: {job_id}")
+            raise ValueError(f"replay gate job not found: {job_id}")
 
         raw_alias = str(self.config.sharing_user_alias or "").strip()
         user_alias = raw_alias or "dashboard-review"
@@ -436,7 +436,7 @@ class DashboardService:
         validation_store.save_result(job_id, user_alias, result_payload)
 
         response = {
-            "operation": "submit-validation-review",
+            "operation": "submit-replay-gate-review",
             "job_id": job_id,
             "user_alias": user_alias,
             "result": result_payload,
@@ -449,6 +449,23 @@ class DashboardService:
         sync_result = self.sync()
         response["sync"] = sync_result["summary"]
         return response
+
+    async def submit_validation_review(
+        self,
+        job_id: str,
+        *,
+        accepted: bool,
+        score: float | None = None,
+        notes: str = "",
+        auto_finalize: bool = True,
+    ) -> dict[str, Any]:
+        return await self.submit_replay_gate_review(
+            job_id,
+            accepted=accepted,
+            score=score,
+            notes=notes,
+            auto_finalize=auto_finalize,
+        )
 
     async def get_evolve_status(self) -> dict[str, Any]:
         base_url = str(self.config.dashboard_evolve_server_url or "").strip()
@@ -625,14 +642,18 @@ def create_dashboard_app(config: SkillClawConfig) -> FastAPI:
             raise HTTPException(status_code=404, detail="session not found")
         return payload
 
-    @app.get("/api/v1/validation/jobs")
-    async def validation_jobs(status: str = "", limit: int = 200):
+    @app.get("/api/v1/replay-gate/jobs")
+    async def replay_gate_jobs(status: str = "", limit: int = 200):
         return {
-            "items": service.store.list_validation_jobs(
+            "items": service.store.list_replay_gate_jobs(
                 status=status.strip(),
                 limit=limit,
             )
         }
+
+    @app.get("/api/v1/validation/jobs")
+    async def validation_jobs(status: str = "", limit: int = 200):
+        return await replay_gate_jobs(status=status, limit=limit)
 
     @app.get("/api/v1/evolve/status")
     async def evolve_status():
@@ -687,8 +708,8 @@ def create_dashboard_app(config: SkillClawConfig) -> FastAPI:
         except Exception as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    @app.post("/api/v1/validation/jobs/{job_id}/review")
-    async def submit_review(job_id: str, payload: dict[str, Any] | None = Body(default=None)):
+    @app.post("/api/v1/replay-gate/jobs/{job_id}/review")
+    async def submit_replay_gate_review(job_id: str, payload: dict[str, Any] | None = Body(default=None)):
         body = payload or {}
         accepted = body.get("accepted")
         if not isinstance(accepted, bool):
@@ -705,7 +726,7 @@ def create_dashboard_app(config: SkillClawConfig) -> FastAPI:
                 raise HTTPException(status_code=400, detail="'score' must be a number in [0, 1]")
 
         try:
-            return await service.submit_validation_review(
+            return await service.submit_replay_gate_review(
                 job_id,
                 accepted=accepted,
                 score=score,
@@ -714,6 +735,10 @@ def create_dashboard_app(config: SkillClawConfig) -> FastAPI:
             )
         except Exception as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/v1/validation/jobs/{job_id}/review")
+    async def submit_review(job_id: str, payload: dict[str, Any] | None = Body(default=None)):
+        return await submit_replay_gate_review(job_id, payload)
 
     return app
 

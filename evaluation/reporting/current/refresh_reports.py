@@ -254,7 +254,7 @@ def _write_runset_summary(
         [
             "## 收录记录",
             "",
-            "| case_id | mode | score | validation | confirmation | benchmark_maturity | benchmark_tier | publication_ready | source_type | source_path | selected_skills | skill_relevance | record |",
+            "| case_id | mode | score | confirmation | confirmation_maturity | benchmark_maturity | benchmark_tier | publication_ready | source_type | source_path | selected_skills | skill_relevance | record |",
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
@@ -276,7 +276,7 @@ def _write_runset_summary(
         display_record_path = _display_path(path, repo_root, report_dir)
         lines.append(
             f"| {row.get('case_id','')} | {row.get('mode','')} | {row.get('score_text','')} | "
-            f"{row.get('validation','')} | {conf} | {bench_maturity} | {bench_tier} | {publication_ready} | "
+            f"{row.get('confirmation','') or row.get('validation','')} | {conf} | {bench_maturity} | {bench_tier} | {publication_ready} | "
             f"{input_type} | `{display_input_path}` | "
             f"{sel} | {rel} | `{display_record_path}` |"
         )

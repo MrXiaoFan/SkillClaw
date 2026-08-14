@@ -44,7 +44,8 @@ def build_manifest_from_final_record(record_path: Path) -> dict[str, Any]:
     if not isinstance(record, dict):
         raise ValueError(f"{record_path} must contain a JSON object")
     run = record.get("run") if isinstance(record.get("run"), dict) else {}
-    validation = record.get("validation") if isinstance(record.get("validation"), dict) else {}
+    confirmation = record.get("confirmation") if isinstance(record.get("confirmation"), dict) else {}
+    validation = confirmation if confirmation else (record.get("validation") if isinstance(record.get("validation"), dict) else {})
     skill_relevance = record.get("skill_relevance") if isinstance(record.get("skill_relevance"), dict) else {}
     skill_injection = record.get("skill_injection") if isinstance(record.get("skill_injection"), dict) else {}
     run_id = _infer_run_id(record_path, record)
@@ -61,6 +62,7 @@ def build_manifest_from_final_record(record_path: Path) -> dict[str, Any]:
         "end": run.get("end") or record.get("timestamp") or "",
         "score": record.get("score"),
         "max_score": record.get("max_score"),
+        "confirmation_status": validation.get("status") or "",
         "validation_status": validation.get("status") or "",
         "session_id": record.get("session_id") or "",
         "session_id_source": record.get("session_id_source") or "",

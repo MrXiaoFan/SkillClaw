@@ -38,9 +38,13 @@ server = [
     "oss2",
     "python-dotenv",
 ]
+# Remote benchmark execution against experiment VMs
+remote = [
+    "paramiko",
+]
 # Everything
 all = [
-    "skillclaw[embedding,evolve,sharing,server]",
+    "skillclaw[embedding,evolve,sharing,server,remote]",
 ]
 
 [project.scripts]

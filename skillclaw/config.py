@@ -129,6 +129,22 @@ class SkillClawConfig:
     validation_poll_interval_seconds: int = 60
     validation_max_jobs_per_day: int = 5
     validation_max_concurrency: int = 1
+    # Replay gate context mode: "evidence" (legacy) or "blind" (raw observations)
+    replay_context_mode: str = "evidence"
+    # Replay gate scoring: "prm" (legacy +/-1/0) or "case_output" (5-dimension match)
+    replay_scoring_mode: str = "prm"
+    # Replay gate acceptance: "strict_improvement" (candidate > baseline) or "non_inferior" (candidate >= baseline)
+    replay_acceptance_mode: str = "strict_improvement"
+    # Real re-run validation (Scheme B): trigger actual agent session with candidate skill
+    real_rerun_enabled: bool = False
+    real_rerun_threshold: float = 0.6
+    # Scheme B VM connection (defaults match the standard eval VM)
+    real_rerun_vm_host: str = "192.168.1.4"
+    real_rerun_vm_user: str = "li"
+    real_rerun_vm_key_path: str = "~/.ssh/skillclaw_vm"
+    real_rerun_skillclaw_url: str = "http://127.0.0.1:30000"
+    real_rerun_skillclaw_key: str = ""
+    real_rerun_remote_repo: str = "/home/li/skillclaw-eval/SkillClaw"
 
     # ------------------------------------------------------------------ #
     # Dashboard                                                           #

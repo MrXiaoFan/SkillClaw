@@ -18,10 +18,10 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from evaluation.validation.core import classify_skill_role
+    from evaluation.confirmation.core import classify_skill_role
 except ImportError:  # pragma: no cover - direct script execution.
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-    from evaluation.validation.core import classify_skill_role
+    from evaluation.confirmation.core import classify_skill_role
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -69,7 +69,10 @@ def _selected_skills(record: dict[str, Any]) -> list[str]:
     return [str(item) for item in injection.get("selected_skill_names") or [] if str(item).strip()]
 
 
-def _validation_status(record: dict[str, Any]) -> str:
+def _confirmation_status(record: dict[str, Any]) -> str:
+    confirmation = record.get("confirmation")
+    if isinstance(confirmation, dict):
+        return str(confirmation.get("status") or "")
     validation = record.get("validation")
     if isinstance(validation, dict):
         return str(validation.get("status") or "")
@@ -120,6 +123,9 @@ def _new_bucket(skill: str) -> dict[str, Any]:
         "neutral": 0,
         "negative": 0,
         "mean_score": None,
+        "confirmation_passed": 0,
+        "confirmation_partial": 0,
+        "confirmation_failed": 0,
         "validation_passed": 0,
         "validation_partial": 0,
         "validation_failed": 0,
@@ -148,23 +154,27 @@ def build_skill_feedback(records: list[tuple[Path, dict[str, Any]]]) -> list[dic
             continue
         decision = _feedback_decision(record) or "neutral"
         normalized = _normalized_score(record)
-        validation = _validation_status(record)
-        validation_checks = (
-            record.get("validation", {}).get("checks")
-            if isinstance(record.get("validation"), dict)
-            else []
-        )
+        confirmation_status = _confirmation_status(record)
+        confirmation = record.get("confirmation")
+        if isinstance(confirmation, dict):
+            confirmation_checks = confirmation.get("checks") or []
+        else:
+            confirmation_checks = (
+                record.get("validation", {}).get("checks")
+                if isinstance(record.get("validation"), dict)
+                else []
+            )
         artifact_generated = any(
             isinstance(item, dict)
             and str(item.get("type") or "") == "artifact_exists"
             and str(item.get("status") or "") == "passed"
-            for item in (validation_checks or [])
+            for item in (confirmation_checks or [])
         )
         artifact_execution_passed = any(
             isinstance(item, dict)
             and str(item.get("type") or "") == "artifact_exec"
             and str(item.get("status") or "") == "passed"
-            for item in (validation_checks or [])
+            for item in (confirmation_checks or [])
         )
         for skill in skills:
             bucket = buckets.setdefault(skill, _new_bucket(skill))
@@ -182,11 +192,14 @@ def build_skill_feedback(records: list[tuple[Path, dict[str, Any]]]) -> list[dic
             bucket[skill_decision] += 1
             if normalized is not None:
                 bucket["_scores"].append(normalized)
-            if validation == "passed":
+            if confirmation_status == "passed":
+                bucket["confirmation_passed"] += 1
                 bucket["validation_passed"] += 1
-            elif validation == "partial":
+            elif confirmation_status == "partial":
+                bucket["confirmation_partial"] += 1
                 bucket["validation_partial"] += 1
-            elif validation == "failed":
+            elif confirmation_status == "failed":
+                bucket["confirmation_failed"] += 1
                 bucket["validation_failed"] += 1
             if artifact_generated:
                 bucket["artifact_generated"] += 1
@@ -235,9 +248,9 @@ def write_markdown(rows: list[dict[str, Any]], out_path: Path) -> None:
         "neutral",
         "negative",
         "mean_score",
-        "validation_passed",
-        "validation_partial",
-        "validation_failed",
+        "confirmation_passed",
+        "confirmation_partial",
+        "confirmation_failed",
         "artifact_generated",
         "artifact_execution_passed",
         "relevant_selected",
@@ -280,9 +293,9 @@ def write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
         "neutral",
         "negative",
         "mean_score",
-        "validation_passed",
-        "validation_partial",
-        "validation_failed",
+        "confirmation_passed",
+        "confirmation_partial",
+        "confirmation_failed",
         "artifact_generated",
         "artifact_execution_passed",
         "relevant_selected",
