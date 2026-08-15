@@ -19,8 +19,7 @@
 
 \begin{frontmatter}
 
-\title{When Skills Help and When They Don't:\\
-Evidence-Grounded Skill Attribution for\\
+\title{Toward Evidence-Grounded Skill Evolution for\\
 LLM-Based Vulnerability Analysis}
 
 \author[inst1]{Author One}
@@ -30,35 +29,40 @@ LLM-Based Vulnerability Analysis}
 \address[inst1]{Affiliation, City, Country}
 
 \begin{abstract}
-Large language model (LLM) agents increasingly rely on reusable
-natural-language skills to improve task performance, but recent work reveals
-that skills can also cause failures and that skill evolution can propagate
-unsafe experience.  These findings raise a question that is especially
-critical in vulnerability analysis: when an agent receives a skill and then
-correctly identifies a vulnerability, was the skill causally responsible?
-We study this question as \emph{skill attribution} in the vulnerability
-domain.  Unlike general agent tasks, vulnerability analysis has executable
-external evidence---source predicates, behavioral reproduction, logic
-harnesses, and sanitizer crashes---that can serve as a low-cost
-approximation to the expensive counterfactual ablations used in prior
-skill-attribution work.  We propose a four-level evidence-conditioned
-feedback signal (supported, mismatched, contradicted, unknown) that exploits
-this domain advantage, and we implement a gated skill-evolution framework
-in which candidate skill revisions must survive replay validation before
-entering the live skill library.  Through 36 remote blind A/B runs across
-six firmware vulnerability cases (no-skill vs.\ with-skill, 3 rounds each),
-we find that skill injection produces unstable effects ranging from
-$+1.67$ to $-1.00$ score points, with two of six cases showing net harm.
-We further analyze 92 gate decisions and show that replay-only validation
-suffers a structural limitation: without counterfactual evidence, the gate
-rejects most candidates because it cannot establish strict improvement.
-We compare our approach with concurrent work on skill-induced failures and
-skill misevolution, and discuss the implications for safe skill evolution.
+Reusable natural-language skills are becoming a practical control surface
+for LLM agents, but in vulnerability analysis the key problem is not merely
+how to generate candidate skills.  The harder problem is deciding when
+evidence from a completed analysis run is strong enough to justify changing
+the live skill library that future analyses will depend on.  We study this
+problem as \emph{evidence-constrained skill evolution} for
+vulnerability-analysis agents.  Our setting couples blind remote analysis
+with post-run external confirmation: an agent solves a task on an isolated
+virtual machine, the local system scores the final answer and checks it
+against source predicates, logic harnesses, behavioral oracles, or
+sanitizer-backed evidence, and only then may an evolution service propose
+and validate candidate skill updates.  We present a split-plane
+architecture that separates analysis from confirmation, a run archival
+scheme that links selected skills to immutable session segments, a
+lightweight run-level feedback interface for candidate generation, and a
+publication gate that stages candidate skills before they can enter the
+live library.  Empirically, our primary 36-run blind A/B study across six
+firmware cases shows strongly heterogeneous skill effects, with mean score
+changes ranging from $+1.67$ to $-1.00$.  Complementary targeted firmware
+ablations on two CGI cases further show that skill structure matters: a
+branch-first seed skill is more stable than a broader but less focused live
+profile, while wrong or absent skills can still yield deceptively plausible
+answers.  Across 94 archived gate decisions, candidate generation is not
+the main bottleneck; admission into the live library is.  Replay-based
+gates can reject clearly poor candidates, but they still struggle to
+separate genuine improvement from harmless redundancy when the baseline
+model already performs well.  The resulting contribution is a
+vulnerability-analysis-oriented research scaffold for studying when
+validated runs should, and should not, become reusable skills.
 \end{abstract}
 
 \begin{keyword}
-LLM agent \sep skill attribution \sep vulnerability analysis \sep
-skill evolution \sep external validation \sep evidence-grounded feedback
+LLM agent \sep skill evolution \sep vulnerability analysis \sep
+external validation \sep blind benchmark \sep evidence-grounded feedback
 \end{keyword}
 
 \end{frontmatter}
@@ -68,80 +72,102 @@ skill evolution \sep external validation \sep evidence-grounded feedback
 
 LLM agents increasingly use external memories, reusable instructions, and
 natural-language skills to improve over repeated tasks.  Systems such as
-Voyager~\cite{voyager} and ExpeL~\cite{expel} demonstrate that agents can
-accumulate procedural knowledge from past interactions and reuse it on new
-problems.  SkillClaw~\cite{skillclaw} extends this idea by evolving and
-sharing skills collectively across users and environments.  Recent work
-further studies autonomous skill construction from context~\cite{ctx2skill}
-and on-policy skill distillation from agent trajectories~\cite{opid}.
+Voyager~\cite{voyager} and ExpeL~\cite{expel} show that agents can
+accumulate procedural knowledge from interaction and reuse it later.
+SkillClaw~\cite{skillclaw} extends this direction to a shared skill
+ecosystem, while recent work studies context-to-skill induction
+(\cite{ctx2skill}), on-policy skill distillation (\cite{opid}),
+environment-grounded skill formation (\cite{spark,skillevolbench}), and
+verifier-guided skill refinement (\cite{trace2skill,veriskill}).
 
-However, two recent findings challenge the assumption that more skills
-always help.  First, \citet{skillharmful} show that agent skills can be
-actively harmful: in a comprehensive empirical study, they identify 307
-skill-induced failures, finding that seemingly relevant skills frequently
-cause agents to incorrectly implement or omit task-required steps.
-Second, \citet{misevolution} show that skill evolution can propagate
-unsafe experience: when an agent converts a successful---but
-unsafe---trajectory into a persistent skill, the unsafe behavior becomes
-reusable across future tasks.  These findings imply that skill systems
-need not only retrieval and injection, but also \emph{attribution} (did
-the skill causally help?) and \emph{safe publication} (is it safe to make
-this skill permanent?).
+At the same time, two recent findings complicate the optimistic picture
+that ``more skills'' naturally means ``better agents.''  First,
+skill-induced failures are common: even topically relevant skills can push
+an agent onto the wrong procedure or the wrong abstraction
+level~\cite{skillharmful}.  Second, self-improving agents can accumulate
+unsafe or low-value procedural knowledge if successful runs are converted
+into persistent skills without enough scrutiny~\cite{misevolution}.  In
+parallel, security-specific work has begun to evolve reusable playbooks for
+auditing~\cite{evohunt} and to construct more realistic long-horizon
+security benchmarks~\cite{secbenchpro}.  These lines of work establish that
+skill evolution, agentic security, and realistic evaluation are all active
+research directions.  What remains less clear is how they should be joined
+in a deployment-oriented vulnerability-analysis loop.
 
-Vulnerability analysis is an especially demanding setting for addressing
-these challenges.  Unlike a general coding task, a vulnerability-analysis
-agent must localize the correct file and function, describe the actual root
-cause, and support the claim with source or runtime evidence.  A plausible
-but wrong answer is easy to produce; a validated answer is much harder.
-Crucially, vulnerability analysis has a property that general agent tasks
-lack: \emph{executable external evidence}.  Source code predicates,
-behavioral reproduction, logic harnesses, and sanitizer crashes provide
-independent verification of the agent's claims.  This raises a natural
-question: can such domain-specific evidence serve as a low-cost substitute
-for the expensive counterfactual ablations used in prior attribution
-work~\cite{skillshapley,skillharmful}?
+That integration problem is the starting point of this paper.  In a real
+vulnerability-analysis workflow, the difficult question is not whether an
+LLM or agent can produce a candidate skill revision.  The difficult
+question is whether a completed run contains reusable procedural knowledge
+that deserves to enter the \emph{live} skill library seen by later runs.
+This question is more stringent than ordinary task success.  A run can be
+correct yet redundant, correct yet overfit to a single instance, or
+correct yet unsafe to generalize.  The engineering surface therefore
+includes not only skill retrieval and revision, but also run archival,
+evidence collection, candidate staging, and admission control.
 
-We study this question through an evidence-grounded skill attribution
-framework.  A benchmark task is executed in a leakage-controlled blind
-workspace; skills are retrieved and injected server-side; the agent produces
-localization and root-cause claims; external validators confirm what
-actually happened; and the result is packaged into structured feedback for
-the evolution service.  Skill updates are generated as candidates rather
-than written directly into the live library, so the next agent only
-receives revisions that survive follow-up checks.
+Vulnerability analysis is a particularly instructive domain for studying
+this problem because it provides something many generic agent tasks do not:
+\emph{external, executable confirmation}.  Depending on the case, a claim
+can be checked by source predicates, logic harnesses, behavioral oracles,
+or sanitizer-backed crashes.  These signals do not prove causal skill
+contribution, but they do let us constrain the evolution loop using
+evidence that is independent of the model's own narrative.  This suggests a
+different research focus from prior work on skill generation or pure
+retrieval: rather than asking only how to produce better skills, we can ask
+how to govern the transition from a \emph{validated run} to a \emph{live
+reusable skill}.
+
+Our goal is therefore narrower and more operational than a general theory
+of skill learning.  We do not claim a new retrieval algorithm, a new
+revision model, or a complete solution to causal attribution.  Instead, we
+study a full vulnerability-analysis loop in which a blind run executes on a
+remote analysis environment, selected skills are injected server-side, the
+final answer is scored and externally confirmed on a separate local plane,
+the resulting record is transformed into a candidate update, and the update
+is published only if it passes an explicit gate.  This framing lets us ask
+three concrete questions: how unstable skill effects are in blind security
+tasks; whether lightweight post-run feedback is useful enough to drive
+candidate generation; and whether publication control, rather than
+candidate generation, is the real bottleneck in practice.
 
 This paper makes four contributions:
 
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{Empirical evidence of unstable skill effects in
-    vulnerability analysis.} Through 36 remote blind A/B runs across six
-    firmware cases, we show that skill injection produces effects ranging
-    from $+1.67$ to $-1.00$ score points.  Two of six cases exhibit net
-    harm, confirming in the security domain the skill-induced failure
-    pattern reported by \citet{skillharmful}.
+    \item \textbf{An evidence-constrained lifecycle view of skill evolution
+    for vulnerability-analysis agents.} We formulate the transition from a
+    blind completed run to a reusable live skill as a structured lifecycle
+    involving execution, confirmation, archival, candidate generation, and
+    publication control.
 
-    \item \textbf{A low-cost skill attribution method using executable
-    domain evidence.} We propose a four-level evidence-conditioned feedback
-    signal (supported, mismatched, contradicted, unknown) that approximates
-    causal attribution using a single run, rather than the multiple
-    ablation runs required by Shapley-value methods~\cite{skillshapley}.
+    \item \textbf{A split-plane architecture for blind analysis and local
+    confirmation.} We design a remote-analysis / local-confirmation
+    separation that preserves blind execution while still supporting
+    post-run evidence processing and evolution.
 
-    \item \textbf{Analysis of a structural limitation in replay-only skill
-    gates.} Across 92 gate decisions, 82 candidates are rejected.  We show
-    that this is not a parameter-tuning problem but a structural limitation:
-    without counterfactual evidence (removing the skill and rerunning), the
-    gate cannot establish strict improvement.  This echoes the concerns of
-    \citet{misevolution} about safe skill evolution.
+    \item \textbf{A problem formulation and empirical analysis of live skill
+    publication control.} We show that the main bottleneck in the current
+    loop is not candidate generation but deciding whether a candidate skill
+    should enter the live library.
 
-    \item \textbf{An auditable skill lifecycle framework.} We implement a
-    research extension to SkillClaw with blind execution, skill injection
-    auditing, external evidence confirmation, structured feedback, and
-    gated candidate publication into a separated live skill workspace.
+    \item \textbf{An experimental protocol for measuring heterogeneous skill
+    effects and skill necessity tendencies in vulnerability analysis.}
+    Across a 36-run blind A/B study over six firmware cases and targeted
+    profile ablations on two CGI tasks, we show that skill effects are
+    strongly case-dependent and sensitive to skill structure rather than
+    topic match alone.
 \end{enumerate}
 
+The intended scope of this paper is therefore a \emph{framework paper with
+initial empirical evidence}.  Our objective is to establish the research
+problem, the system structure, and the first round of measurable findings.
+We do not claim that autonomous skill improvement has already been solved.
+Instead, we argue that the field needs a cleaner way to study when
+validated security runs should, and should not, become persistent skills,
+and we present a first operational scaffold for that study.
+
 The remainder of the paper is organized as follows.
-Section~\ref{sec:problem} formalizes the skill attribution and safe
-publication problems.
+Section~\ref{sec:problem} formalizes the skill-evolution problem and its
+two key subproblems: run-level attribution and safe publication.
 Section~\ref{sec:method} presents the framework.
 Section~\ref{sec:implementation} describes the prototype.
 Section~\ref{sec:evaluation} reports experimental methodology and results.
@@ -202,12 +228,13 @@ computational cost per attribution.  More importantly, LLM outputs are
 stochastic: a single pair of runs may not reflect the true expected
 effect, requiring multiple repeated trials for statistical power.
 
-Prior work addresses this through counterfactual ablation.
-\citet{skillharmful} use differential analysis: comparing a skill-guided
-run against a no-skill reference run.  \citet{skillshapley} use Shapley
-values~\cite{shapley} to estimate the marginal contribution of each skill
-step, but this requires evaluating all subsets of steps, making it
-expensive for long skills.
+Prior work addresses this through counterfactual ablation.  Differential
+comparison between a skill-guided run and a no-skill reference
+run~\cite{skillharmful}, and Shapley-style step valuation over skill
+traces~\cite{skillshapley,shapley}, both provide stronger attribution
+signals than single-run observation.  However, Shapley-style estimation
+requires evaluating many subsets of skill steps, making it expensive for
+long skills.
 
 The key question we investigate is: \emph{can executable domain evidence
 provide a cheaper approximation of $\Delta(s)$ without running
@@ -260,20 +287,22 @@ The study is guided by three hypotheses:
     \item[H2: Evidence approximation.] Executable domain evidence can
     approximate skill attribution at lower cost than counterfactual
     ablation, but with reduced precision.
-    \item[H3: Gate limitation.} A replay-only publication gate suffers a
+    \item[H3: Gate limitation.] A replay-only publication gate suffers a
     structural false-negative limitation that cannot be resolved by
     parameter tuning alone.
 \end{description}
 
-\section{Evidence-Grounded Skill Attribution Framework}
+\section{Evidence-Constrained Skill Evolution Framework}
 \label{sec:method}
 
 We propose a framework that connects blind task execution, skill injection
 auditing, external evidence confirmation, evidence-conditioned feedback,
-and gated candidate publication.  Each component is designed not merely as
-a pipeline stage, but to address a specific challenge identified in recent
-work on skill-induced failures~\cite{skillharmful} and skill
-misevolution~\cite{misevolution}.
+and gated candidate publication.  The framework is designed around a simple
+principle: in vulnerability analysis, post-run evidence should constrain
+both what we infer about a skill and what we allow the system to retain for
+future use.  The goal is not to make the evolution service omniscient.  The
+goal is to ensure that the path from a completed run to a persistent live
+skill is explicit, inspectable, and conservative enough for security work.
 
 \subsection{Leakage-Controlled Blind Execution}
 \label{sec:blind}
@@ -295,19 +324,18 @@ environment is isolated from the vulnerability database.
 \subsection{Auditable Skill Injection}
 \label{sec:injection}
 
-For each run, the system records: (1) the selected skill names, (2) the
-injected prompt content hash, (3) the request session identifier, and (4)
-the immutable session segment consumed by the evolution process.
+For each run, the system records the selected skill names, the injected
+prompt content hash, the request session identifier, and the immutable
+session segment consumed by the evolution process.
 
-This recording addresses a prerequisite for studying skill attribution.
-\citet{skillharmful} note that a comparison between skill-augmented and
-direct agent runs is uninterpretable if the intended skill was never
-selected, changed midway through a session, or cannot be linked to the
-final answer.  Injection auditing ensures that ``a skill was available and
-injected'' is a verifiable fact, not an assumption.  However, injection
-does not imply utilization: the model may receive a skill but not follow
-its guidance.  Distinguishing injection from utilization is itself part of
-the attribution problem.
+This recording addresses a prerequisite for studying skill evolution.
+Any claim about a skill's effect is uninterpretable if the intended skill
+cannot be linked to a specific request segment, or if the injected content
+cannot be reconstructed after the run.  Injection auditing therefore does
+not solve attribution, but it narrows the question from ``was the skill
+present?'' to the more meaningful ``what procedural prior was exposed to
+the model in this specific run, and how should that exposure be archived
+for later judgment?''
 
 \subsection{Multi-Evidence External Confirmation}
 \label{sec:confirmation}
@@ -345,12 +373,17 @@ mapping every passing script to the same notion of ``confirmed.''
 \label{sec:feedback}
 
 After validation, the system constructs feedback at the run--skill level.
-This is our proposed low-cost approximation of the causal effect
-$\Delta(s)$ from Equation~\ref{eq:causal_effect}.
+This feedback is an operational interface for evolution rather than a
+standalone causal estimator.  Its role is to summarize the relation between
+task outcome, external confirmation, and observed skill relevance in a form
+that can drive candidate generation and later gate decisions.  In that
+sense, it is a low-cost approximation to the latent quantity $\Delta(s)$ in
+Equation~\ref{eq:causal_effect}, but we do not present it as a substitute
+for full counterfactual attribution.
 
 A skill receives one of four statuses:
 
-\begin{description}[leftmargin=*]
+\begin{description}[style=nextline,leftmargin=2.4cm]
     \item[Supported ($\hat{\Delta} > 0$):] the task is externally validated
     and the skill is aligned with the analysis procedure (i.e., the skill's
     described steps match the agent's actual trajectory).  This is
@@ -365,12 +398,15 @@ A skill receives one of four statuses:
     from coincidence.
 \end{description}
 
-The key insight is that this classification uses information already
-available from a single run---the task validation result, the evidence
-class, and the alignment between skill content and agent trajectory---to
-produce an approximate attribution signal.  This costs one run, while
-counterfactual ablation costs at least two and Shapley-value
-attribution~\cite{skillshapley} costs $O(2^n)$ for $n$ skill steps.
+The key idea is practical rather than metaphysical.  Vulnerability-analysis
+workflows already produce task scores, evidence classes, and auditable
+records of the selected skill and final answer.  We reuse these signals to
+derive an attribution-oriented label at the cost of one run, whereas
+counterfactual ablation requires at least two runs and Shapley-style
+valuation~\cite{skillshapley} can be exponentially expensive in the number
+of skill steps.  This makes the label useful as a triage signal for
+evolution even when it remains imperfect as scientific evidence of causal
+contribution.
 
 However, this approximation has lower precision.  A ``supported'' skill may
 be supported only by coincidence: the model might have succeeded regardless.
@@ -383,15 +419,15 @@ Section~\ref{sec:results}.
 
 Evolution produces a candidate revision $\Delta s$ rather than directly
 overwriting the live skill.  Publication is gated by
-Equation~\ref{eq:gate}.  The follow-up validation
-($\mathrm{FollowupPass}$) runs the candidate skill on the same or related
-task and checks whether validation passes.
+Equation~\ref{eq:gate}.  In our prototype, follow-up validation replays the
+candidate on the same or a closely related task and checks whether the
+candidate remains consistent with the stored evidence.
 
-The gate enforces a \emph{strict improvement} policy: the candidate must
-achieve a mean validation score that exceeds the baseline (no-skill or
-pre-revision) score by a margin.  This is a conservative design choice
-motivated by \citet{misevolution}'s finding that direct skill updates can
-propagate unsafe experience.
+The most conservative form of this gate is a \emph{strict improvement}
+policy: the candidate must achieve a mean validation score that exceeds a
+baseline score by a margin.  This design is motivated by the concern that
+successful-but-unsafe or merely coincidental experiences should not be
+persisted as reusable skills.
 
 However, as formalized in Section~\ref{sec:publication_problem}, a
 replay-only gate has a structural limitation.  The follow-up measures
@@ -406,23 +442,23 @@ Section~\ref{sec:results_gate}.
 \subsection{Design Rationale: Live, Candidate, and Share Separation}
 
 Live skills, candidate revisions, and shared runtime state are stored in
-separate directories.  This separation is a safety boundary: evolution can
-produce and reject a candidate without silently changing what the next
-agent receives.  This is a direct response to the misevolution risk
-identified by \citet{misevolution}: if candidate skills were immediately
-visible to agents, an unsafe revision could propagate before it is
-validated.
+separate directories.  This separation is not merely a
+software-organization choice; it is part of the experimental design.  It
+ensures that candidate skills can be generated, inspected, replayed, and
+rejected without silently changing the library seen by the next run.
 
 \section{Prototype Realization}
 \label{sec:implementation}
 
 We realize the framework as a research extension to
-SkillClaw~\cite{skillclaw}.  The original system provides request proxying,
-skill retrieval and injection, session capture, skill sharing, and an
-evolution service.  Our extension adds four research-facing capabilities:
-leakage-controlled benchmark cases, remote blind execution, heterogeneous
-vulnerability validators, and a structured handoff from finalized runs to
-validation-gated evolution.
+SkillClaw~\cite{skillclaw}.  The original system already provides request
+proxying, skill retrieval and injection, session capture, skill sharing,
+and an evolution service.  Our extension does not replace these core
+services with a new retrieval or revision algorithm.  Instead, it adds the
+elements needed to study the run-to-library transition in a security
+setting: leakage-controlled benchmark cases, remote blind execution,
+heterogeneous vulnerability validators, candidate staging, and a structured
+handoff from finalized runs to validation-gated evolution.
 
 \subsection{Analysis Plane and Evidence Plane}
 
@@ -430,7 +466,9 @@ The runtime is divided into two planes.  The \emph{analysis plane} consists
 of an LLM agent client on a remote VM that analyzes the target through the
 SkillClaw proxy.  The \emph{evidence plane} is a local service that retains
 private ground truth, finalizes the run record, executes validators, and
-sends a closed session/feedback pair to the evolution service.
+sends a closed session/feedback pair to the evolution service.  This split
+preserves the blind-evaluation setting while still allowing rich local
+post-processing and confirmation.
 
 Client-provided session identifiers are preserved when available, and long
 sessions are archived as incrementally consumable immutable segments.  This
@@ -447,16 +485,18 @@ root cause, required evidence terms), and confirmation policies.
 The current benchmark includes 13 cases spanning two categories:
 \begin{itemize}[leftmargin=*]
     \item \textbf{Firmware cases (8):} embedded HTTPd command injection
-    and buffer overflow vulnerabilities in router firmware binaries
-    (Tenda, NETGEAR, etc.), analyzed via static reverse engineering.
+    and buffer overflow vulnerabilities in router firmware binaries from
+    multiple vendors, analyzed via static reverse engineering.
     \item \textbf{Open-source cases (5):} parser vulnerabilities in
     giflib, libxml2, tcpdump, libarchive, and Exiv2, with source code
     available and sanitizer/logic-backed validators.
 \end{itemize}
 
-The firmware cases are analyzed through binary-level static analysis (IDA,
-Ghidra) without runtime environments.  The open-source cases support
-runtime evidence through compilation and execution.
+The firmware cases are analyzed primarily through binary-level static
+analysis, whereas the open-source cases additionally support runtime
+evidence through compilation and execution.  The distinction matters
+methodologically because it changes which evidence classes are available to
+the attribution layer.
 
 \subsection{Scoring}
 
@@ -471,8 +511,10 @@ Each case defines a scoring rubric with four check dimensions:
     \item \textbf{Evidence:} does the agent cite concrete evidence
     (function names, string references, code patterns)?
 \end{itemize}
-Each dimension is scored as hit/miss, and the total score is computed on a
-0--10 scale with weighted dimensions.
+Each dimension is scored against private case metadata and aggregated onto a
+0--10 scale through a weighted rubric.  The rubric is deliberately coarse:
+it is intended to compare blind runs at the task level, not to certify
+fine-grained semantic equivalence between two explanations.
 
 \subsection{Evolution Service}
 
@@ -485,10 +527,9 @@ in Section~\ref{sec:gate}.
 \subsection{LLM Configuration}
 
 Both the analysis agent and the evolution service use the same LLM backend
-(GLM-5.2, a locally deployed model).  The SkillClaw server retrieves and
-injects skills based on task similarity, and the evolution service uses the
-model for candidate generation.  Using a single consistent model eliminates
-cross-model variance as a confounding factor in the attribution analysis.
+(GLM-5.2, locally deployed).  Using one model family does not eliminate
+stochasticity, but it does remove cross-model capability differences as a
+confound in the present study.
 
 \section{Experimental Methodology}
 \label{sec:evaluation}
@@ -496,41 +537,49 @@ cross-model variance as a confounding factor in the attribution analysis.
 \subsection{Research Questions}
 
 \begin{description}
-    \item[RQ1.] Does injecting a domain skill change the quality of blind
-    vulnerability analysis, and if so, is the effect consistently positive?
-    \item[RQ2.] Can evidence-conditioned feedback (four-level) produce
-    attribution signals that are consistent with A/B counterfactual
-    results?
-    \item[RQ3.] What is the false-negative rate of a replay-only
-    publication gate, and what causes it?
+    \item[RQ1.] How heterogeneous are skill effects in blind vulnerability
+    analysis, and can a topically relevant skill still be neutral or
+    harmful?
+    \item[RQ2.] Can lightweight run-level feedback serve as a useful
+    triage signal for evolution, even if it does not prove causal
+    contribution?
+    \item[RQ3.] In a working closed loop, is candidate publication rather
+    than candidate generation the main bottleneck?
 \end{description}
 
 \subsection{Benchmark Cases}
 
 We use six firmware vulnerability cases for the A/B study
 (Table~\ref{tab:cases}).  These cases cover two vulnerability types
-(command injection and buffer overflow) across four different firmware
-targets.  Each case is analyzed through binary-level static analysis on a
-remote VM, with the agent receiving no CVE identifiers or solution-bearing
+(command injection and buffer overflow) across multiple embedded targets.
+Among them, \texttt{firmware2-wireless} is a CGI command-injection task in
+which the vulnerable path is exposed through a wireless-management handler,
+whereas \texttt{firmware2-login} is a CGI command-injection task centered
+on a login-related request path.  For readability, we refer to the three
+injected skills in shorthand as \texttt{tenda-triage},
+\texttt{elf-triage}, and \texttt{cgi-triage}; the corresponding full skill
+artifacts remain unchanged in the repository and runtime logs.
+Each case is analyzed through blind binary-level reasoning on a remote VM,
+with the agent receiving neither CVE identifiers nor solution-bearing
 artifact names.
 
 \begin{table}[t]
 \centering
 \caption{Benchmark cases used in the A/B study.}
 \label{tab:cases}
-\small
-\begin{tabularx}{\textwidth}{llllX}
+\footnotesize
+\begin{tabular}{l l l c l}
 \toprule
-Case ID & Target & Vuln.\ type & Injected skill & Evidence class \\
+Case ID & Target & Vuln.\ type & \makecell[c]{Injected\\skill} & Evidence class \\
 \midrule
-f453-cmdinject & Tenda httpd & cmd injection & tenda-httpd-goform-triage & behavior-backed \\
-f453-overflow & Tenda httpd & buffer overflow & elf-cwe120-firmware-triage & behavior-backed \\
-f9k1122-overflow & NETGEAR httpd & buffer overflow & elf-cwe120-firmware-triage & behavior-backed \\
-i12-overflow & Tenda httpd & buffer overflow & elf-cwe120-firmware-triage & behavior-backed \\
-firmware2-wireless & Embedded CGI & cmd injection & cgi-cmdinject-triage & behavior-backed \\
-firmware2-login & Embedded CGI & cmd injection & cgi-cmdinject-triage & behavior-backed \\
+f453-cmdinject & Tenda httpd & cmd injection & \makecell[l]{tenda-\\triage} & behavior \\
+f453-overflow & Tenda httpd & buffer overflow & \makecell[l]{elf-\\triage} & behavior \\
+f9k1122-overflow & NETGEAR httpd & buffer overflow & \makecell[l]{elf-\\triage} & behavior \\
+i12-overflow & Tenda httpd & buffer overflow & \makecell[l]{elf-\\triage} & behavior \\
+firmware2-wireless & Embedded CGI & cmd injection & \makecell[l]{cgi-\\triage} & behavior \\
+firmware2-login & Embedded CGI & cmd injection & \makecell[l]{cgi-\\triage} & behavior \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
 \subsection{Conditions and Controls}
@@ -545,8 +594,37 @@ Each case is evaluated under two conditions:
 \end{itemize}
 
 Each condition is repeated for 3 rounds with fresh agent sessions, yielding
-$6 \times 2 \times 3 = 36$ runs total.  All runs use the same model
-(GLM-5.2), the same inference budget, and the same blind workspace.
+$6 \times 2 \times 3 = 36$ primary runs.  One additional recovery rerun was
+generated operationally for a failed attempt and is archived on disk, but
+it is excluded from the main A/B means reported here.  All primary runs use
+the same model, inference budget, prompt format, and blind workspace
+construction procedure.
+
+\subsection{Complementary Targeted Profile Ablations}
+
+In addition to the main six-case A/B study, we conduct a smaller
+complementary ablation focused on two firmware CGI command-injection cases:
+\texttt{firmware2-wireless} and \texttt{firmware2-login}.  The purpose of
+this ablation is not to enlarge the benchmark, but to probe a more specific
+question that emerged during development: is it enough for a skill to be
+topically relevant, or does the \emph{structure} of the skill matter?
+
+We compare four profile conditions:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{None:} no injected firmware skill.
+    \item \textbf{Wrong:} an injected firmware skill from the wrong
+    procedural family (\texttt{firmware-embedded-lua-shell-extraction}).
+    \item \textbf{Relevant:} the current live CGI command-injection triage
+    skill, which is broader and more descriptive.
+    \item \textbf{Seed:} an earlier branch-first CGI skill that prioritizes
+    dispatcher variables and single-branch sink tracing.
+\end{itemize}
+
+This complementary study contributes 16 archived runs in total and is used
+only for targeted interpretation in Section~\ref{sec:results_ablation}.  We
+do not merge these runs into the six-case A/B means because the profile
+conditions are asymmetric and were designed for mechanism diagnosis rather
+than balanced cross-case comparison.
 
 \subsection{Measurements}
 
@@ -557,18 +635,18 @@ We report:
     \item \textbf{Skill effect:} $\Delta = \bar{y}_{WS} - \bar{y}_{NS}$,
     where $\bar{y}$ is the mean score across rounds.
     \item \textbf{Attribution signal:} the four-level feedback status
-    (supported, mismatched, contradicted, unknown) for each run.
+    (supported, mismatched, contradicted, unknown) assigned after
+    confirmation.
     \item \textbf{Gate outcome:} published or rejected, with rejection
     reasons.
 \end{itemize}
 
 \subsection{Statistical Analysis}
 
-Given the small sample size ($N=3$ per condition), we report individual
-run scores in addition to means.  We compute the Wilcoxon signed-rank test
-for paired comparisons where applicable, and we acknowledge that $N=3$
-provides limited statistical power.  This is a known limitation discussed
-in Section~\ref{sec:threats}.
+Given the small sample size ($N=3$ per condition), our analysis is
+primarily descriptive.  We report individual run scores in addition to
+means, and we treat non-parametric significance tests only as supporting
+context rather than as the main basis for the paper's claims.
 
 \section{Results}
 \label{sec:results}
@@ -576,51 +654,52 @@ in Section~\ref{sec:threats}.
 \subsection{RQ1: Skill Effects Are Unstable and Sometimes Harmful}
 \label{sec:results_rq1}
 
-Table~\ref{tab:ab_results} reports the full A/B results across all 36 runs.
-The mean score difference $\Delta$ ranges from $+1.67$ to $-1.00$, with no
-case showing a clearly positive effect that is consistent across all three
-rounds.
+Table~\ref{tab:ab_results} reports the full A/B results across all 36
+primary runs.  The most important observation is heterogeneity rather than
+average gain: the mean skill effect $\Delta$ ranges from $+1.67$ to
+$-1.00$, and the overall average across all six cases is only $+0.28$.
 
 \begin{table}[t]
 \centering
 \caption{A/B results: no-skill vs.\ with-skill across 6 cases, 3 rounds each.
 $\Delta = \bar{y}_{WS} - \bar{y}_{NS}$.}
 \label{tab:ab_results}
-\small
-\begin{tabularx}{\textwidth}{lc cc c c X}
+\footnotesize
+\begin{tabular}{l c c c c c c l}
 \toprule
-Case & Skill & NS scores & NS mean & WS scores & WS mean & $\Delta$ & Verdict \\
+Case & Skill & \makecell[c]{NS\\scores} & NS mean & \makecell[c]{WS\\scores} & WS mean & $\Delta$ & Verdict \\
 \midrule
-f453-cmdinject & tenda-triage & 6,8,8 & 7.33 & 6,8,6 & 6.67 & $-0.67$ & Harmful \\
-f453-overflow & elf-triage & 6,2,6 & 4.67 & 6,2,6 & 4.67 & $\phantom{-}0.00$ & Neutral \\
-f9k1122-overflow & elf-triage & 2,6,6 & 4.67 & 6,6,6 & 6.00 & $+1.33$ & Helpful \\
-i12-overflow & elf-triage & 3,8,3 & 4.67 & 3,8,8 & 6.33 & $+1.67$ & Helpful \\
-firmware2-wireless & cgi-triage & 5,5,5 & 5.00 & 5,5,2 & 4.00 & $-1.00$ & Harmful \\
-firmware2-login & cgi-triage & 5,4,5 & 4.67 & 5,5,5 & 5.00 & $+0.33$ & Marginal \\
+f453-cmdinject & \makecell[l]{tenda-\\triage} & 6,8,8 & 7.33 & 6,8,6 & 6.67 & $-0.67$ & Harmful \\
+f453-overflow & \makecell[l]{elf-\\triage} & 6,2,6 & 4.67 & 6,2,6 & 4.67 & $\phantom{-}0.00$ & Neutral \\
+f9k1122-overflow & \makecell[l]{elf-\\triage} & 2,6,6 & 4.67 & 6,6,6 & 6.00 & $+1.33$ & Helpful \\
+i12-overflow & \makecell[l]{elf-\\triage} & 3,8,3 & 4.67 & 3,8,8 & 6.33 & $+1.67$ & Helpful \\
+\makecell[l]{firmware2-\\wireless} & \makecell[l]{cgi-\\triage} & 5,5,5 & 5.00 & 5,5,2 & 4.00 & $-1.00$ & Harmful \\
+\makecell[l]{firmware2-\\login} & \makecell[l]{cgi-\\triage} & 5,4,5 & 4.67 & 5,5,5 & 5.00 & $+0.33$ & Marginal \\
 \midrule
-\multicolumn{5}{l}{Average across all cases} & & & $+0.28$ \\
+\multicolumn{5}{l}{Average across all cases} &  & $+0.28$ &  \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
-\textbf{Finding 1: Skill effects are inconsistent.}
+\textbf{Finding 1: Skill effects are highly case-dependent.}
 The same skill (\texttt{elf-cwe120-firmware-triage}) produces $+1.33$ on
 f9k1122-overflow, $+1.67$ on i12-overflow, but $0.00$ on f453-overflow.
-There is no prior signal (e.g., skill--task similarity) that predicts
-whether the effect will be positive, neutral, or harmful.
+This result cautions against any blanket statement such as ``domain skill X
+improves binary analysis.''  A skill may encode generally sensible tactics
+yet still fail to help a particular case.
 
-\textbf{Finding 2: Seemingly relevant skills can be harmful.}
-The firmware2-wireless case injected \texttt{embedded-cgi-command-injection-triage},
-a skill that is topically relevant to the task (CGI command injection in
+\textbf{Finding 2: Topically relevant skills can still degrade
+performance.}
+The firmware2-wireless case injected \texttt{cgi-triage}, a
+skill that is topically relevant to the task (CGI command injection in
 embedded firmware).  Yet the with-skill condition produced a lower mean
-score ($4.00$ vs.\ $5.00$), with one round dropping to $2$ (the lowest
-score in the entire experiment).  This mirrors the finding of
-\citet{skillharmful}: ``skill induced functional failures are rarely caused
-by obviously irrelevant skills; instead, seemingly relevant skills often
-make the agent incorrectly implement or omit task-required implementation
-elements.''
+score ($4.00$ vs.\ $5.00$), with one round dropping to $2$.  This mirrors
+recent evidence that many skill-induced failures are caused not by
+obviously irrelevant instructions, but by superficially plausible skills
+that distort the agent's reasoning trajectory~\cite{skillharmful}.
 
-\textbf{Finding 3: Model instability confounds attribution.}
+\textbf{Finding 3: run-to-run model variance is large enough to obscure
+moderate skill effects.}
 The no-skill condition for i12-overflow produces scores of $3, 8, 3$---a
 range of 5 points across three identical-configuration runs.  Even though
 the with-skill mean is $1.67$ points higher, this difference is not
@@ -629,7 +708,7 @@ that LLM output variance is a major confound for skill attribution: even
 without any skill, the model's performance fluctuates enough to mask
 moderate skill effects.
 
-\textbf{Finding 4: One skill has zero effect.}
+\textbf{Finding 4: some injected skills appear observationally redundant.}
 The f453-overflow case shows identical scores in both conditions
 ($6, 2, 6$), indicating that the injected skill \texttt{elf-cwe120-firmware-triage}
 had no observable effect on the agent's behavior.  This may mean the agent
@@ -637,21 +716,80 @@ ignored the skill, or that the skill's content was redundant with the
 model's existing knowledge.  Distinguishing these cases requires
 trajectory-level analysis (Section~\ref{sec:discussion}).
 
+\subsection{Complementary Result: Targeted CGI Profile Ablations}
+\label{sec:results_ablation}
+
+The six-case A/B study tells us whether a chosen skill helps on average
+relative to a no-skill baseline.  It does not reveal whether a skill's
+\emph{topic match} is enough, whether a narrower seed version can be more
+effective than a broader live version, or whether a wrong-domain firmware
+skill can still produce plausible outputs.  We therefore inspect the 16-run
+targeted CGI ablations introduced in
+Section~\ref{sec:evaluation}.
+
+\begin{table}[t]
+\centering
+\caption{Complementary profile ablations on two firmware CGI cases.  Values
+are mean scores over archived runs under each profile condition.}
+\label{tab:profile_ablation}
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+Case & None & Wrong & Relevant & Seed \\
+\midrule
+\texttt{firmware2-wireless} & 2.67 & 3.00 & 3.00 & \textbf{4.00} \\
+\texttt{firmware2-login} & 4.33 & 4.50 & \textbf{5.00} & \textbf{5.00} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two observations matter.
+
+\textbf{First, topical relevance alone is insufficient.}  On
+\texttt{firmware2-wireless}, the broader live \texttt{relevant} profile and
+the wrong-domain firmware profile both score $3.00$, only slightly above
+the no-skill mean of $2.67$.  A skill can therefore sound domain-relevant
+without actually providing the procedural bias needed by the case.
+
+\textbf{Second, skill structure matters.}  The branch-first
+\texttt{seed} profile reaches the highest mean on
+\texttt{firmware2-wireless} ($4.00$) and ties the best mean on
+\texttt{firmware2-login} ($5.00$).  The difference between
+\texttt{seed} and \texttt{relevant} is not topical; both target CGI
+command-injection analysis.  The difference is procedural emphasis.  The
+\texttt{seed} version first anchors the dispatcher variable (e.g.,
+\texttt{page}/\texttt{action}/\texttt{mode}) and then traces one concrete
+branch to the sink, whereas the broader live profile allocates more prompt
+budget to generic CGI entrypoint enumeration and request structure.
+
+\textbf{Interpretation.}  These ablations do not yet prove strict skill
+necessity: on \texttt{firmware2-login}, both \texttt{relevant} and
+\texttt{seed} reach the same mean, and even the \texttt{wrong} profile
+remains close to the no-skill baseline.  What they do show is that
+``correct topic'' and ``helpful skill'' are not the same notion.  For this
+kind of firmware CGI task, the current evidence suggests that branch-first
+procedural guidance is more stable than broad descriptive guidance, but the
+effect is still case-dependent and not yet strong enough to establish an
+all-or-nothing necessity threshold.
+
 \subsection{RQ2: Evidence-Conditioned Feedback vs.\ A/B Attribution}
 \label{sec:results_rq2}
 
-We cross-reference the four-level feedback signal with the A/B $\Delta$
-values.  For the six firmware cases in this study:
+We next compare the four-level feedback signal with the A/B $\Delta$
+measure.  The purpose of this comparison is not to prove that the feedback
+signal is causal; rather, it is to test whether the signal at least points
+in the correct directional regime.  For the six firmware cases in this
+study:
 
 \begin{itemize}[leftmargin=*]
     \item \textbf{i12-overflow ($\Delta = +1.67$):} The skill
-    \texttt{elf-cwe120-firmware-triage} describes ELF binary analysis
+    \texttt{elf-triage} describes ELF binary analysis
     steps that align with the agent's trajectory (function localization
     via PLT/GOT, sink identification via \texttt{system}/\texttt{sprintf}).
     Feedback: \emph{supported}.  This is consistent with the positive
     $\Delta$.
     \item \textbf{firmware2-wireless ($\Delta = -1.00$):} The skill
-    \texttt{embedded-cgi-command-injection-triage} describes CGI handler
+    \texttt{cgi-triage} describes CGI handler
     analysis, which is relevant to the task.  However, the with-skill run
     in round 3 dropped to score 2 (file miss), suggesting the skill may
     have directed the agent to the wrong binary or function.  Feedback:
@@ -663,18 +801,18 @@ values.  For the six firmware cases in this study:
     Consistent with $\Delta \approx 0$.
 \end{itemize}
 
-This cross-reference suggests that the four-level feedback is
-\emph{directionally consistent} with A/B results: supported skills tend to
-have positive $\Delta$, contradicted skills tend to have negative $\Delta$,
-and mismatched skills tend to have $\Delta \approx 0$.  However, with
-$N=3$, this consistency is suggestive rather than statistically
-confirmatory.  A larger-scale validation is needed to establish the
-precision and recall of the four-level signal.
+Taken together, these cases suggest that the four-level signal is
+\emph{directionally plausible}: supported labels tend to coincide with
+positive A/B effects, contradicted labels with negative effects, and
+mismatched labels with near-zero effects.  At the same time, the signal is
+best viewed as a triage mechanism rather than a proof device.  Its value is
+that it can prioritize which skills deserve ablation, rejection, or further
+inspection without paying the full cost of paired reruns for every case.
 
 \subsection{RQ3: Replay-Only Gate Has a Structural Limitation}
 \label{sec:results_gate}
 
-We analyze 92 gate decisions collected across all experiments
+We analyze 94 gate decisions collected across all experiments
 (Table~\ref{tab:gate_stats}).
 
 \begin{table}[t]
@@ -686,45 +824,49 @@ We analyze 92 gate decisions collected across all experiments
 \toprule
 Metric & Count \\
 \midrule
-Total gate decisions & 92 \\
-Published & 10 \\
+Total gate decisions & 94 \\
+Published & 12 \\
 Rejected & 82 \\
-Rejection reason: ``client validation rejected candidate'' & 82 \\
+Published under earlier score-only gate logging & 10 \\
+Published under baseline-aware non-inferiority logging & 2 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The 10 published candidates all occurred during an earlier phase of
-experiments (August 11--13) when the gate's minimum mean-score threshold
-was set to $0.75$ and validation used a single follow-up run.  All 10 had
-mean scores $\geq 0.75$ and were published.  After tightening the gate to
-require \emph{strict improvement} over baseline (candidate mean $>$
-baseline mean), all subsequent 82 candidates were rejected.
+The archived decision history spans two gate regimes.  Earlier decisions
+record only the candidate-side validation score and final decision.  Later
+decisions additionally record a baseline mean, gate mode, and effective
+threshold.  Among the latter, the two published examples were accepted
+under a non-inferiority criterion, with $(0.7, 0.4)$ and $(0.6, 0.6)$ for
+(candidate mean, baseline mean), respectively.
 
 \textbf{Root cause analysis.}
-The rejection reason is uniform: ``client validation rejected candidate.''
-This means the follow-up validation run with the candidate skill did not
-achieve a sufficiently higher score than the baseline.  In most cases, the
-candidate's follow-up score equals or is slightly below the baseline
-score.
+The key issue is not simply that many candidates are poor.  Rather, the
+gate often lacks a defensible basis for deciding whether a candidate skill
+was \emph{necessary}.  In a replay-only setting, a candidate can reproduce
+the same validated answer as the baseline while providing no clear evidence
+that it changed the outcome.  Under a strict-improvement interpretation,
+such a candidate is rejected as redundant; under a non-inferiority
+interpretation, the same candidate may be retained as harmless but
+potentially useful.  The decision therefore depends as much on the gate's
+philosophy as on the candidate's intrinsic quality.
 
 This is the structural limitation formalized in
 Section~\ref{sec:publication_problem}.  The gate's
 $\mathrm{FollowupPass}$ function computes $q_{\mathrm{task}}(y_{\Delta s})$
-but has no access to $q_{\mathrm{task}}(y_0)$.  When the model can already
-solve the task without the skill (high baseline), the candidate cannot
-exceed the baseline by a meaningful margin, even if the skill is not
-harmful.  The gate therefore has a high false-negative rate: it rejects
-candidates that are redundant (not harmful, but not strictly better)
-rather than only candidates that are harmful.
+but only imperfectly captures $q_{\mathrm{task}}(y_0)$.  When the model can
+already solve the task without the skill, a replay-only gate struggles to
+separate three cases: genuine improvement, harmless redundancy, and
+spurious success.  This ambiguity is exactly why publication remains the
+hardest part of the loop.
 
-\textbf{Comparison with SafeEvolve.}
-\citet{misevolution} propose SafeEvolve, a wrapper that repairs unsafe
-content and governs subsequent reuse.  Our gate is more conservative:
-SafeEvolve focuses on preventing \emph{unsafe} updates, while our gate
-additionally requires \emph{demonstrated improvement}.  This makes our
-gate safer but also more prone to false negatives.  A potential
-middle ground is discussed in Section~\ref{sec:discussion}.
+\textbf{Interpretation.}
+Recent work on skill misevolution~\cite{misevolution} proposes SafeEvolve, a wrapper that repairs unsafe
+content and governs subsequent reuse.  Our study highlights a closely
+related but distinct problem: even when content appears safe, the system
+may still be unable to decide whether the skill deserves to persist.  In
+other words, safety and usefulness are separable questions, and a realistic
+evolution loop must reason about both.
 
 \subsection{Summary of Findings}
 
@@ -739,7 +881,7 @@ Hypothesis & Finding & Status \\
 \midrule
 H1: Skill instability & $\Delta$ ranges from $-1.00$ to $+1.67$; 2/6 cases show net harm & Supported \\
 H2: Evidence approximation & Four-level feedback is directionally consistent with A/B $\Delta$ & Partially supported \\
-H3: Gate limitation & 82/92 candidates rejected; root cause is missing counterfactual & Supported \\
+H3: Gate limitation & 82/94 candidates rejected; baseline-aware decisions remain difficult to interpret without counterfactual evidence & Supported \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -781,17 +923,17 @@ future work.
 
 Our finding that the same skill can be helpful, neutral, or harmful
 depending on the case has a direct implication: \emph{skill libraries need
-per-case skill selection, not global skill ranking.}  A skill that ranks
-high on average may still harm specific cases.  This is consistent with
-\citet{skillharmful}'s finding that skill-induced failures are
-case-specific.
+case-sensitive selection and case-sensitive evaluation.}  A globally
+plausible skill may still degrade a specific analysis if its procedural
+biases do not fit the target.  This is consistent with
+prior observations that skill-induced failures are strongly
+case-specific~\cite{skillharmful}.
 
-This suggests that skill retrieval mechanisms (such as
-ERSkill~\cite{erskill}) should consider not only skill--task similarity
-but also the model's prior capability on the task.  If the model can
-already solve the task (high baseline), injecting a skill may introduce
-noise rather than help.  A possible heuristic: only inject skills when the
-predicted baseline performance is below a threshold.
+This suggests that retrieval mechanisms should consider not only textual
+skill--task similarity, but also uncertainty about the model's unaided
+capability.  If the baseline is already strong, injection may add noise,
+encourage over-commitment to the wrong pattern, or simply consume prompt
+budget without benefit.
 
 \subsection{Toward a Counterfactual Gate}
 \label{sec:counterfactual_gate}
@@ -815,9 +957,10 @@ do not help.
 A combined approach could use Scheme B for initial publication (allowing
 the skill to enter the live library) and Scheme A for retention decisions
 (removing skills that do not demonstrate improvement over a longer
-horizon).  We implement both schemes as configurable options in the
-prototype but have not yet conducted a full evaluation of their
-false-positive and false-negative rates.
+horizon).  More broadly, this suggests that publication and retention may
+need to be decoupled: the system can admit a candidate as provisionally
+safe while still demanding stronger evidence before treating it as
+established expertise.
 
 \subsection{Comparison with Concurrent Work}
 
@@ -828,133 +971,117 @@ agent skills.
 \centering
 \caption{Comparison with concurrent work on agent skills.}
 \label{tab:comparison}
-\small
-\begin{tabularx}{\textwidth}{l cc cc X}
+\footnotesize
+\begin{tabular}{l c c c c c}
 \toprule
 & \multicolumn{2}{c}{Attribution} & \multicolumn{2}{c}{Publication} & \\
 \cmidrule(lr){2-3} \cmidrule(lr){4-5}
 Approach & Method & Cost & Method & Safety & Domain \\
 \midrule
-Ours & 4-level evidence & 1 run & Replay gate & Conservative & Vulnerability \\
+Ours & 4-level evidence & 1 run & Replay gate & Conservative & Vuln. analysis \\
 SkillShapley~\cite{skillshapley} & Shapley value & $O(2^n)$ & N/A & N/A & General \\
 Skill Harmful~\cite{skillharmful} & Differential & 2 runs & N/A & N/A & General \\
 Misevolution~\cite{misevolution} & N/A & N/A & SafeEvolve & Repair-based & General \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
-Our approach is the only one that leverages executable domain evidence for
-attribution.  This gives us a cost advantage (1 run vs.\ 2+ runs) but at
-the cost of precision (four discrete levels vs.\ continuous Shapley
-values).  Our gate is more conservative than SafeEvolve: we require
-demonstrated improvement, while SafeEvolve focuses on preventing unsafe
-content.  These are complementary approaches that could be combined.
+Our approach is distinctive in its use of executable domain evidence as a
+post-run attribution signal.  This gives it a cost advantage over explicit
+ablation, but also a narrower claim: we obtain an auditable approximation,
+not a full causal decomposition.
 
 \subsection{Limitations of Static Analysis}
 
-The six firmware cases in our A/B study are analyzed through binary-level
-static analysis without runtime environments.  This means the strongest
-evidence class (sanitizer-backed) is not available for these cases; they
-rely on behavior-backed evidence (string references, symbol analysis,
-control-flow patterns).  This may limit the precision of the
-evidence-conditioned feedback.  Cases with runtime evidence (e.g., the
-open-source parser cases with ASan) would provide a stronger attribution
-signal, and we plan to include them in future experiments.
+The firmware cases in our A/B study are analyzed through binary-level
+static reasoning without a live runtime environment.  Consequently, the
+available evidence is weaker than sanitizer-backed confirmation in the
+open-source cases.  This likely lowers the precision of the feedback signal
+and should be interpreted as a limitation of the present study, not as a
+property of the framework in general.
 
 \section{Related Work}
 \label{sec:related}
 
-\subsection{Agent Skill Libraries and Lifelong Learning}
+\subsection{Skill Induction, Libraries, and Evolution}
 
-Voyager~\cite{voyager} introduces an open-ended embodied agent that
-acquires skills through exploration in Minecraft, maintaining a skill
-library that grows over time.  ExpeL~\cite{expel} proposes experiential
-learning for LLM agents, extracting insights from past trajectories to
-improve future decision-making.  Reflexion~\cite{reflexion} uses verbal
-reinforcement learning, where agents reflect on failures and maintain
-textual memory for improvement.  MemGPT~\cite{memgpt} treats LLMs as
-operating systems with hierarchical memory management.
+Voyager~\cite{voyager}, ExpeL~\cite{expel}, Reflexion~\cite{reflexion},
+and MemGPT~\cite{memgpt} establish the broader agent-learning context in
+which trajectories, memories, and reusable instructions are accumulated
+across tasks.  SkillClaw~\cite{skillclaw} makes this logic explicit at the
+level of a shared natural-language skill library, while
+Ctx2Skill~\cite{ctx2skill} and OPID~\cite{opid} study, respectively,
+context-to-skill induction and trajectory-derived skill distillation.
+These works show that skill formation and reuse are already central to LLM
+agent research.  Our paper does not compete by proposing yet another
+generic skill generator.  Instead, it focuses on a narrower systems
+question: in a vulnerability-analysis deployment, how should a completed
+run be transformed---or refused transformation---into a live reusable
+skill?
 
-SkillClaw~\cite{skillclaw} evolves and shares reusable skills from agent
-sessions across users and environments, with an agentic evolver that
-collectively manages skill updates.  Ctx2Skill~\cite{ctx2skill}
-automatically discovers and refines context-specific skills using
-self-play and generated tasks.  OPID~\cite{opid} extracts episode- and
-step-level skills from on-policy trajectories for policy optimization.
+\subsection{Environment- and Verifier-Grounded Skill Refinement}
 
-Our work extends SkillClaw with vulnerability-specific evidence
-confirmation and gated publication.  Unlike OPID, we do not train the
-model; we study an external natural-language skill library whose updates
-are constrained by domain evidence.
+Recent work increasingly grounds skill refinement in environmental or
+verifier feedback rather than in free-form self-reflection alone.
+SPARK~\cite{spark} emphasizes \emph{evidence over plans}, preferring
+environment-grounded revisions to purely narrative improvement.
+Trace2Skill~\cite{trace2skill} distills trajectory-local lessons into
+longer-term skills using verifier feedback, and
+VeriSkill~\cite{veriskill} studies self-evolution specifically for program
+verification skills.  SkillEvolBench~\cite{skillevolbench} further turns
+episodic-to-procedural evolution into an explicit benchmark problem.
 
-\subsection{Skill-Induced Failures and Misevolution}
+Our work is aligned with this trend, but differs in scope and target.  We
+do not study general verifier-backed skill improvement in the abstract.
+We study the security-specific transition from \emph{blind remote
+vulnerability-analysis runs} to \emph{candidate skills that may alter a
+live library}.  In this setting, the central issue is not only whether
+verifier signals exist, but how they participate in archival, candidate
+staging, and publication control.
 
-\citet{skillharmful} present a comprehensive empirical study of
-skill-induced failures in LLM agents.  They identify 307 failures
-attributable to skills, finding that seemingly relevant skills frequently
-cause agents to incorrectly implement or omit task-required steps.  They
-propose SkillTriage, a taxonomy-guided attribution tool.  Our A/B results
-confirm this pattern in the vulnerability domain: two of six cases show
-net harm from skill injection.
+\subsection{Skill Failure, Attribution, and Governance}
 
-\citet{misevolution} study skill misevolution in self-improving agents.
-They show that evolution optimizes task outcomes rather than procedure
-safety, causing compromised experience to persist as reusable skills.  They
-propose SkillMisevo-Gym (a lifecycle-aware harness) and SafeEvolve (a
-wrapper that repairs unsafe content).  Our gate addresses the same
-problem from a different angle: we require demonstrated improvement before
-publication, while SafeEvolve focuses on content safety.  Our finding that
-replay-only gates have a structural false-negative limitation complements
-their observation that safe evolution requires governing both what updates
-write and what future executors reuse.
+Skill-induced failures~\cite{skillharmful} demonstrate that apparently
+relevant skills can actively harm agent performance by steering execution
+onto the wrong procedure.  Skill misevolution~\cite{misevolution} shows
+that self-improving loops can preserve unsafe behavior as persistent
+skills.  Adversarial skill publishing~\cite{detourhijack} further exposes
+how untrusted skills can manipulate downstream behavior.
 
-\citet{detourhijack} study security risks in skill-based agents from the
-perspective of adversarial skill publishers, showing that untrusted skills
-can steer agents onto costly trajectories.  While our work does not
-address adversarial skills, the injection auditing component
-(Section~\ref{sec:injection}) provides a foundation for detecting such
-manipulation.
+These works motivate our emphasis on post-run governance.  In our setting,
+retrieval and generation are only the front half of the problem.  The back
+half is deciding whether a candidate skill deserves admission into the live
+library.  Our gate analysis complements prior work by showing that even
+when candidate generation is available, publication remains difficult
+because replay-only evidence is often insufficient to separate improvement
+from redundancy.
 
 \subsection{Skill Attribution and Valuation}
 
-\citet{skillshapley} model skill-step attribution as a Shapley
-value~\cite{shapley} estimation problem, proposing a
-boundary-adaptive sampling method.  Their approach provides continuous
-contribution estimates but requires evaluating many skill-step subsets,
-making it expensive for long skills.  Our four-level feedback provides a
-coarser but cheaper approximation that leverages domain-specific
-executable evidence.
+SkillShapley~\cite{skillshapley} formulates skill-step attribution through
+Shapley-value estimation~\cite{shapley}, yielding a principled but costly
+counterfactual approach.  Differential no-skill / with-skill
+comparison~\cite{skillharmful} provides a cheaper alternative at the run
+level.  Our feedback interface belongs to this family of post-run
+assessment methods, but with a deliberately narrower claim: it is a
+triage-oriented operational signal, not a full causal estimator.  Its
+purpose is to support candidate generation and publication decisions in a
+security workflow where full ablations are expensive and often delayed.
 
-\subsection{Skill Management and Compression}
+\subsection{Security Agents, Playbooks, and Benchmarks}
 
-ERSkill~\cite{erskill} treats the retrieval mechanism itself as an
-evolvable component, adapting memory retrieval strategies to heterogeneous
-query types.  SkillZip~\cite{skillzip} addresses the scalability challenge
-of growing skill libraries through graph compression that preserves
-procedural contracts.  Our work complements these approaches: while they
-focus on \emph{how} to retrieve and compress skills, we focus on
-\emph{when} to publish and \emph{whether} the published skill actually
-helps.
-
-\subsection{LLM-Based Vulnerability Analysis}
-
-PentestGPT~\cite{pentestgpt} uses LLMs to automate penetration testing,
-demonstrating that models can reason about attack steps.  Prior work has
-also studied LLMs for vulnerability detection in source
-code~\cite{gpt4vuln} and surveyed the landscape of LLM-based security
-analysis~\cite{aslr}.  These works focus on the analysis capability of
-LLMs; our work focuses on the \emph{skill management} layer that governs
-how reusable vulnerability-analysis expertise is accumulated, validated,
-and safely reused.
-
-\subsection{Self-Evolving Agent Defense}
-
-\citet{selfevolvingdefense} propose self-evolving defense for LLM agents,
-addressing the need for runtime defenses that go beyond manually designed
-interventions.  While their focus is on defending agents against attacks,
-our work addresses a complementary concern: ensuring that the agent's own
-learning process (skill evolution) does not introduce vulnerabilities
-through unsafe or ineffective skill updates.
+On the security side, PentestGPT~\cite{pentestgpt} and subsequent studies
+on LLM-based vulnerability analysis~\cite{gpt4vuln,aslr} focus on what
+models can discover or explain.  More recent work such as
+EvoHunt~\cite{evohunt} begins to evolve reusable playbooks for agentic
+security auditing, while SEC-bench Pro~\cite{secbenchpro} raises the bar on
+realistic long-horizon software-security evaluation.  Our work is adjacent
+to both directions.  Like EvoHunt, we care about reusable procedural
+knowledge in security tasks; like SEC-bench Pro, we care about realistic
+task construction and leakage control.  The difference is that we center
+the run-to-library transition itself: blind execution, external
+confirmation, candidate staging, and live-skill admission are the primary
+objects of study.
 
 \section{Threats to Validity}
 \label{sec:threats}
@@ -981,10 +1108,12 @@ models, as different models have different prior knowledge and instruction
 following capabilities.  Cross-model validation is left as future work.
 
 \paragraph{Static analysis limitation.}
-The firmware cases are analyzed through binary-level static analysis
-without runtime environments.  This limits the evidence classes available
-(behavior-backed only, no sanitizer-backed).  Open-source cases with
-runtime evidence may provide stronger attribution signals.
+The firmware cases in the main A/B study are analyzed through binary-level
+static reasoning without a live runtime environment.  Consequently, the
+available evidence is weaker than sanitizer-backed confirmation in the
+open-source cases.  This likely lowers the precision of the feedback signal
+and should be interpreted as a limitation of the present study, not as a
+property of the framework in general.
 
 \paragraph{Attribution precision.}
 The four-level feedback is a heuristic approximation, not a causal
@@ -994,11 +1123,13 @@ require comparing the four-level signal against ground-truth causal
 effects (from counterfactual ablation) across many cases.
 
 \paragraph{Gate evaluation.}
-The 92 gate decisions are collected across different phases of
-development, with evolving skill libraries and case sets.  The 10
-published candidates used a more lenient threshold ($0.75$) than the
-subsequent strict-improvement policy.  A controlled gate evaluation with
-fixed snapshots is needed for a fair false-negative rate estimate.
+The 94 gate decisions were produced under multiple development-time gate
+regimes.  Earlier decisions preserve only candidate-side validation
+outcomes, whereas later decisions include baseline-aware metadata and
+non-inferiority parameters.  This historical mixture is useful for
+retrospective diagnosis but imperfect for a clean scientific comparison.  A
+future study should evaluate gate variants from fixed repository snapshots
+under a single benchmark protocol.
 
 \paragraph{Answer leakage.}
 Known-CVE benchmarks can leak through identifiers, artifact names,
@@ -1016,42 +1147,42 @@ readers to assess the strength of each confirmation.
 \section{Conclusion}
 \label{sec:conclusion}
 
-We studied the problem of skill attribution and safe skill evolution in
-LLM-based vulnerability analysis.  Through 36 remote blind A/B runs, we
-found that skill injection produces unstable effects: the same skill can
-be helpful, neutral, or harmful depending on the case, with two of six
-cases showing net harm.  This confirms in the security domain the
-skill-induced failure pattern reported by concurrent work.
+We studied the transition from blind vulnerability-analysis runs to live
+reusable skills.  The main claim of the paper is not that autonomous skill
+improvement is already solved.  Rather, we show that this transition can be
+made explicit enough to study: blind remote execution, local external
+confirmation, run archival, candidate generation, and publication control
+can be connected into a single operational loop.
 
-We proposed a four-level evidence-conditioned feedback signal that
-approximates skill attribution using executable domain evidence at the
-cost of a single run, rather than the multiple ablation runs required by
-Shapley-value methods.  Our cross-reference with A/B results shows
-directional consistency, though the precision of this approximation
-requires larger-scale validation.
+Empirically, the picture is mixed in a useful way.  Across 36 remote blind
+A/B runs, skill effects are strongly heterogeneous: the same broad class of
+skill can help one case, do nothing on another, and harm a third.
+Complementary CGI profile ablations further suggest that procedural
+structure matters at least as much as topical relevance.  A branch-first
+skill can outperform a broader descriptive variant on one firmware case
+while tying it on another, yet the current evidence still falls short of a
+strict necessity claim.
 
-We analyzed 92 gate decisions and identified a structural limitation of
-replay-only validation: without counterfactual evidence, the gate cannot
-establish strict improvement, leading to systematic rejection of candidates
-that may be redundant but not harmful.  We proposed two improvement
-directions---counterfactual ablation gates and non-inferiority
-gates---and discussed their trade-offs.
+We also show that publication control is the real bottleneck of the
+current loop.  The system can already generate candidate skills and replay
+them against archived cases, but replay-only evidence is often not strong
+enough to justify admission into the live library.  In practice, the hard
+problem is not writing another candidate skill.  The hard problem is
+deciding whether a validated run contains knowledge that should persist.
 
-These findings have implications beyond vulnerability analysis.  If skill
-attribution is difficult even in a domain with executable external
-evidence, it is likely harder in general agent tasks that lack such
-evidence.  Skill evolution systems need attribution mechanisms that are
-both affordable and sufficiently precise; our work suggests that
-domain-specific evidence can contribute to this goal, but cannot fully
-replace counterfactual reasoning.
+This observation is relevant beyond vulnerability analysis.  If the
+run-to-library transition is difficult even in a domain with executable
+external confirmation, it is likely harder in agent settings where such
+confirmation is weak or absent.  Our framework suggests a pragmatic stance:
+external evidence can discipline skill evolution, but it does not remove
+the need for explicit publication and retention policies.
 
-Future work will focus on: (1) scaling the A/B study to more cases and
-rounds for statistical power; (2) implementing and evaluating
-counterfactual ablation gates; (3) including open-source cases with
-runtime evidence (sanitizer-backed) to test whether stronger evidence
-improves attribution precision; and (4) developing a probabilistic
-attribution model that estimates causal effects from observed correlations
-across many runs.
+Future work should proceed along four directions: (1) scale the blind study
+to larger case sets and more rounds; (2) implement counterfactual or
+retention-stage gates that better separate improvement from redundancy; (3)
+incorporate stronger runtime-backed evidence on open-source cases; and (4)
+test whether the same lifecycle design transfers to broader security-agent
+settings such as exploit validation or multi-step auditing playbooks.
 
 \section*{Acknowledgments}
 Acknowledgments go here.

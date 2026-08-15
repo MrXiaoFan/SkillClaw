@@ -560,6 +560,7 @@ class AgentEvolveServer(EvolveEngineMixin):
                 content={
                     "engine": "agent",
                     "running": self._running,
+                    "config_source": getattr(self.config, "config_source", "unknown"),
                     "pending_sessions": len(pending_keys),
                     "registered_skills": len(entries),
                     "skills": skill_summary,

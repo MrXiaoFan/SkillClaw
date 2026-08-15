@@ -164,32 +164,74 @@ class ReplayGateWorker:
         return "\n".join(lines)
 
     @staticmethod
-    def _extract_evidence(reference_response: str) -> str:
-        """Extract only the evidence field from a JSON reference response.
-
-        The original run's final answer is typically a JSON object with
-        predicted_cves, predicted_files, root_cause, evidence, etc.
-        We return only the evidence text so that baseline and candidate
-        branches must each derive their own conclusions.
-        """
-        text = reference_response.strip()
-        if not text:
-            return ""
-        # Try parsing as JSON first
+    def _extract_json_object_from_text(text: str) -> dict[str, Any]:
+        """Best-effort extraction of the final JSON object from mixed model output."""
+        stripped = str(text or "").lstrip("\ufeff").strip()
+        if not stripped:
+            return {}
         try:
-            obj = json.loads(text)
-            if isinstance(obj, dict):
-                evidence = str(obj.get("evidence") or "").strip()
-                if evidence:
-                    return evidence[:3000]
-                # If no evidence key, return root_cause as fallback context
-                root_cause = str(obj.get("root_cause") or "").strip()
-                if root_cause:
-                    return f"Context: {root_cause[:3000]}"
+            obj = json.loads(stripped)
+            return obj if isinstance(obj, dict) else {}
         except (json.JSONDecodeError, ValueError):
             pass
-        # If not JSON, return first 2000 chars as raw context
-        return text[:2000]
+
+        if "```" in stripped:
+            parts = stripped.split("```")
+            for idx, part in enumerate(parts):
+                candidate = part
+                if idx % 2 == 1 and candidate.lstrip().lower().startswith("json"):
+                    candidate = candidate.lstrip()[4:]
+                candidate = candidate.strip()
+                if not candidate:
+                    continue
+                try:
+                    obj = json.loads(candidate)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                if isinstance(obj, dict):
+                    return obj
+
+        decoder = json.JSONDecoder()
+        for idx, char in enumerate(stripped):
+            if char != "{":
+                continue
+            try:
+                obj, _ = decoder.raw_decode(stripped[idx:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                return obj
+        return {}
+
+    @staticmethod
+    def _stringify_evidence_value(value: Any) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, list):
+            lines = [str(item).strip() for item in value if str(item).strip()]
+            if not lines:
+                return ""
+            return "\n".join(f"- {line}" for line in lines)
+        if isinstance(value, dict):
+            lines = []
+            for key, item in value.items():
+                key_text = str(key).strip()
+                item_text = str(item).strip()
+                if not key_text or not item_text:
+                    continue
+                lines.append(f"- {key_text}: {item_text}")
+            return "\n".join(lines)
+        return str(value).strip()
+
+    @classmethod
+    def _extract_evidence(cls, reference_response: str) -> str:
+        """Extract only evidence-bearing text, never the prior final conclusion."""
+        obj = cls._extract_json_object_from_text(reference_response)
+        if obj:
+            evidence = cls._stringify_evidence_value(obj.get("evidence"))
+            if evidence:
+                return evidence[:3000]
+        return ""
 
     @staticmethod
     def _extract_raw_observations(reference_response: str) -> str:
@@ -214,27 +256,26 @@ class ReplayGateWorker:
         if instruction:
             messages.append({"role": "user", "content": instruction})
         reference_response = str(case.get("reference_response", "") or "").strip()
-        # Extract only the evidence portion from the original run so that
-        # baseline and candidate must each derive their own conclusions from
-        # the same raw evidence.  Passing the full reference_response (which
-        # includes predicted_cves / root_cause / etc.) makes both branches
-        # produce identical output, defeating the purpose of replay.
+        structured_evidence = str(case.get("reference_evidence", "") or "").strip()
+        raw_observations = str(case.get("reference_observations", "") or "").strip()
+        # The replay branch should see either extracted evidence or pre-JSON
+        # observations, but never the previous branch's full conclusion blob.
         if context_mode == "blind":
-            context_text = ReplayGateWorker._extract_raw_observations(reference_response)
-            context_label = "raw workspace observations (no conclusions)"
+            context_text = raw_observations or ReplayGateWorker._extract_raw_observations(reference_response)
+            context_label = "raw workspace observations from the original run (no conclusions)"
         else:
-            context_text = ReplayGateWorker._extract_evidence(reference_response)
-            context_label = "raw observations only, no conclusions"
-        evidence_only = context_text
-        if evidence_only:
+            context_text = structured_evidence or ReplayGateWorker._extract_evidence(reference_response)
+            if not context_text:
+                context_text = raw_observations or ReplayGateWorker._extract_raw_observations(reference_response)
+            context_label = "previously extracted evidence from the original run (no conclusions)"
+        if context_text:
             messages.append(
                 {
                     "role": "user",
                     "content": (
-                        "Previously collected " + context_label + " from the original run "
-                        "no conclusions):\n"
+                        f"Below is {context_label}:\n"
                         "<original_evidence>\n"
-                        f"{evidence_only}\n"
+                        f"{context_text}\n"
                         "</original_evidence>\n\n"
                         "Based on the evidence above and the skill guidance, derive your own "
                         "conclusions. Do not call tools. Do not output bash. "
@@ -410,7 +451,10 @@ class ReplayGateWorker:
         candidate_scores: list[float] = []
         baseline_scores: list[float] = []
 
-        for case in replay_cases[:3]:
+        # Real re-run is much heavier than local replay. Keep the first pass
+        # intentionally narrow so one pending job cannot block the whole gate
+        # pipeline for tens of minutes.
+        for case in replay_cases[:1]:
             baseline = await self._run_replay_branch(case, current_skill, label="baseline")
             candidate = await self._run_replay_branch(case, candidate_skill, label="candidate")
             baseline_score = baseline.get("normalized_score")
@@ -670,13 +714,17 @@ class ReplayGateWorker:
 
         async def _run_ssh(session_id: str, output_dir: str) -> str:
             """Run a single case on the remote VM via SSH and return the output text."""
+            remote_timeout_seconds = 240
+            agent_timeout_seconds = 180
             cmd = (
                 f"cd {remote_repo} && "
                 f"env SKILLCLAW_PATH_PROFILE=vm-li "
+                f"timeout --signal=TERM {remote_timeout_seconds}s "
                 f"python3 -m evaluation.runs.run_single_case "
                 f"{case_file} --mode blind-skillclaw-inline-guarded "
                 f"--session-id {session_id} "
                 f"--output-dir {output_dir} "
+                f"--timeout-seconds {agent_timeout_seconds} "
                 f"--skillclaw-url {skillclaw_url}"
             )
             if skillclaw_key:
@@ -690,7 +738,10 @@ class ReplayGateWorker:
                 stderr=asyncio.subprocess.PIPE,
             )
             try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=1800)
+                stdout, stderr = await asyncio.wait_for(
+                    proc.communicate(),
+                    timeout=remote_timeout_seconds + 30,
+                )
             except asyncio.TimeoutError:
                 proc.kill()
                 logger.warning("[ReplayGateWorker] SSH re-run timed out for %s", session_id)
@@ -700,17 +751,18 @@ class ReplayGateWorker:
                 return ""
             return stdout.decode("utf-8", errors="replace")
 
-        # Run candidate and baseline in parallel
-        candidate_task = _run_ssh(rerun_session_id, remote_output_dir + "-candidate")
-        baseline_task = _run_ssh(baseline_session_id, remote_output_dir + "-baseline")
-        candidate_raw, baseline_raw = await asyncio.gather(candidate_task, baseline_task, return_exceptions=True)
-
-        # Handle exceptions from gather
-        if isinstance(candidate_raw, Exception):
-            logger.warning("[ReplayGateWorker] candidate re-run exception: %s", candidate_raw)
+        # Run candidate then baseline serially. Parallel startup on the same VM
+        # causes both Claude processes to race on shared marketplace/plugin
+        # initialization, which can stall the rerun gate indefinitely.
+        try:
+            candidate_raw = await _run_ssh(rerun_session_id, remote_output_dir + "-candidate")
+        except Exception as exc:
+            logger.warning("[ReplayGateWorker] candidate re-run exception: %s", exc)
             candidate_raw = ""
-        if isinstance(baseline_raw, Exception):
-            logger.warning("[ReplayGateWorker] baseline re-run exception: %s", baseline_raw)
+        try:
+            baseline_raw = await _run_ssh(baseline_session_id, remote_output_dir + "-baseline")
+        except Exception as exc:
+            logger.warning("[ReplayGateWorker] baseline re-run exception: %s", exc)
             baseline_raw = ""
 
         # Score with case_output - prefer VM\'s own detailed score

@@ -284,6 +284,57 @@ def _row_attribution_eligible(row: dict[str, Any]) -> bool | None:
     return None
 
 
+def _condense_injection_row(row: dict[str, Any]) -> dict[str, Any]:
+    nested = row.get("skill_injection")
+    nested_meta = nested if isinstance(nested, dict) else {}
+
+    def _value(*keys: str) -> Any:
+        for key in keys:
+            if key in row and row.get(key) not in (None, ""):
+                return row.get(key)
+            if key in nested_meta and nested_meta.get(key) not in (None, ""):
+                return nested_meta.get(key)
+        return None
+
+    def _list_value(*keys: str) -> list[str]:
+        return _first_non_empty_list(*[_value(key) for key in keys])
+
+    turn_value = _value("turn")
+    if turn_value in (None, "", 0, "0"):
+        turn_value = None
+
+    condensed = {
+        "session_id": str(_value("session_id") or ""),
+        "client_session_id": str(_value("client_session_id") or ""),
+        "session_segment_id": str(_value("session_segment_id") or ""),
+        "session_id_source": str(_value("session_id_source") or ""),
+        "segment_started_at": str(_value("segment_started_at") or ""),
+        "segment_status": str(_value("segment_status") or ""),
+        "timestamp": str(_value("timestamp") or ""),
+        "turn": int(turn_value) if turn_value is not None else None,
+        "selected_skill_names": _list_value("selected_skill_names"),
+        "injection_mode": str(_value("injection_mode") or ""),
+        "skill_top_k": _value("skill_top_k", "top_k"),
+        "top_k": _value("top_k", "skill_top_k"),
+        "skill_prompt_hash": str(_value("skill_prompt_hash") or ""),
+        "skill_prompt_chars": _value("skill_prompt_chars"),
+        "available_skill_count": _value("available_skill_count"),
+        "enabled": _value("enabled"),
+        "override_mode": str(_value("override_mode") or ""),
+        "override_note": str(_value("override_note") or ""),
+        "override_requested_skill_names": _list_value("override_requested_skill_names"),
+        "override_matched_skill_names": _list_value("override_matched_skill_names"),
+        "override_unmatched_skill_names": _list_value("override_unmatched_skill_names"),
+        "stable_session": _value("stable_session"),
+        "stable_action": str(_value("stable_action") or ""),
+        "stable_generation": _value("stable_generation"),
+        "attribution_eligible": _value("attribution_eligible"),
+        "prm_score": _value("prm_score"),
+        "source": str(_value("source") or ""),
+    }
+    return {key: value for key, value in condensed.items() if value not in (None, "", [], {})}
+
+
 def _select_injection(value: Any, session_id: str) -> dict[str, Any] | None:
     candidates = _normalize_injection_rows(value)
     if session_id:
@@ -304,7 +355,7 @@ def _select_injection(value: Any, session_id: str) -> dict[str, Any] | None:
     with_selected_skills = [item for item in pool if _row_selected_skill_names(item)]
     if with_selected_skills:
         pool = with_selected_skills
-    return pool[-1]
+    return _condense_injection_row(pool[-1])
 
 
 def _select_injection_history(value: Any, session_id: str) -> list[dict[str, Any]]:
@@ -319,7 +370,7 @@ def _select_injection_history(value: Any, session_id: str) -> list[dict[str, Any
                 str(item.get("client_session_id") or ""),
             }
         ]
-    return candidates
+    return [_condense_injection_row(item) for item in candidates]
 
 
 def _select_validation(value: Any, case_id: str) -> dict[str, Any] | None:

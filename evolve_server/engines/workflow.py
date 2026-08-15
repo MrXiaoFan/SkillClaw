@@ -805,6 +805,58 @@ class EvolveServer(EvolveEngineMixin):
         preferred: list[tuple[int, int, dict[str, Any]]] = []
         fallback: list[tuple[int, dict[str, Any]]] = []
 
+        def _extract_json_object(text: str) -> dict[str, Any]:
+            stripped = str(text or "").lstrip("\ufeff").strip()
+            if not stripped:
+                return {}
+            try:
+                obj = json.loads(stripped)
+                return obj if isinstance(obj, dict) else {}
+            except (json.JSONDecodeError, ValueError):
+                pass
+            if "```" in stripped:
+                parts = stripped.split("```")
+                for idx, part in enumerate(parts):
+                    candidate = part
+                    if idx % 2 == 1 and candidate.lstrip().lower().startswith("json"):
+                        candidate = candidate.lstrip()[4:]
+                    candidate = candidate.strip()
+                    if not candidate:
+                        continue
+                    try:
+                        obj = json.loads(candidate)
+                    except (json.JSONDecodeError, ValueError):
+                        continue
+                    if isinstance(obj, dict):
+                        return obj
+            decoder = json.JSONDecoder()
+            for idx, char in enumerate(stripped):
+                if char != "{":
+                    continue
+                try:
+                    obj, _ = decoder.raw_decode(stripped[idx:])
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(obj, dict):
+                    return obj
+            return {}
+
+        def _stringify_evidence(value: Any) -> str:
+            if value is None:
+                return ""
+            if isinstance(value, list):
+                lines = [str(item).strip() for item in value if str(item).strip()]
+                return "\n".join(f"- {line}" for line in lines)
+            if isinstance(value, dict):
+                lines = []
+                for key, item in value.items():
+                    key_text = str(key).strip()
+                    item_text = str(item).strip()
+                    if key_text and item_text:
+                        lines.append(f"- {key_text}: {item_text}")
+                return "\n".join(lines)
+            return str(value).strip()
+
         def _looks_like_final_answer(text: str) -> bool:
             normalized = str(text or "").strip()
             if not normalized:
@@ -845,6 +897,12 @@ class EvolveServer(EvolveEngineMixin):
                 reference_response = str(turn.get("response_text", "") or "").strip()
                 if not instruction or not reference_response:
                     continue
+                parsed_response = _extract_json_object(reference_response)
+                reference_evidence = _stringify_evidence(parsed_response.get("evidence"))[:3000]
+                reference_observations = ""
+                json_start = reference_response.find("{")
+                if json_start > 100:
+                    reference_observations = reference_response[:json_start].strip()[:3000]
                 # Prefer explicit case_id from feedback envelope (authoritative).
                 # Fall back to text matching only if no envelope case_id is present.
                 envelope_case_id = ""
@@ -868,6 +926,8 @@ class EvolveServer(EvolveEngineMixin):
                     "turn_num": int(turn.get("turn_num", 0) or 0),
                     "instruction": instruction[:3000],
                     "reference_response": reference_response[:4000],
+                    "reference_evidence": reference_evidence,
+                    "reference_observations": reference_observations,
                     "raw_turn_kind": str(turn.get("raw_turn_kind", "") or ""),
                     "attribution_eligible": bool(turn.get("attribution_eligible", False)),
                     "had_tool_calls": bool(turn.get("tool_calls")),
@@ -1683,6 +1743,7 @@ class EvolveServer(EvolveEngineMixin):
                 content={
                     "engine": "workflow",
                     "running": self._running,
+                    "config_source": getattr(self.config, "config_source", "unknown"),
                     "publish_mode": self.config.publish_mode,
                     "llm_model": self.config.llm_model,
                     "llm_base_url": self.config.llm_base_url,

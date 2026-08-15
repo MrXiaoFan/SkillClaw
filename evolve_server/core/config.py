@@ -84,6 +84,7 @@ def feedback_bundle_candidates(raw_path: str | Path | None) -> list[Path]:
 @dataclass
 class EvolveServerConfig:
     engine: str = "workflow"
+    config_source: str = "env"
 
     # Storage
     storage_backend: str = ""
@@ -238,6 +239,7 @@ class EvolveServerConfig:
             )
 
         return cls(
+            config_source="env",
             engine=engine,
             storage_backend=storage_backend,
             storage_endpoint=storage_endpoint,
@@ -363,6 +365,7 @@ class EvolveServerConfig:
             nacos_server = sharing_endpoint
 
         return cls(
+            config_source="skillclaw_config",
             engine=engine,
             storage_backend=storage_backend,
             storage_endpoint=storage_endpoint,

@@ -25,6 +25,14 @@
   - 服务端依赖安装脚本
 - `ops/proxy_session_admin.py`
   - 查看和清理当前 SkillClaw 代理会话
+- `ops/start_skillclaw.ps1`
+  - 启动本地 SkillClaw 服务端
+- `ops/start_evolve.ps1`
+  - 启动本地 Evolve Server，直接复用 `C:\Users\Fan\.skillclaw\config.yaml` 中的 LLM 配置
+- `ops/start_dashboard.ps1`
+  - 启动本地 Dashboard
+- `ops/check_stack.ps1`
+  - 检查 `30000 / 8787 / 3788` 三个服务状态
 - `demos/demo_nacos_skill_lifecycle.py`
   - 演示 Nacos 技能生命周期
 

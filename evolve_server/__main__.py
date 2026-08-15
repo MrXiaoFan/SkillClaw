@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 
 from .core.config import EvolveServerConfig
 from .engines.agent import AgentEvolveServer
@@ -21,6 +22,7 @@ _DEEPSEEK_MODELS = {"deepseek-v4-pro", "deepseek-v4-flash"}
 def _build_config_from_args(args: argparse.Namespace) -> EvolveServerConfig:
     """Merge CLI args, environment variables, and optionally skillclaw config."""
     config = EvolveServerConfig.from_env()
+    source = "env"
 
     if args.use_skillclaw_config:
         try:
@@ -28,6 +30,7 @@ def _build_config_from_args(args: argparse.Namespace) -> EvolveServerConfig:
 
             sc_config = ConfigStore().to_skillclaw_config()
             config = EvolveServerConfig.from_skillclaw_config(sc_config)
+            source = "skillclaw_config"
         except Exception as e:
             logger.warning("Could not load skillclaw config: %s — falling back to env", e)
 
@@ -96,6 +99,47 @@ def _build_config_from_args(args: argparse.Namespace) -> EvolveServerConfig:
         config.agents_md_path = args.agents_md
     if args.fresh is not None:
         config.fresh = args.fresh
+    env_override_names = (
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "EVOLVE_MODEL",
+        "EVOLVE_LLM_API_TYPE",
+        "EVOLVE_STORAGE_BACKEND",
+        "EVOLVE_STORAGE_LOCAL_ROOT",
+    )
+    cli_override_names = (
+        "engine",
+        "storage_backend",
+        "storage_endpoint",
+        "storage_bucket",
+        "storage_region",
+        "local_root",
+        "group_id",
+        "model",
+        "llm_api_type",
+        "interval",
+        "port",
+        "publish_mode",
+        "feedback_bundle",
+        "nacos_publish_mode",
+        "use_skill_verifier",
+        "skill_verifier_min_score",
+        "validation_required_results",
+        "validation_required_approvals",
+        "validation_min_mean_score",
+        "validation_max_rejections",
+        "openclaw_bin",
+        "openclaw_home",
+        "agent_timeout",
+        "workspace_root",
+        "agents_md",
+        "fresh",
+    )
+    if args.use_skillclaw_config and any(os.environ.get(name) for name in env_override_names):
+        source += "+env_overrides"
+    if any(getattr(args, name) is not None for name in cli_override_names):
+        source += "+cli_overrides"
+    config.config_source = source
     config.__post_init__()
     return config
 
@@ -258,7 +302,8 @@ def main() -> None:
     config = _build_config_from_args(args)
     _validate_llm_runtime_config(config)
     logger.info(
-        "[EvolveServer] resolved llm base=%s model=%s publish_mode=%s storage=%s",
+        "[EvolveServer] resolved config source=%s llm base=%s model=%s publish_mode=%s storage=%s",
+        config.config_source,
         config.llm_base_url,
         config.llm_model,
         config.publish_mode,

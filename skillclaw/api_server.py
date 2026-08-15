@@ -1674,6 +1674,8 @@ class SkillClawAPIServer:
             owner: SkillClawAPIServer = request.app.state.owner
             await owner._check_auth(authorization)
             await owner._pull_skills_from_cloud()
+            if owner.skill_manager:
+                owner.skill_manager.reload()
             skill_count = len(owner.skill_manager.get_all_skills()) if owner.skill_manager else 0
             return {"ok": True, "skills": skill_count}
 
