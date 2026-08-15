@@ -459,6 +459,22 @@ def build_feedback(
     if has_cve_check and not cve_hit and localization_hit:
         quality_flags.append("cve_identity_miss")
         reasons.append("quality_flag=cve_identity_miss")
+    # Detect function identity miss: the model's predicted_functions do not
+    # include any ground-truth function, but the function name appears in the
+    # raw analysis text (e.g. model found the right sink but wrong handler).
+    has_function_check = _has_explicit_check(score_result, "function")
+    function_check = None
+    if isinstance(score_result, dict):
+        checks = score_result.get("checks")
+        if isinstance(checks, dict):
+            function_check = checks.get("function")
+    predicted_function_hit = (
+        isinstance(function_check, dict)
+        and function_check.get("predicted_function_hit") is True
+    )
+    if has_function_check and not predicted_function_hit and localization_hit:
+        quality_flags.append("function_identity_miss")
+        reasons.append("quality_flag=function_identity_miss")
     if relevance_status == "mixed_task_relevance":
         quality_flags.append("extraneous_skill_selection")
         reasons.append("quality_flag=extraneous_skill_selection")
@@ -469,6 +485,9 @@ def build_feedback(
         if "cve_identity_miss" in quality_flags:
             decision = "neutral"
             action = "baseline_cve_identity_review"
+        elif "function_identity_miss" in quality_flags:
+            decision = "neutral"
+            action = "baseline_function_identity_review"
         elif normalized is not None and normalized >= 0.8 and confirmation_passed:
             decision = "positive"
             action = "use_as_baseline_positive"
@@ -481,6 +500,9 @@ def build_feedback(
     elif "cve_identity_miss" in quality_flags:
         decision = "neutral"
         action = "revise_cve_identity_before_promotion"
+    elif "function_identity_miss" in quality_flags:
+        decision = "neutral"
+        action = "revise_function_identity_before_promotion"
     elif relevance_status == "mixed_task_relevance" and normalized is not None and normalized >= 0.8 and confirmation_passed:
         decision = "positive"
         action = "keep_skill_but_prune_extraneous_selection"

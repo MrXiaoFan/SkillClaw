@@ -172,10 +172,43 @@ def score_output(case: dict[str, Any], raw_text: str) -> dict[str, Any]:
         score += float(weights.get("file", 2))
 
     functions = [str(func) for func in truth.get("functions", [])]
-    hit, matched = _contains_any(predictions["functions"] + predictions["raw_text"], functions)
-    checks["function"] = {"hit": hit, "matched": matched, "expected": functions}
-    if hit:
-        score += float(weights.get("function", 3))
+    # Primary check: model's explicit predicted_functions (strict).
+    pred_func_hit, pred_func_matched = _contains_any(predictions["functions"], functions)
+    # Secondary check: function name mentioned in raw text (lenient).
+    text_func_hit, text_func_matched = _contains_any(predictions["raw_text"], functions)
+    func_weight = float(weights.get("function", 3))
+    if pred_func_hit:
+        checks["function"] = {
+            "hit": True,
+            "matched": pred_func_matched,
+            "expected": functions,
+            "match_source": "predicted",
+            "predicted_function_hit": True,
+        }
+        score += func_weight
+    elif text_func_hit:
+        # Partial credit: the correct function appears in the analysis text
+        # but was NOT listed in the model's final predicted_functions.
+        # This means the model mentioned the right function in passing but
+        # chose a different one as its final answer.
+        partial = round(func_weight * 0.5, 3)
+        checks["function"] = {
+            "hit": True,
+            "matched": text_func_matched,
+            "expected": functions,
+            "match_source": "text_partial",
+            "predicted_function_hit": False,
+            "partial_credit": partial,
+        }
+        score += partial
+    else:
+        checks["function"] = {
+            "hit": False,
+            "matched": [],
+            "expected": functions,
+            "match_source": "none",
+            "predicted_function_hit": False,
+        }
 
     required_evidence = [str(item) for item in truth.get("required_evidence", [])]
     if required_evidence:
