@@ -1216,7 +1216,26 @@ class SkillManager:
             scored.append((score, skill))
 
         if not scored:
-            return []
+            # Fallback: when lexical scoring produces no positive matches,
+            # return the top-k skills by effectiveness so the model still
+            # receives guidance.  This prevents the "no skill selected"
+            # failure mode where a vulnerability-analysis task gets zero
+            # skills because keyword overlap was zero (e.g., the query uses
+            # different terminology than skill descriptions, or negative
+            # trigger terms filtered out all candidates).
+            fallback_pool = []
+            for skill in self.get_all_skills():
+                name = str(skill.get("name") or "")
+                if name.startswith("skillclaw-") and (is_vulnerability_task or not is_skillclaw_meta_task):
+                    continue
+                fallback_pool.append(skill)
+            if not fallback_pool:
+                return []
+            fallback_pool.sort(
+                key=lambda s: self.get_effectiveness(str(s.get("name") or "")),
+                reverse=True,
+            )
+            return fallback_pool[:top_k]
         scored.sort(key=lambda item: item[0], reverse=True)
         return [skill for _, skill in scored[:top_k]]
 

@@ -1120,6 +1120,7 @@ class EvolveServer(EvolveEngineMixin):
             scores: list[float] = []
             baseline_scores: list[float] = []
             result_thresholds: list[float] = []
+            validator_modes: list[str] = []
             for result in results:
                 if result.get("accepted") is True:
                     accepted += 1
@@ -1137,6 +1138,9 @@ class EvolveServer(EvolveEngineMixin):
                 result_threshold = result.get("threshold")
                 if isinstance(result_threshold, (int, float)) and not isinstance(result_threshold, bool):
                     result_thresholds.append(float(result_threshold))
+                vm = str(result.get("validator_mode") or result.get("gate_mode") or "")
+                if vm:
+                    validator_modes.append(vm)
 
             mean_score = round(sum(scores) / len(scores), 3) if scores else None
             baseline_mean = round(sum(baseline_scores) / len(baseline_scores), 3) if baseline_scores else None
@@ -1209,6 +1213,7 @@ class EvolveServer(EvolveEngineMixin):
                         "mean_score": mean_score,
                         "baseline_mean": baseline_mean,
                         "gate_mode": gate_mode,
+                        "validator_mode": validator_modes[0] if validator_modes else "",
                         "effective_threshold": effective_threshold,
                     },
                 )
@@ -1250,6 +1255,7 @@ class EvolveServer(EvolveEngineMixin):
                         "mean_score": mean_score,
                         "baseline_mean": baseline_mean,
                         "gate_mode": gate_mode,
+                        "validator_mode": validator_modes[0] if validator_modes else "",
                         "effective_threshold": effective_threshold,
                     },
                 )
