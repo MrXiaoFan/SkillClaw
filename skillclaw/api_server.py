@@ -655,9 +655,28 @@ def _is_transient_skill_reminder(text: str) -> bool:
     lowered = str(text or "").strip().lower()
     if not lowered:
         return False
-    if lowered.startswith("<system-reminder>"):
-        return True
-    return "the following skills are available for use with the skill tool" in lowered
+    # Strip all <system-reminder>...</system-reminder> blocks (including
+    # unclosed ones).  This handles the case where Claude Code sends a
+    # <system-reminder> as a separate text block within the same user
+    # message, and the Anthropic-to-OpenAI converter joins the blocks
+    # into a single string.
+    stripped = re.sub(
+        r"<system-reminder>.*?(?:</system-reminder>|$)",
+        "",
+        lowered,
+        flags=re.DOTALL,
+    ).strip()
+    # If substantial content remains after stripping reminder blocks, the
+    # turn contains real task content and should NOT be treated as
+    # reminder-only.
+    if len(stripped) >= 50:
+        return False
+    # Little or no content remains ? treat as reminder-only only if the
+    # original text actually contained reminder markers.
+    return (
+        "<system-reminder>" in lowered
+        or "the following skills are available for use with the skill tool" in lowered
+    )
 
 
 def _extract_session_task_instruction(
