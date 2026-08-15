@@ -119,7 +119,23 @@ class ReplayGateWorker:
         return max(0.0, min(1.0, (value + 1.0) / 2.0))
 
     @staticmethod
-    def _accept_replay_candidate(*, candidate_mean: float, baseline_mean: float, threshold: float, acceptance_mode: str = "strict_improvement") -> bool:
+    def _accept_replay_candidate(
+        *,
+        candidate_mean: float,
+        baseline_mean: float,
+        threshold: float,
+        acceptance_mode: str = "strict_improvement",
+        non_inferiority_margin: float = 0.0,
+    ) -> bool:
+        """Decide whether a candidate skill passes the replay gate.
+
+        Modes:
+          - strict_improvement: candidate > baseline (Scheme A, counterfactual ablation)
+          - non_inferior: candidate >= baseline (no margin)
+          - non_inferiority: candidate >= baseline - epsilon (Scheme B, with margin)
+        """
+        if acceptance_mode == "non_inferiority":
+            return candidate_mean >= threshold and candidate_mean >= baseline_mean - non_inferiority_margin
         if acceptance_mode == "non_inferior":
             return candidate_mean >= threshold and candidate_mean >= baseline_mean
         return candidate_mean >= threshold and candidate_mean > baseline_mean
@@ -388,6 +404,7 @@ class ReplayGateWorker:
 
         current_skill = job.get("current_skill") if isinstance(job.get("current_skill"), dict) else None
         acceptance_mode = str(getattr(self.config, "replay_acceptance_mode", "strict_improvement") or "strict_improvement")
+        non_inferiority_margin = float(getattr(self.config, "non_inferiority_margin", 0.0) or 0.0)
         scoring_mode = str(getattr(self.config, "replay_scoring_mode", "prm") or "prm")
         case_results: list[dict[str, Any]] = []
         candidate_scores: list[float] = []
@@ -423,12 +440,14 @@ class ReplayGateWorker:
             baseline_mean=baseline_mean,
             threshold=threshold,
             acceptance_mode=acceptance_mode,
+            non_inferiority_margin=non_inferiority_margin,
         )
         decision = "accept" if accepted else "reject"
         reason = (
             f"Replay validation compared {len(case_results)} case(s): "
             f"candidate_mean={candidate_mean}, baseline_mean={baseline_mean}, "
             f"threshold={threshold}, acceptance_mode={acceptance_mode}, "
+            f"non_inferiority_margin={non_inferiority_margin}, "
             f"scoring_mode={scoring_mode}"
         )
         return {
@@ -471,6 +490,7 @@ class ReplayGateWorker:
 
         current_skill = job.get("current_skill") if isinstance(job.get("current_skill"), dict) else None
         acceptance_mode = str(getattr(self.config, "replay_acceptance_mode", "strict_improvement") or "strict_improvement")
+        non_inferiority_margin = float(getattr(self.config, "non_inferiority_margin", 0.0) or 0.0)
         rerun_threshold = float(getattr(self.config, "real_rerun_threshold", 0.6) or 0.6)
 
         # Try real re-run for each case; fall back to replay for cases without case_id
@@ -531,12 +551,14 @@ class ReplayGateWorker:
             baseline_mean=baseline_mean,
             threshold=threshold,
             acceptance_mode=acceptance_mode,
+            non_inferiority_margin=non_inferiority_margin,
         )
         decision = "accept" if accepted else "reject"
         reason = (
             f"Real re-run validation: {rerun_count} real rerun(s), {fallback_count} replay fallback(s). "
             f"candidate_mean={candidate_mean}, baseline_mean={baseline_mean}, "
-            f"threshold={threshold}, acceptance_mode={acceptance_mode}"
+            f"threshold={threshold}, acceptance_mode={acceptance_mode}, "
+            f"non_inferiority_margin={non_inferiority_margin}"
         )
         return {
             "gate_mode": "real_rerun",

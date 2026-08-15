@@ -1058,6 +1058,8 @@ class EvolveServer(EvolveEngineMixin):
             accepted = 0
             rejected = 0
             scores: list[float] = []
+            baseline_scores: list[float] = []
+            result_thresholds: list[float] = []
             for result in results:
                 if result.get("accepted") is True:
                     accepted += 1
@@ -1066,13 +1068,55 @@ class EvolveServer(EvolveEngineMixin):
                 score = result.get("score")
                 if isinstance(score, (int, float)) and not isinstance(score, bool):
                     scores.append(float(score))
+                # Extract baseline score from replay/rerun summary for gate-mode-aware re-evaluation
+                replay_summary = result.get("replay_summary") or result.get("rerun_summary") or {}
+                baseline_score = replay_summary.get("baseline_mean_score")
+                if isinstance(baseline_score, (int, float)) and not isinstance(baseline_score, bool):
+                    baseline_scores.append(float(baseline_score))
+                # Use result-specific threshold when available (e.g. real_rerun uses lower threshold)
+                result_threshold = result.get("threshold")
+                if isinstance(result_threshold, (int, float)) and not isinstance(result_threshold, bool):
+                    result_thresholds.append(float(result_threshold))
 
             mean_score = round(sum(scores) / len(scores), 3) if scores else None
+            baseline_mean = round(sum(baseline_scores) / len(baseline_scores), 3) if baseline_scores else None
+
+            # Gate-mode-aware publish decision
+            gate_mode = str(getattr(self.config, "gate_mode", "non_inferiority") or "non_inferiority")
+            margin = float(getattr(self.config, "non_inferiority_margin", 0.1) or 0.1)
+            # Use the result-specific threshold (e.g. real_rerun uses 0.6) when available;
+            # fall back to the server-wide validation_min_mean_score (0.75)
+            effective_threshold = (
+                round(sum(result_thresholds) / len(result_thresholds), 3)
+                if result_thresholds
+                else self.config.validation_min_mean_score
+            )
+
+            if gate_mode == "strict_improvement" or gate_mode == "counterfactual":
+                # Scheme A: candidate must strictly beat baseline
+                gate_passed = (
+                    mean_score is not None
+                    and mean_score >= effective_threshold
+                    and (baseline_mean is None or mean_score > baseline_mean)
+                )
+            elif gate_mode == "non_inferiority":
+                # Scheme B: candidate must not be worse than baseline by more than margin
+                gate_passed = (
+                    mean_score is not None
+                    and mean_score >= effective_threshold
+                    and (baseline_mean is None or mean_score >= baseline_mean - margin)
+                )
+            else:
+                # Fallback: trust worker's accepted field
+                gate_passed = (
+                    mean_score is not None
+                    and mean_score >= effective_threshold
+                )
+
             publish_ready = (
                 len(results) >= self.config.validation_required_results
                 and accepted >= self.config.validation_required_approvals
-                and mean_score is not None
-                and mean_score >= self.config.validation_min_mean_score
+                and gate_passed
             )
             reject_ready = rejected >= self.config.validation_max_rejections
 
@@ -1103,6 +1147,9 @@ class EvolveServer(EvolveEngineMixin):
                         "accepted_count": accepted,
                         "rejected_count": rejected,
                         "mean_score": mean_score,
+                        "baseline_mean": baseline_mean,
+                        "gate_mode": gate_mode,
+                        "effective_threshold": effective_threshold,
                     },
                 )
                 if uploaded:
@@ -1141,6 +1188,9 @@ class EvolveServer(EvolveEngineMixin):
                         "accepted_count": accepted,
                         "rejected_count": rejected,
                         "mean_score": mean_score,
+                        "baseline_mean": baseline_mean,
+                        "gate_mode": gate_mode,
+                        "effective_threshold": effective_threshold,
                     },
                 )
                 summary["rejected"] += 1
@@ -1645,6 +1695,8 @@ class EvolveServer(EvolveEngineMixin):
                         "required_approvals": self.config.validation_required_approvals,
                         "min_mean_score": self.config.validation_min_mean_score,
                         "max_rejections": self.config.validation_max_rejections,
+                        "gate_mode": str(getattr(self.config, "gate_mode", "non_inferiority") or "non_inferiority"),
+                        "non_inferiority_margin": float(getattr(self.config, "non_inferiority_margin", 0.1) or 0.1),
                     },
                     "published_skills": len(published_entries),
                     "registered_skills": len(registry_entries),

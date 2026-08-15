@@ -457,6 +457,7 @@ class ConfigStore:
             replay_context_mode=str(validation.get("replay_context_mode", "evidence") or "evidence"),
             replay_scoring_mode=str(validation.get("replay_scoring_mode", "prm") or "prm"),
             replay_acceptance_mode=str(validation.get("replay_acceptance_mode", "strict_improvement") or "strict_improvement"),
+            non_inferiority_margin=float(validation.get("non_inferiority_margin", 0.1) or 0.1),
             real_rerun_enabled=bool(validation.get("real_rerun_enabled", False)),
             real_rerun_threshold=float(validation.get("real_rerun_threshold", 0.6) or 0.6),
             real_rerun_vm_host=str(validation.get("real_rerun_vm_host", "192.168.1.4") or "192.168.1.4"),

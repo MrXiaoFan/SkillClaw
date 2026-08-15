@@ -135,6 +135,8 @@ class SkillClawConfig:
     replay_scoring_mode: str = "prm"
     # Replay gate acceptance: "strict_improvement" (candidate > baseline) or "non_inferior" (candidate >= baseline)
     replay_acceptance_mode: str = "strict_improvement"
+    # Epsilon margin for non_inferiority acceptance mode (Scheme B)
+    non_inferiority_margin: float = 0.1
     # Real re-run validation (Scheme B): trigger actual agent session with candidate skill
     real_rerun_enabled: bool = False
     real_rerun_threshold: float = 0.6

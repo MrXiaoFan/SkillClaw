@@ -122,7 +122,11 @@ class EvolveServerConfig:
     validation_required_results: int = 1
     validation_required_approvals: int = 1
     validation_min_mean_score: float = 0.75
-    validation_max_rejections: int = 1
+    validation_max_rejections: int = 3
+    # Gate mode: "strict_improvement" (Scheme A), "non_inferiority" (Scheme B), "counterfactual" (Scheme A variant)
+    gate_mode: str = "non_inferiority"
+    # Epsilon margin for non_inferiority gate mode
+    non_inferiority_margin: float = 0.1
     debug_dump_dir: str = ""
 
     # Skill registry. Session queues and validation artifacts still use the
@@ -174,6 +178,10 @@ class EvolveServerConfig:
             min(1.0, float(self.validation_min_mean_score or 0.0)),
         )
         self.validation_max_rejections = max(1, int(self.validation_max_rejections or 1))
+        self.gate_mode = str(self.gate_mode or "non_inferiority").strip().lower() or "non_inferiority"
+        if self.gate_mode not in {"strict_improvement", "non_inferiority", "counterfactual"}:
+            self.gate_mode = "non_inferiority"
+        self.non_inferiority_margin = max(0.0, min(1.0, float(self.non_inferiority_margin or 0.0)))
         if not self.feedback_bundle_path:
             self.feedback_bundle_path = str(_DEFAULT_FEEDBACK_BUNDLE_PATH)
         if self.engine == "agent":
@@ -261,7 +269,9 @@ class EvolveServerConfig:
             validation_required_results=int(os.environ.get("EVOLVE_VALIDATION_REQUIRED_RESULTS", "1")),
             validation_required_approvals=int(os.environ.get("EVOLVE_VALIDATION_REQUIRED_APPROVALS", "1")),
             validation_min_mean_score=float(os.environ.get("EVOLVE_VALIDATION_MIN_MEAN_SCORE", "0.75")),
-            validation_max_rejections=int(os.environ.get("EVOLVE_VALIDATION_MAX_REJECTIONS", "1")),
+            validation_max_rejections=int(os.environ.get("EVOLVE_VALIDATION_MAX_REJECTIONS", "3")),
+            gate_mode=os.environ.get("EVOLVE_GATE_MODE", "non_inferiority"),
+            non_inferiority_margin=float(os.environ.get("EVOLVE_NON_INFERIORITY_MARGIN", "0.1")),
             skill_storage_backend=os.environ.get("EVOLVE_SKILL_STORAGE_BACKEND", ""),
             nacos_server=os.environ.get("EVOLVE_NACOS_SERVER", ""),
             nacos_namespace_id=os.environ.get("EVOLVE_NACOS_NAMESPACE_ID", "public"),
@@ -382,7 +392,9 @@ class EvolveServerConfig:
             validation_required_results=int(os.environ.get("EVOLVE_VALIDATION_REQUIRED_RESULTS", "1")),
             validation_required_approvals=int(os.environ.get("EVOLVE_VALIDATION_REQUIRED_APPROVALS", "1")),
             validation_min_mean_score=float(os.environ.get("EVOLVE_VALIDATION_MIN_MEAN_SCORE", "0.75")),
-            validation_max_rejections=int(os.environ.get("EVOLVE_VALIDATION_MAX_REJECTIONS", "1")),
+            validation_max_rejections=int(os.environ.get("EVOLVE_VALIDATION_MAX_REJECTIONS", "3")),
+            gate_mode=os.environ.get("EVOLVE_GATE_MODE", "non_inferiority"),
+            non_inferiority_margin=float(os.environ.get("EVOLVE_NON_INFERIORITY_MARGIN", "0.1")),
             skill_storage_backend="nacos" if skill_backend == "nacos" else "",
             nacos_server=nacos_server,
             nacos_namespace_id=str(getattr(config, "sharing_nacos_namespace_id", "") or "public"),
