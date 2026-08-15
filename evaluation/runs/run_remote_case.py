@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import shlex
 import sys
 import tarfile
+import time
 import tempfile
 import uuid
 from dataclasses import dataclass
@@ -51,6 +53,8 @@ except ImportError:  # pragma: no cover - direct script execution.
 
 
 SYNC_PATHS = ("evaluation", "benchmarks")
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -779,7 +783,20 @@ def run_auto(args: argparse.Namespace) -> dict[str, Any]:
                 ),
                 cwd=remote_repo_root,
             )
-        run_result = client.run(command, cwd=remote_repo_root)
+        run_timeout = getattr(args, 'run_timeout', None) or 900.0
+        run_result: dict[str, Any] | None = None
+        try:
+            run_result = client.run(command, cwd=remote_repo_root, timeout=run_timeout)
+        except Exception as exc:
+            logger.warning('Remote run timed out or failed after %.0fs: %s', run_timeout, exc)
+            run_result = {
+                'action': 'run',
+                'command': command,
+                'exit_status': -1,
+                'stdout': '',
+                'stderr': str(exc),
+                'timeout': True,
+            }
         downloaded = _download_artifacts(client, layout=layout, remote_output_dir=layout.remote_output_dir)
     enriched_path = enrich_downloaded_final(
         case=case,
@@ -878,6 +895,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Close the session and queue validated skill candidates.",
     )
     auto.add_argument("--evolve-url", default="http://127.0.0.1:8787")
+    auto.add_argument("--run-timeout", type=float, default=900.0, help="Timeout in seconds for the remote run command.")
 
     check = subparsers.add_parser("check", help="Verify remote connectivity and repo presence.")
     check.add_argument("--cwd", default="")
