@@ -1190,6 +1190,13 @@ class SkillManager:
             desc_overlap = query_terms & desc_terms
             category_overlap = query_terms & category_terms
             negative_overlap = query_terms & negative_terms
+            # Hard veto: if the query strongly matches the skill's exclusion
+            # criteria (3+ negative-term overlaps), skip the skill entirely.
+            # This prevents mismatched skills from being selected even when
+            # positive keyword overlap is high (e.g., a Lua-extraction skill
+            # matched against a Tenda httpd command-injection task).
+            if len(negative_overlap) >= 3:
+                continue
             content_overlap = query_terms & content_terms
             score = (
                 len(name_overlap) * 4.0
@@ -1227,6 +1234,11 @@ class SkillManager:
             for skill in self.get_all_skills():
                 name = str(skill.get("name") or "")
                 if name.startswith("skillclaw-") and (is_vulnerability_task or not is_skillclaw_meta_task):
+                    continue
+                # Respect negative exclusion clauses in fallback too
+                fb_desc = str(skill.get("description") or "")
+                _, fb_neg = _split_trigger_description(fb_desc)
+                if len(query_terms & _inline_terms(fb_neg)) >= 3:
                     continue
                 fallback_pool.append(skill)
             if not fallback_pool:
