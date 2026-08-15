@@ -13,7 +13,7 @@
   },
   "task_profile": {
     "workspace": "firmware_rootfs",
-    "target_component": "firmware_service",
+    "target_component": "firmware_cgi_service",
     "analysis_mode": "binary_reverse",
     "bug_class": "command_injection",
     "input_vector": "network_request",
@@ -43,7 +43,7 @@
       "formWriteFacMac",
       "doSystemCmd"
     ],
-    "vulnerability_type": "embedded httpd command injection",
+    "vulnerability_type": "embedded httpd cgi command injection",
     "root_cause": "The formWriteFacMac handler reads the user-provided 'mac' parameter via sub_28CB8 and passes it directly to doSystemCmd(\"cfm mac %s\", v3), which formats the command via vsnprintf and executes it with system(). The mac parameter is not sanitized, allowing command injection.",
     "required_evidence": [
       "formWriteFacMac",
