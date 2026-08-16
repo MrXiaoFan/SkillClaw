@@ -406,12 +406,15 @@ def _build_feedback_context(feedback_context: dict | None) -> str:
         root_cause_success = dimensions.get("root_cause_success")
         validator_passed = dimensions.get("validator_passed")
         validator_failed = dimensions.get("validator_failed")
+        function_identity_miss = dimensions.get("function_identity_miss")
         lines.append(
-            "- Dimensions: localization_success={loc}, cve_success={cve}, cve_identity_miss={miss}, "
-            "evidence_success={evidence}, root_cause_success={root}, validator_passed={vp}, validator_failed={vf}".format(
+            "- Dimensions: localization_success={loc}, cve_success={cve}, cve_identity_miss={cmiss}, "
+            "function_identity_miss={fmiss}, evidence_success={evidence}, root_cause_success={root}, "
+            "validator_passed={vp}, validator_failed={vf}".format(
                 loc=localization_success,
                 cve=dimensions.get("cve_success"),
-                miss=dimensions.get("cve_identity_miss"),
+                cmiss=dimensions.get("cve_identity_miss"),
+                fmiss=function_identity_miss,
                 evidence=evidence_success,
                 root=root_cause_success,
                 vp=validator_passed,
@@ -447,12 +450,20 @@ def _build_feedback_context(feedback_context: dict | None) -> str:
         validator_passed_count = int(validator_passed) if validator_passed is not None else 0
     except (TypeError, ValueError):
         validator_passed_count = 0
+    try:
+        function_identity_miss_count = int(function_identity_miss) if function_identity_miss is not None else 0
+    except (TypeError, ValueError):
+        function_identity_miss_count = 0
 
+    function_identity_defect = relevant_count > 0 and function_identity_miss_count > 0
     concrete_defect_signal = (
-        relevant_count > 0
-        and negative_count > 0
-        and mean_score_value is not None
-        and mean_score_value < 0.6
+        (
+            relevant_count > 0
+            and negative_count > 0
+            and mean_score_value is not None
+            and mean_score_value < 0.6
+        )
+        or function_identity_defect
     )
     partial_success_signal = (
         concrete_defect_signal
@@ -478,6 +489,16 @@ def _build_feedback_context(feedback_context: dict | None) -> str:
                 "- A task-relevant skill was selected, but the resulting confirmed run stayed low-scoring.",
                 "- Treat this as evidence for a narrow improve_skill edit, not an automatic skip.",
                 "- Focus on the smallest guidance change that would steer future runs away from the observed failure mode.",
+            ]
+        )
+    if function_identity_defect:
+        lines.extend(
+            [
+                "",
+                "Function-identity defect signal:",
+                "- A task-relevant skill was selected, but the agent predicted the wrong vulnerable function.",
+                "- The skill should be guiding the agent toward the correct function name; its absence or misdirection is a concrete defect.",
+                "- Prefer an improve_skill edit that adds or corrects the function-name guidance so future runs target the right sink.",
             ]
         )
     if partial_success_signal:

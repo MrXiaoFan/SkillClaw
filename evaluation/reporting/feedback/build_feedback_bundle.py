@@ -192,6 +192,7 @@ def _new_bundle(skill: str, gate: dict[str, Any] | None) -> dict[str, Any]:
             "localization_success": 0,
             "cve_success": 0,
             "cve_identity_miss": 0,
+            "function_identity_miss": 0,
             "evidence_success": 0,
             "root_cause_success": 0,
             "validator_passed": 0,
@@ -324,6 +325,8 @@ def build_feedback_bundles(
                 dimensions["cve_success"] += 1
             if "cve_identity_miss" in quality_flags:
                 dimensions["cve_identity_miss"] += 1
+            if "function_identity_miss" in quality_flags:
+                dimensions["function_identity_miss"] += 1
             if evidence["hits"]["evidence"]:
                 dimensions["evidence_success"] += 1
             if evidence["hits"]["root_cause"]:
