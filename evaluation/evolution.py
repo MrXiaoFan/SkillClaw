@@ -368,6 +368,61 @@ def _extract_selected_skill_names(record: dict[str, Any]) -> list[str]:
     return selected
 
 
+def _build_synthetic_session_record(
+    record: dict[str, Any],
+    *,
+    segment_id: str,
+    session_id: str,
+) -> dict[str, Any]:
+    """Build a minimal session record from an enriched final record.
+
+    Used when the API server has no active session (remote VM runs) so
+    that the evolve server can still pair validated feedback with a
+    session record and proceed with evolution.
+    """
+    from datetime import datetime, timezone
+
+    predictions = record.get("predictions") or {}
+    root_cause = str(record.get("root_cause") or "")
+    evidence = str(record.get("evidence") or "")
+    selected_skill_names = record.get("selected_skill_names") or []
+    skill_injection = record.get("skill_injection") or {}
+
+    response_parts: list[str] = []
+    if root_cause:
+        response_parts.append("Root cause: " + root_cause)
+    if evidence:
+        response_parts.append("Evidence: " + evidence)
+    predicted_functions = predictions.get("functions") or []
+    if predicted_functions:
+        response_parts.append("Predicted functions: " + ", ".join(str(f) for f in predicted_functions))
+    predicted_files = predictions.get("files") or []
+    if predicted_files:
+        response_parts.append("Predicted files: " + ", ".join(str(f) for f in predicted_files))
+    response_text = "\n\n".join(response_parts) if response_parts else "(no agent output captured)"
+
+    turn: dict[str, Any] = {
+        "prompt_text": str(record.get("case_id") or ""),
+        "response_text": response_text,
+        "selected_skill_names": list(selected_skill_names),
+    }
+    if isinstance(skill_injection, dict) and skill_injection:
+        turn["skill_injection"] = skill_injection
+
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return {
+        "session_id": segment_id,
+        "client_session_id": session_id,
+        "session_segment_id": segment_id,
+        "segment_status": "closed",
+        "segment_closed_at": now,
+        "timestamp": now,
+        "user_alias": "remote_vm",
+        "num_turns": 1,
+        "turns": [turn],
+    }
+
+
 def _close_matching_session_segment(
     *,
     active_session: dict[str, Any] | None,
@@ -468,6 +523,18 @@ def handoff_validated_run(
         request=request,
     )
 
+    synthesize_result: dict[str, Any] | None = None
+    if not close_result.get("deleted"):
+        synthetic_session = _build_synthetic_session_record(
+            record, segment_id=segment_id, session_id=session_id
+        )
+        synthesize_result = request(
+            f"{evolve_base}/v1/sessions/synthesize",
+            method="POST",
+            timeout=30.0,
+            json_body=synthetic_session,
+        )
+
     trigger_result: dict[str, Any] | None = None
     receipt_result: dict[str, Any] | None = None
     run_id = str(feedback_envelope["run_id"])
@@ -522,6 +589,7 @@ def handoff_validated_run(
         },
         "runtime_feedback_bundle": runtime_feedback_bundle,
         "session_close": close_result,
+        "session_synthesize": synthesize_result,
         "evolve": trigger_result,
         "consumption_receipt": receipt_result,
         "next_stage": "candidate_validation" if int(trigger_result.get("candidates_queued") or 0) else "no_candidate",

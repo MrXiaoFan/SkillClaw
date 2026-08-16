@@ -1736,6 +1736,40 @@ class EvolveServer(EvolveEngineMixin):
                 )
             return JSONResponse(content=receipt)
 
+        @app.post("/v1/sessions/synthesize")
+        async def synthesize_session(request: Request):
+            """Write a synthetic session record for remote runs that have no
+            API-server session (the agent ran on a VM, so the local API server
+            never accumulated turns).  This lets the evolve server pair the
+            validated feedback with a session and proceed with evolution."""
+            payload = await request.json()
+            if not isinstance(payload, dict):
+                raise HTTPException(status_code=400, detail="session payload must be a JSON object")
+            segment_id = str(payload.get("session_segment_id") or "").strip()
+            client_session_id = str(payload.get("client_session_id") or "").strip()
+            try:
+                uuid.UUID(segment_id)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="session_segment_id must be a UUID") from exc
+            if not client_session_id:
+                raise HTTPException(status_code=400, detail="client_session_id is required")
+            session_key = f"{self._prefix}sessions/{segment_id}.json"
+            existing = await self._call_storage(read_json_object, self._bucket, session_key, False)
+            if isinstance(existing, dict):
+                return JSONResponse(content={
+                    "synthesized": False,
+                    "reason": "session_already_exists",
+                    "session_segment_id": segment_id,
+                })
+            payload["segment_status"] = "closed"
+            await self._call_storage(write_json_object, self._bucket, session_key, payload)
+            logger.info("[EvolveServer] synthesized session record: %s", session_key)
+            return JSONResponse(content={
+                "synthesized": True,
+                "session_segment_id": segment_id,
+                "storage_key": session_key,
+            })
+
         @app.get("/status")
         async def status():
             published_entries = self._load_remote_skills()
