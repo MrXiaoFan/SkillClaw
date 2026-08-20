@@ -172,3 +172,22 @@ next steps（建议）：
   预测 formSetSystemSettings 判 YES 但文件名是 setpassword）。
 - 结论：setpassword case 需在 dataset/benchmark 层面订正（要么给真 formSetPassword 的 ground_truth，
   要么划为重复 case 排除）；不是 oracle skill 的问题。
+
+### 2026-08-20 补强：setpassword 异常已 100% 确认 = dataset 重复 case（非 skill 问题）
+- 逐字段比对 f9k1122-webs-overflow-formSetPassword.json 与 formSetSystemSettings.json：
+  仅 case_id 与 notes 两个字段不同，其余（target.source_root、blind_workspace、ground_truth、
+  required_evidence、validators、confirmation、prompt、oracle_only_paths）逐字节相同。
+- 源侧对照 Z 盘原始样本：vul4（真 formSetPassword，poc 打 /goform/formSetPassword，
+  webs MD5=205E6972...）与 vul5（formSetSystemSettings，poc 打 /goform/formSetSystemSettings，
+  webs MD5=205E6972...）两样本的 webs 二进制 MD5 相等（同一固件），formsDefine.c 也相同，
+  仅 vul_function 源码与 description/poc 不同。
+- 但 benchmark 里的 setpassword case 把 source_root/blind_workspace/GT/validator 全指向 vul5
+  （formSetSystemSettings），notes 文本却声称来自 vul4。结论：这份 case 是从 setsystemsettings case
+  直接复制、只改了 case_id 和 notes，从未真正从 vul4 的 formSetPassword 样本重新派生。
+- 因此 setpassword 在 ablation 里测的是「vul5 二进制上的 formSetPassword」一个不存在的目标。
+  0/3 是数据缺陷造成的，不是 skill 盲区——真正要区分的是同一个 webs 二进制里的相邻两个 handler。
+- 近亲对无法靠二进制邻接指纹分开的根因：二者是同一份 webs 固件里的相邻符号，字符串表里
+  formSetSystemSettings(445) 紧邻 formSetPassword(446)，且邻接串完全相同（同 flash 持久区），
+  没有任何二进制级 token 能区分二者；真正能区分的是 poc 打哪个 /goform/* 端点（但那是 oracle-only，不给模型）。
+=> 判定：setpassword case 应在 dataset/benchmark 层面作废或订正（要么改用 vul4 真样本重派生，
+   要么标为重复 case 从 14 案例集排除）。tuning oracle skill 无法修复它。
