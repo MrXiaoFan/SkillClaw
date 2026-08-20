@@ -215,3 +215,18 @@ next steps（建议）：
 - commit: 2ce59e5 (staged) + 6fb062c (扩充) + e8c8529 (中文重写定稿)。
 - 核心结论: 旧作弊 baseline oracle 97.5% -> 清洁重跑 35.7% (约 -62pp); no-skill 3.6% / weak 14.3% / oracle 35.7%。
 
+
+### 2026-08-20 深夜补充：方案 1.1 三条件技能必要性实验（冻结 case 集，153 runs）
+
+- 在冻结口径（freeze_cases_20260820.md，commit 01f5830）+ 净化技能（8186f34）+ deepseek-v4-flash 下，
+  执行 **17 case × 3 conditions（no/weak/oracle）× 3 rounds = 153 runs**（tag `plan11_frozen`），回答 "clean 下 skill 是否必要"。
+- 结果（剔除近亲对后 n=45/条件）：no 6.7% / weak 11.1% / **oracle 46.7%**；DECOY no 28 → weak 24 → oracle 2。
+  oracle YES ≈ no 的 7 倍、weak 的 4.2 倍；并把诱饵命中从 28 压到 2（控诱饵能力强）。
+- 与 84-run 对照：oracle 35.7% → 153-run 46.7%（+11pp，口径更严、样本更大），oracle 优势稳健。
+- 近亲对（setsystemsettings/wlansetup，0.2 口径）单列：oracle 0/6 YES，数据不可分区非 skill 盲区（族内区分型已把 wlansetup 掰回 3/3）。
+- oracle 全不中 5 case（f1202-credential-overflow、f453-qossetting-overflow、f9k1122-crossband-overflow、fh451-WrlclientSet-overflow、fh451-fromSetCfm-overflow）
+  多为**同一固件内选错 handler**（generic oracle 无族内区分判据）→ 1.2 族内区分推广的直接抓手。
+- 结论：**净化+冻结口径下 oracle 优势稳健，但严格必要性仍未被证明**（oracle 仍有 48.9% NO）；论文继续标注边界。
+- 产物：记录 `briefing_20260816/plan1_necessity_frozen_validation_20260820.md`、规范表 `.../plan1_necessity_frozen_table_20260820.csv`（135 行弃近亲对）、
+  原始结果 `runtime/ablation/results/ablation_results_plan11_frozen.csv`（153 行）。
+- 计划状态：work_plan 1.1 ✅、roadmap 1.1 ✅。

@@ -70,3 +70,17 @@
    
    改动/数据落点：新技能 `runtime/ablation/oracle_skills_json/oracle-f9k-distinguishing-*.json`（5 份）、跑步器 `runtime/ablation/run_f9k_distinguish.py`（独立 output-tag `f9k_distinguish_oracle`，不碰 rerun_model 表）、结果 `runtime/ablation/results/ablation_results_f9k_distinguish_oracle.csv`（15 行）、记录 `f9k_distinguishing_validation_20260820.md` + `f9k_distinguishing_run_table_20260820.csv`。
 
+
+9. **在冻结 case 集口径下完成技能必要性三条件实验（方案 1.1，153 runs，2026-08-20）**。在净化技能 + 新模型（deepseek-v4-flash）基础上，按冻结协议（`freeze_cases_20260820.md`，固定 commit `01f5830`）执行 **17 case × 3 conditions（no/weak/oracle）× 3 rounds = 153 runs**。相较方案 A 的 84-run 又加了轮次与更严口径。
+
+   统计结果（剔除近亲对后 n=45/条件，满分 10）：
+
+   | 条件 | runs | YES | YES% | DECOY | NO | 平均分 |
+   | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+   | no-skill | 45 | 3 | 6.7% | 28 | 14 | 3.92 |
+   | weak-skill | 45 | 5 | 11.1% | 24 | 16 | 3.99 |
+   | oracle-skill | 45 | 21 | **46.7%** | **2** | 22 | 6.20 |
+
+   关键结论：①oracle YES 率 46.7% 约为 no 的 7 倍、weak 的 4.2 倍，且把诱饵命中从 no/weak 的 28/24 压到仅 2，oracle 的“控诱饵能力”在更大样本（153 runs）上得到稳健确认；②相比方案 A 的 oracle 35.7%，本组升至 46.7%（+11pp，口径更严），优势稳健；③但 oracle 仍有 48.9% NO，5 个 case 全不中，**严格必要性仍未证明**，论文继续标注边界。逐 oracle-NO 归因显示多为**同一固件内选错 handler**（generic oracle 无族内区分判据），与已完成的族内区分验证（crossband/wlansetup 掰回 3/3）对应，是下一步 1.2 推广的直接抓手。
+
+   数据落点：记录 `briefing_20260816/plan1_necessity_frozen_validation_20260820.md`、规范表 `.../plan1_necessity_frozen_table_20260820.csv`（135 行弃近亲对）、原始结果 `runtime/ablation/results/ablation_results_plan11_frozen.csv`（153 行）。

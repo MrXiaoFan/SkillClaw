@@ -1,4 +1,4 @@
-# 研究路线图（Research Roadmap）— 2026-08-20 修订
+﻿# 研究路线图（Research Roadmap）— 2026-08-20 修订
 
 > 本文档用于长期追踪：先给出一份基于「工程状态（旧版）」批判性复盘的研究总结（按工程架构与脉络），
 > 再给出细化的阶段性开发/实验/论文计划。所有实验数字都以原始 CSV 文件为准，不凭记忆。
@@ -169,7 +169,7 @@ benchmark case → blind run → 评分/确认 → feedback → evolve → candi
 
 | # | 任务 | 做法 | 前置 | 验收 |
 | --- | --- | --- | --- | --- |
-| 1.1 | 三条件系统必要性实验 | clean case 集下 oracle/weak/no 多轮，替代旧的 18 case/213 run 口径 | 0.x | 干净数据上 oracle ≫ weak/no 稳定 |
+| 1.1 ✅ | 三条件系统必要性实验 | clean case 集下 oracle/weak/no 多轮，替代旧的 18 case/213 run 口径；**153-run 已出（冻结口径：no 6.7% / weak 11.1% / oracle 46.7%，DECOY no28→weak24→oracle2）** | 0.x | **已达核心验收**：oracle≫weak/no（46.7 vs 11.1/6.7）且诱饵从 28 压到 2；严格必要性仍待 1.2 族内区分推广后再下 |
 | 1.2 | 族内区分推广 | 邻接指纹方法推广到 Tenda F1202/F453/F456/FH451、i12、firmware2 CGI | 0.x | ≥2 个家族复现 20%→66.7% 量级回升 |
 | 1.3 | 逐 case 归因 | 对 oracle 未命中 17 个 NO 区分"模型能力不足 vs oracle 区分度不够" | 0.x | 归因表 |
 
