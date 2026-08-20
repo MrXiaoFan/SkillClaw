@@ -246,3 +246,17 @@ next steps（建议）：
 - 文档更新：work_plan/roadmap 1.2 改为 🔶（部分否定，验收改为"先做分离度预判"）；experiment_archive §5.9；
   run 表 + 验证记录入 reports/current/briefing_20260816/。
 - 未提交 item 用 `git status` 查看；本次若提交记 `fh451_distinguish`。
+
+---
+
+## 2026-08-20（续2）· 方案 1.3 逐 case 归因 + 0.4 FH451 数据处置（完成）
+
+- **1.3 逐 case 归因（✅）**：对冻结 153-run（plan11_frozen）的 28 个 oracle-NO round 归因成 5 类：
+  A oracle区分度不够(已验证可修, F9K) 9；B FH451 高密度簇 6；C 数据集缺陷(fromSetCfm) 3；D 同固件漂移(可尝试) 6；E 模型能力/诱饵 4。
+  **区分度不够 A+B+D=21/28≈75% 主导**；C 类(fromSetCfm)数据层订正、任何 skill 无法修。
+  产物：briefing_20260816/plan1_necessity_attribution_20260820.md + .csv。
+- **0.4 FH451 数据处置（✅）**：旧 60-run `ablation_results_fh451.csv` 复核 error=51/60、correct 空白 51、oracle 15 行全空
+  → **作废（superseded）**；同样 5 个 FH451 case 已由冻结 153-run(45 completed) + 族内区分 15-run 取代。
+  产物：briefing_20260816/fh451_old_60run_disposition_20260820.md；archive §7.1 已标注已作废。
+- 计划状态：work_plan/roadmap 0.4 ✅、1.3 ✅。
+- 未提交 item 用 git status 查看；本次若提交记 `plan13_attribution_0404`。

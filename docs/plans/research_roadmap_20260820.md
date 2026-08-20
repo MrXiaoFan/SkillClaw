@@ -171,7 +171,7 @@ benchmark case → blind run → 评分/确认 → feedback → evolve → candi
 | --- | --- | --- | --- | --- |
 | 1.1 ✅ | 三条件系统必要性实验 | clean case 集下 oracle/weak/no 多轮，替代旧的 18 case/213 run 口径；**153-run 已出（冻结口径：no 6.7% / weak 11.1% / oracle 46.7%，DECOY no28→weak24→oracle2）** | 0.x | **已达核心验收**：oracle≫weak/no（46.7 vs 11.1/6.7）且诱饵从 28 压到 2；严格必要性仍待 1.2 族内区分推广后再下 |
 | 1.2 🔶 | 族内区分推广 | 邻接指纹方法推广到其他家族。**FH451 已跑但为负结果**（5 case×3 轮，distinguishing 4/15 vs generic 6/15）：FH451 的 5 个脆弱 handler 及近邻聚集在重叠度极高的无线/WAN 字符串表集群，邻接运行几乎相同、参数 token 被多个近邻共享，模型按语义取名漂移（fromWanPortParam/formWrlLoginfo/formSetCfm 等）；fromSetCfm 还因二进制实为 formSetCfm 而不可命中。**对比 F9K(20%→66.7%)，结论：族内区分收益 family-dependent，非通用增益**；仅在目标在字符串表分离度高的家族适用 | 0.x | 修正后验收：区分型 skill 只应用于分离度足够的家族，并维护每家族分离度+结果记录（FH451 已记） |
-| 1.3 | 逐 case 归因 | 对 oracle 未命中 17 个 NO 区分"模型能力不足 vs oracle 区分度不够" | 0.x | 归因表 |
+| 1.3 ✅ | 逐 case 归因 | 对 oracle 未命中（NO）区分"模型能力不足 vs oracle 区分度不够"，出归因表 | 0.x | **已达成**：28 oracle-NO round 归因 5 类（区分度不足 A+B+D=75% 主导、数据集缺陷 C=3、模型能力 E=4）；见 briefing_20260816/plan1_necessity_attribution_20260820.md |
 
 ### 阶段 2 · 系统完整性（闭环能否自证收益）
 **目标**：把"闭环能跑"升级为"闭环带来可追踪的正收益"。
@@ -213,3 +213,4 @@ benchmark case → blind run → 评分/确认 → feedback → evolve → candi
 ---
 
 *文档生成：2026-08-20 · 数据来源：runtime/ablation/results/ 原始 CSV + docs/handoff/ + 工程状态（旧版）*
+

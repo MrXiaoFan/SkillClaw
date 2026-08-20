@@ -335,11 +335,18 @@ Q2. 在这些样本上，模型+现有 skill 的盲测命中/评分处于什么�
 
 ## 七、其余辅助/存疑实验（FH451 / sanity / closed-loop）
 
-### 7.1 FH451 五 case 四条件对照（60 runs，数据无效待排查）
-- 规模：5 个 FH451 case × 4 条件（no/weak/weak-skill-2/oracle）× 3 轮 = 60 runs；文件 `ablation_results_fh451.csv`。
-- 结果：四条件 YES 全 = 0，且 oracle 15 行全空、其余各约 12/15 的 correct 为空 → 基本无可判读输出，**数据无效**。
-- 结论：不能作证据；需排查 FH451 case 构造（同名 formWrlExtraSet 冲突）或模型输出解析问题后重做。
+### 7.1 FH451 五 case 四条件对照（60 runs，**已作废 / 已被有效数据取代**）
 
+- 规模：5 个 FH451 case × 4 条件（no/weak/weak-skill-2/oracle）× 3 轮 = 60 runs；文件 blation_results_fh451.csv。
+
+- 复核（2026-08-20）：60 行中 **completed 仅 9、error 51（85% 报错）**，correct 空白 51；oracle 15 行 predicted_functions 全空
+  → 大比例运行错误 + 输出缺失，**数据无效**，不能作证据。
+
+- **处置（0.4，详见 briefing_20260816/fh451_old_60run_disposition_20260820.md）**：作废（superseded）。这 5 个 FH451 case
+  已被**冻结 153-run（plan11_frozen，45 completed rows）**及 FH451 族内区分 15-run（commit 2e28257）有效取代，
+  旧 60-run 不再被任何命中统计/论文引用。原始文件保留仅为负面积累。
+
+
 ### 7.2 sanity 冒烟测试（2 runs，无统计意义）
 - 1 case（f453-cmdinject）× no/oracle 各 1 轮，验证实验台能跑通即可；一次 DECOY、一次 NO。文件 `ablation_results_sanity.csv`。
 - 作用：流程调通验证，不作结论。
