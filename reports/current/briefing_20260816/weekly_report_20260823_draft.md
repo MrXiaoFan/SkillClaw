@@ -1,4 +1,4 @@
-# 项目周报（用于 2026-08-17 至 2026-08-23 汇报）
+﻿# 项目周报（用于 2026-08-17 至 2026-08-23 汇报）
 
 > 本文内容同样来自 2026-08-10 至 2026-08-16 这一周已经真实完成的工作，只是按后半周口径拆分，供下周末继续汇报使用。
 
@@ -83,4 +83,14 @@
 
    关键结论：①oracle YES 率 46.7% 约为 no 的 7 倍、weak 的 4.2 倍，且把诱饵命中从 no/weak 的 28/24 压到仅 2，oracle 的“控诱饵能力”在更大样本（153 runs）上得到稳健确认；②相比方案 A 的 oracle 35.7%，本组升至 46.7%（+11pp，口径更严），优势稳健；③但 oracle 仍有 48.9% NO，5 个 case 全不中，**严格必要性仍未证明**，论文继续标注边界。逐 oracle-NO 归因显示多为**同一固件内选错 handler**（generic oracle 无族内区分判据），与已完成的族内区分验证（crossband/wlansetup 掰回 3/3）对应，是下一步 1.2 推广的直接抓手。
 
-   数据落点：记录 `briefing_20260816/plan1_necessity_frozen_validation_20260820.md`、规范表 `.../plan1_necessity_frozen_table_20260820.csv`（135 行弃近亲对）、原始结果 `runtime/ablation/results/ablation_results_plan11_frozen.csv`（153 行）。
+   数据落点：记录 `briefing_20260816/plan1_necessity_frozen_validation_20260820.md`、规范表 `.../plan1_necessity_frozen_table_20260820.csv`（135 行弃近亲对）、原始结果 `runtime/ablation/results/ablation_results_plan11_frozen.csv`（153 行）。
+
+
+---
+
+## 8.x 更新：方案 1.2 首次推广（FH451 族内区分）→ 负结果（2026-08-20 补充）
+
+承接 5.8 里"oracle 全不中/部分命中"的 FH451 case，复用 F9K 上验证有效的邻接符号指纹做族内区分，
+结果**新 distinguishing 4/15，反而低于同批 generic-oracle 6/15**——族内区分收益 family-dependent，
+非通用；对 FH451 这类 handler 高密集、邻接/参数 token 重叠度高的簇无效。详见
+`briefing_20260816/fh451_distinguishing_validation_20260820.md`。

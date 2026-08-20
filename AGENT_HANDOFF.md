@@ -230,3 +230,19 @@ next steps（建议）：
 - 产物：记录 `briefing_20260816/plan1_necessity_frozen_validation_20260820.md`、规范表 `.../plan1_necessity_frozen_table_20260820.csv`（135 行弃近亲对）、
   原始结果 `runtime/ablation/results/ablation_results_plan11_frozen.csv`（153 行）。
 - 计划状态：work_plan 1.1 ✅、roadmap 1.1 ✅。
+
+---
+
+## 2026-08-20（续）· 方案 1.2 首次推广：FH451 族内区分（负结果）
+
+- 前序 1.1 冻结 153-run（commit 60b7d2a）：oracle 46.7% vs weak 11.1% vs no 6.7%。本步推进 1.2。
+- **FH451 族内区分型 oracle skill 验证（5 case x 3 rounds = 15 runs，tag fh451_distinguish_oracle）**：
+  复用 F9K 邻接符号指纹模板 → **新 distinguishing 4/15，反而低于同批 generic-oracle 6/15**。结论：族内
+  区分收益 family-dependent，非通用；仅对字符串表分离度高的家族（F9K）有效。
+- 失败归因（详见 reports/current/briefing_20260816/fh451_distinguishing_validation_20260820.md）：
+  ① 模型按语义取名忽略邻接锚点（fromAdvSetWan→fromWanPortParam）；② FH451 脆弱 handler 与近邻同聚高
+  重叠无线/WAN 簇，邻接/参数 token 无法唯一区分；③ fromSetCfm 数据集命名不一致（二进制为 formSetCfm），
+  目标名不可命中。
+- 文档更新：work_plan/roadmap 1.2 改为 🔶（部分否定，验收改为"先做分离度预判"）；experiment_archive §5.9；
+  run 表 + 验证记录入 reports/current/briefing_20260816/。
+- 未提交 item 用 `git status` 查看；本次若提交记 `fh451_distinguish`。
