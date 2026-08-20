@@ -122,3 +122,22 @@ next steps（建议）：
 ### 下一步建议（选项1 落地）
 重写 oracle skill 为"族内区分型"，对 F9K1122 家族先做一轮（5 case），验证 oracle 命中率能否回升。
 生成素材：runtime/ablation/werk/f9k_neighborhood.json（全量邻接数据）。执行时注意分批写文件，避免长命令。
+
+### 2026-08-20 深夜续：族内区分型 oracle skill 起草 + 验证跑已启动
+- 生成 5 份 F9K1122 族内区分型 oracle skill（runtime/ablation/oracle_skills_json/oracle-f9k-distinguishing-*.json）：
+  wisp5g / crossband / wlan-setup / set-system-settings / set-password。
+- 关键设计：用二进制字符串表"邻接符号指纹"区分族内 handler（如 formWlanSetup 紧邻 formWlanMP/formWdsEncrypt/formHwSet/formTcpipSetup；
+  formWISP5G 关联 wispWanId/formiNIC*；formCrossBandSwitch 紧邻 formSetWan* 家族；
+  formSetSystemSettings/formSetPassword 在 flash-持久化错误串区域，互为前后邻）。均不写目标函数名本身。
+- 抽查确认：5 份内部都不含各自目标符号名（set-password 那份只引用兄弟 formSetSystemSettings 作为定位参照，不含 formSetPassword）。
+- 验证跑步器 runtime/ablation/run_f9k_distinguish.py（独立 output-tag f9k_distinguish_oracle，不碰 rerun_model CSV），
+  5 case x oracle-skill x 3 rounds = 15 runs，后台已启动，log: runtime/ablation/results/f9k_distinguish_run.log。
+- 复核 baseline（rerun_model.csv f9k1122 族）：
+  * wisp5g/overflow(case f9k1122-overflow) oracle 2/2 HIT(score8)
+  * crossband oracle r1=8(HIT formWISP5G 但实际 gt 要 formCrossBandSwitch，判分是否命中待核) r2=4.5(MISS)
+  * setpassword oracle 2/2=8(但预测 formWISP5G；注意该 case 的 ground_truth.functions=['formSetSystemSettings','strcpy']，
+    与文件名 setpassword/run_ablation target=formSetPassword 不一致，可能两边都算对或都算错，需专门核对)
+  * setsystemsettings oracle r1=8 r2=4.5
+  * wlansetup oracle 2/2=4.5(MISS，预测 formWISP5G)
+- 待验证结果出来后，判断族内区分 skill 是否把 4 个非 WISP 目标从"全预测 formWISP5G"掰到各自真相。
+- 注意 runtime/ 目录在 .gitignore 里，生成的 skill 与 runner 不纳入 git；如需版本化需另行处理。
