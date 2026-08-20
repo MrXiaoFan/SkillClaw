@@ -2305,7 +2305,7 @@ class SkillClawAPIServer:
 
         if mode == "inline_skills":
             selected = self._normalize_inline_override_skills(override.get("inline_skills") or [])
-            skill_text = self.skill_manager.format_inline_skills_for_prompt(selected, max_chars=max_skill_chars)
+            skill_text = self.skill_manager.format_inline_skills_for_prompt(selected, max_chars=max_skill_chars, include_catalog=False)
             skill_names = [str(skill.get("name") or "") for skill in selected if str(skill.get("name") or "").strip()]
             return (
                 skill_text,
@@ -3926,7 +3926,7 @@ class SkillClawAPIServer:
                 if sys_indices:
                     idx = sys_indices[0]
                     existing = _flatten_message_content(messages[idx].get("content", ""))
-                    messages[idx] = {**messages[idx], "content": existing + "\n\n" + skill_text}
+                    messages[idx] = {**messages[idx], "content": skill_text + "\n\n" + existing}
                 else:
                     messages.insert(0, {"role": "system", "content": skill_text})
             skill_injection_meta.setdefault("available_skill_count", all_skill_count)

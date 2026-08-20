@@ -321,12 +321,12 @@ def _resolve_local_injection_source(path: Path) -> Path | None:
     return fallback if fallback.is_file() else None
 
 
-def _load_local_injection_value(path: Path) -> Any:
+def _load_local_injection_value(path: Path, session_filter: str = "") -> Any:
     primary = _resolve_local_injection_source(path)
     if primary is None:
         return None
 
-    primary_value = _load_optional_json(primary)
+    primary_value = _load_optional_json(primary, session_filter=session_filter)
     if not path.is_dir():
         return primary_value
 
@@ -339,7 +339,7 @@ def _load_local_injection_value(path: Path) -> Any:
     except OSError:
         pass
 
-    fallback_value = _load_optional_json(fallback)
+    fallback_value = _load_optional_json(fallback, session_filter=session_filter)
     merged: list[Any] = []
     if isinstance(primary_value, list):
         merged.extend(primary_value)
@@ -483,9 +483,10 @@ def enrich_downloaded_final(
     case: dict[str, Any],
     downloaded_artifacts: dict[str, str],
     local_session_dir: Path,
+    session_id: str = "",
 ) -> str | None:
     final_path_text = str(downloaded_artifacts.get("final") or "").strip()
-    injection_value = _load_local_injection_value(local_session_dir)
+    injection_value = _load_local_injection_value(local_session_dir, session_filter=session_id)
     if not final_path_text or injection_value is None:
         return None
 
@@ -714,6 +715,7 @@ def finalize_manual_run(args: argparse.Namespace) -> dict[str, Any]:
         case=case,
         downloaded_artifacts=downloaded,
         local_session_dir=args.local_session_dir,
+        session_id=client_session_id,
     )
     evolution_handoff = _handoff_after_run(args, repo_root, enriched_path)
     _persist_evolution_handoff(enriched_path, evolution_handoff)
@@ -802,6 +804,7 @@ def run_auto(args: argparse.Namespace) -> dict[str, Any]:
         case=case,
         downloaded_artifacts=downloaded,
         local_session_dir=args.local_session_dir,
+        session_id=client_session_id,
     )
     evolution_handoff = _handoff_after_run(args, repo_root, enriched_path)
     _persist_evolution_handoff(enriched_path, evolution_handoff)

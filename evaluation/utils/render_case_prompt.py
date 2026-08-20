@@ -81,7 +81,7 @@ def _task_profile_enabled() -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
-def _render_task_profile(case: dict[str, Any]) -> str:
+def _render_task_profile(case: dict[str, Any], *, blind: bool = False) -> str:
     profile = case.get("task_profile") if isinstance(case.get("task_profile"), dict) else {}
     if not profile:
         return ""
@@ -129,9 +129,62 @@ def _render_task_profile(case: dict[str, Any]) -> str:
         lines.append("- Expect the trigger to come from a crafted packet, capture, or protocol input already visible in the workspace.")
 
     if notes:
-        lines.append(f"- Notes: {notes}")
+        if blind:
+            # Blind mode must not leak oracle answers embedded in task_profile.notes
+            # (device/vendor names, target function names, parameter names, CVE ids).
+            lines.append("- Notes: (redacted in blind mode)")
+        else:
+            lines.append(f"- Notes: {notes}")
 
-    return "\n".join(lines).strip()
+    rendered = "\n".join(lines).strip()
+    if blind:
+        rendered = _redact_known_identifiers(rendered, case)
+    return rendered
+
+
+
+
+_SENSITIVE_ID_RE = [
+    re.compile(r"CVE-\d{4}-\d+", re.IGNORECASE),
+]
+
+
+def _redact_known_identifiers(text: str, case: dict[str, Any]) -> str:
+    """Neutralize known answer-bearing identifiers (target/decoy function names,
+    parameter names, device/vendor names, CVE ids) that may be embedded in a case's
+    task_profile and could leak the ground truth into a blind prompt.
+    """
+    out = str(text or "")
+
+    target = case.get("target", {}) if isinstance(case.get("target"), dict) else {}
+    gt = case.get("ground_truth", {}) if isinstance(case.get("ground_truth"), dict) else {}
+
+    sensitive: set[str] = set()
+
+    for key in ("functions", "files"):
+        for item in (gt.get(key) or []):
+            if isinstance(item, str) and item.strip():
+                sensitive.add(item.strip())
+
+    for item in (gt.get("required_evidence") or []):
+        if isinstance(item, str) and item.strip():
+            sensitive.add(item.strip())
+
+    project = str(target.get("project") or "").strip()
+    version = str(target.get("version") or "").strip()
+    if project:
+        sensitive.add(project)
+    if version and version != "dataset-20260819":
+        sensitive.add(version)
+
+    for rx in _SENSITIVE_ID_RE:
+        out = rx.sub("***", out)
+
+    for token in sorted((t for t in sensitive if len(t) >= 3), key=len, reverse=True):
+        out = re.sub(re.escape(token), "***", out, flags=re.IGNORECASE)
+
+    return out
+
 
 
 def _render_confirmation_contract(case: dict[str, Any]) -> str:
@@ -269,7 +322,7 @@ def get_case_prompt(case: dict[str, Any], mode: str) -> str:
         if _is_blind_mode(mode):
             prompt = _sanitize_blind_prompt(case, prompt)
         if _task_profile_enabled():
-            task_profile = _render_task_profile(case)
+            task_profile = _render_task_profile(case, blind=_is_blind_mode(mode))
             if task_profile:
                 prompt = f"{task_profile}\n\n{prompt}"
         if not _is_blind_mode(mode):

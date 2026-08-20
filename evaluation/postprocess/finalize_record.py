@@ -26,7 +26,7 @@ def _load_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def _load_optional_json(path: Path | None) -> Any:
+def _load_optional_json(path: Path | None, session_filter: str = "") -> Any:
     if not path:
         return None
     if path.is_dir():
@@ -42,6 +42,19 @@ def _load_optional_json(path: Path | None) -> Any:
         return items
     if not path.is_file():
         return None
+    # Stream-read with session filter for large JSONL files to avoid OOM
+    if session_filter:
+        rows = []
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or session_filter not in line:
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+        return rows
     text = path.read_text(encoding="utf-8-sig", errors="replace").strip()
     if not text:
         return None
@@ -52,6 +65,8 @@ def _load_optional_json(path: Path | None) -> Any:
         for line in text.splitlines():
             line = line.strip()
             if not line:
+                continue
+            if session_filter and session_filter not in line:
                 continue
             try:
                 rows.append(json.loads(line))

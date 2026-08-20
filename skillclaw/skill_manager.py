@@ -1251,7 +1251,7 @@ class SkillManager:
         scored.sort(key=lambda item: item[0], reverse=True)
         return [skill for _, skill in scored[:top_k]]
 
-    def format_inline_skills_for_prompt(self, skills: list[dict], max_chars: int = 30_000) -> str:
+    def format_inline_skills_for_prompt(self, skills: list[dict], max_chars: int = 30_000, include_catalog: bool = True) -> str:
         """Build an inline skill prompt that includes SKILL.md bodies."""
         if not skills:
             return ""
@@ -1262,18 +1262,19 @@ class SkillManager:
             "SkillClaw server-side skills are different from the client's local Claude Code skills.",
             "Do not call the client's local `Skill(...)` tool for these SkillClaw skills; they are already injected as text.",
             "If a client-local Skill tool reports 'Unknown skill', ignore that local-tool error and continue with the injected SkillClaw instructions.",
-            "If the user asks which skills are available on the SkillClaw/LLM/server side, answer from <available_server_skills>.",
-            "",
-            "<available_server_skills>",
         ]
-        for skill in self.get_all_skills():
-            lines.append("  <skill>")
-            lines.append(f"    <name>{escape(str(skill.get('name') or ''))}</name>")
-            lines.append(f"    <description>{escape(str(skill.get('description') or ''))}</description>")
-            lines.append("  </skill>")
+        if include_catalog:
+            lines.append("If the user asks which skills are available on the SkillClaw/LLM/server side, answer from <available_server_skills>.")
+            lines.append("")
+            lines.append("<available_server_skills>")
+            for skill in self.get_all_skills():
+                lines.append("  <skill>")
+                lines.append(f"    <name>{escape(str(skill.get('name') or ''))}</name>")
+                lines.append(f"    <description>{escape(str(skill.get('description') or ''))}</description>")
+                lines.append("  </skill>")
+            lines.append("</available_server_skills>")
         lines.extend(
             [
-                "</available_server_skills>",
                 "",
                 "## Loaded Skill Instructions",
             ]
