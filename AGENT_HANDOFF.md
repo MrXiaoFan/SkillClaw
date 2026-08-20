@@ -141,3 +141,34 @@ next steps（建议）：
   * wlansetup oracle 2/2=4.5(MISS，预测 formWISP5G)
 - 待验证结果出来后，判断族内区分 skill 是否把 4 个非 WISP 目标从"全预测 formWISP5G"掰到各自真相。
 - 注意 runtime/ 目录在 .gitignore 里，生成的 skill 与 runner 不纳入 git；如需版本化需另行处理。
+
+### 2026-08-20 结果：族内区分型 oracle 验证完成（15 runs），oracle 命中率大幅回升
+- output-tag=f9k_distinguish_oracle 已完成 5 case x oracle-skill x 3 rounds。
+- 逐 case（对比旧 generic-oracle 的 YES 率 -> 新 distinguishing 的 YES 率）：
+  * f9k1122-overflow(WISP5G)         2/2 -> 3/3  (both HIT)
+  * crossband                       0/2 -> 3/3  (全修好，预测 formCrossBandSwitch)
+  * wlansetup                       0/2 -> 3/3  (全修好，预测 formWlanSetup)
+  * setpassword                     0/2 -> 0/3  (仍 MISS；formSelfHealing/formWISP5G，兼有 ground-truth 异常)
+  * setsystemsettings               0/2 -> 1/3  (r1 HIT formSetSystemSettings，r2/r3 又飘 formWISP5G)
+- 汇总：old oracle 2/10 (20%) -> new distinguishing 10/15 (66.7%)，约 3 倍。
+- 关键结论：族内区分型 skill 用的是二进制字符串表"邻接符号指纹"（不写目标函数名），
+  能把 crossband/wlansetup 这类原本全被带偏到 formWISP5G 的案例稳定掰回正确 handler。
+- 剩余 2 个顽固案例 setpassword/setsystemsettings 恰是"同 flash-持久化串区、互为前后邻"的近亲对，
+  技能难以把二者分开；且 setpassword case 的 ground_truth.functions=['formSetSystemSettings'] 与
+  文件名/run_ablation target=formSetPassword 不一致（待核对，可能这个 case 本身定义就有问题）。
+- 下一步建议：
+  1. 核对 setpassword 的 ground_truth 异常（是否应改为 formSetPassword 或就是重复的 setsystemsettings）。
+  2. 对 setpassword/setsystemsettings 两个近亲，可在技能里加更强判据（如各自前后第二个/第三个邻接符号、
+     或各自特有的 flash error 子串位置），再补一轮，验证能否把 1/3 提到 3/3。
+  3. 若要把"族内区分"推广到全 14 case，需要给每个家族的每份 oracle 生成邻接指纹（已有 f9k_neighborhood 素材）。
+
+### 补充：setpassword case 的 ground_truth 异常已定位
+- f9k1122-webs-overflow-formSetPassword.json 与 formSetSystemSettings.json 两份 case 文件
+  的 task_profile.notes / ground_truth.functions / required_evidence / blind_workspace.agent_root
+  完全相同（都指向 formSetSystemSettings + reboots图同 root）。所以 "setpassword" 这份 case
+  实际上是 formSetSystemSettings 的重复定义（dataset 侧混入了同一 vul5 样本）。
+- 因此 run_ablation 里 f9k1122-setpassword-overflow 的 target=formSetPassword 与
+  case文件 ground_truth=formSetSystemSettings 不一致，导致它评分一直很怪（预测 formWISP5G 被判 NO，
+  预测 formSetSystemSettings 判 YES 但文件名是 setpassword）。
+- 结论：setpassword case 需在 dataset/benchmark 层面订正（要么给真 formSetPassword 的 ground_truth，
+  要么划为重复 case 排除）；不是 oracle skill 的问题。
