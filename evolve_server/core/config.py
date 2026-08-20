@@ -119,7 +119,7 @@ class EvolveServerConfig:
     use_session_judge: bool = True
     use_skill_verifier: bool = False
     skill_verifier_min_score: float = 0.75
-    publish_mode: str = "direct"
+    publish_mode: str = "validated"
     validation_required_results: int = 1
     validation_required_approvals: int = 1
     validation_min_mean_score: float = 0.75
@@ -167,9 +167,9 @@ class EvolveServerConfig:
             0.0,
             min(1.0, float(self.skill_verifier_min_score or 0.0)),
         )
-        self.publish_mode = str(self.publish_mode or "direct").strip().lower() or "direct"
+        self.publish_mode = str(self.publish_mode or "validated").strip().lower() or "validated"
         if self.publish_mode not in {"direct", "validated"}:
-            self.publish_mode = "direct"
+            self.publish_mode = "validated"
         self.nacos_publish_mode = _normalize_choice(self.nacos_publish_mode, _NACOS_PUBLISH_MODES, "review")
         self.skill_reload_mode = _normalize_choice(self.skill_reload_mode, _SKILL_RELOAD_MODES, "poll")
         self.validation_required_results = max(1, int(self.validation_required_results or 1))
@@ -267,7 +267,7 @@ class EvolveServerConfig:
             use_session_judge=os.environ.get("EVOLVE_USE_SESSION_JUDGE", "1").lower() not in {"0", "false", "no"},
             use_skill_verifier=os.environ.get("EVOLVE_USE_SKILL_VERIFIER", "0").lower() in {"1", "true", "yes"},
             skill_verifier_min_score=float(os.environ.get("EVOLVE_SKILL_VERIFIER_MIN_SCORE", "0.75")),
-            publish_mode=os.environ.get("EVOLVE_PUBLISH_MODE", "direct"),
+            publish_mode=os.environ.get("EVOLVE_PUBLISH_MODE", "validated"),
             validation_required_results=int(os.environ.get("EVOLVE_VALIDATION_REQUIRED_RESULTS", "1")),
             validation_required_approvals=int(os.environ.get("EVOLVE_VALIDATION_REQUIRED_APPROVALS", "1")),
             validation_min_mean_score=float(os.environ.get("EVOLVE_VALIDATION_MIN_MEAN_SCORE", "0.75")),
@@ -391,7 +391,7 @@ class EvolveServerConfig:
             use_session_judge=os.environ.get("EVOLVE_USE_SESSION_JUDGE", "1").lower() not in {"0", "false", "no"},
             use_skill_verifier=os.environ.get("EVOLVE_USE_SKILL_VERIFIER", "0").lower() in {"1", "true", "yes"},
             skill_verifier_min_score=float(os.environ.get("EVOLVE_SKILL_VERIFIER_MIN_SCORE", "0.75")),
-            publish_mode=os.environ.get("EVOLVE_PUBLISH_MODE", "direct"),
+            publish_mode=os.environ.get("EVOLVE_PUBLISH_MODE", "validated"),
             validation_required_results=int(os.environ.get("EVOLVE_VALIDATION_REQUIRED_RESULTS", "1")),
             validation_required_approvals=int(os.environ.get("EVOLVE_VALIDATION_REQUIRED_APPROVALS", "1")),
             validation_min_mean_score=float(os.environ.get("EVOLVE_VALIDATION_MIN_MEAN_SCORE", "0.75")),

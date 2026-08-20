@@ -1183,6 +1183,15 @@ class EvolveServer(EvolveEngineMixin):
                 and gate_passed
             )
             reject_ready = rejected >= self.config.validation_max_rejections
+            # D1 guard: once the required number of results has arrived, the job
+            # MUST settle (publish or reject). Without this, a job whose results
+            # all reject but never reach max_rejections (e.g. required_results=1,
+            # max_rejections=3, and a single rejected result) stays pending
+            # forever because publish_ready needs an approval and reject_ready
+            # never trips. Once count >= required_results and it isn't publishable,
+            # it is final and must be rejected instead of left hanging.
+            if not publish_ready and len(results) >= self.config.validation_required_results:
+                reject_ready = True
 
             if publish_ready:
                 candidate_skill = job.get("candidate_skill")
