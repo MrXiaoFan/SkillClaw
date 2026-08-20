@@ -207,3 +207,11 @@ next steps（建议）：
   - planA_clean_rerun_validation_20260820.md（阶段性工作记录）
   - planA_clean_rerun_table_20260820.csv（84 行规范化结果表）
 - 结果速览：no-skill 1/28 (3.6%)、weak-skill 4/28 (14.3%)、oracle-skill 10/28 (35.7%)。
+
+### 08-20 补充:方案 A 清洁重跑中文记录
+
+- 已将 「方案 A 三条件清洁对比(84 runs)」 整理为中文详细实验记录: reports/current/briefing_20260816/planA_clean_rerun_validation_20260820.md (含目的/设计/统计/逐 case/逐 run 84 行表/结论/setpassword 缺陷说明)。
+- 规范化结果表: reports/current/briefing_20260816/planA_clean_rerun_table_20260820.csv。
+- commit: 2ce59e5 (staged) + 6fb062c (扩充) + e8c8529 (中文重写定稿)。
+- 核心结论: 旧作弊 baseline oracle 97.5% -> 清洁重跑 35.7% (约 -62pp); no-skill 3.6% / weak 14.3% / oracle 35.7%。
+
