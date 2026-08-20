@@ -31,6 +31,10 @@
   - 启动本地 Evolve Server，直接复用 `C:\Users\Fan\.skillclaw\config.yaml` 中的 LLM 配置
 - `ops/start_dashboard.ps1`
   - 启动本地 Dashboard
+- `ops/safe-runner.cmd` **（CC Switch 防断层 CMD 工具，所有命令行走这里）**
+  - 用途：以短行调用本仓库 scripts 下的 .py/.ps1，规避 CC Switch 对长/内联 PowerShell JSON 的 EOF·吞 $ 导致会话中断（`Invalid function_call arguments for 'exec_command': EOF while parsing a string at line 1 column 866`）。
+  - 用法：`cmd /c scripts\ops\safe-runner.cmd <脚本> <参数...>`；多步操作先写成 .py/.ps1 再调用。
+  - 脚本头部已内嵌完整提醒；每次 exec_command 前自查：命令行是否 >200 字符 / 含内联 $？是 → 改走 safe-runner。
 - `ops/check_stack.ps1`
   - 检查 `30000 / 8787 / 3788` 三个服务状态
 - `demos/demo_nacos_skill_lifecycle.py`
