@@ -376,6 +376,15 @@ Q2. 在这些样本上，模型+现有 skill 的盲测命中/评分处于什么�
 - 族内区分 oracle：20% → 66.7%（不写函数名、用邻接指纹）→ “怎么写才有效且不泄答案”；
 - 诚实边界：skill 必要性（“必须用它才能找到漏洞”）仍未在 clean 数据上证明，论文严禁套旧 54/54 类强结论。
 
+## 八·补、阶段 0.3 冻结 Case 集（2026-08-20）
+
+- 固定 ref：`01f5830`（`01f583041cd89af230c136dd78a62008e5279d9f`）。
+- 冻结文档：`reports/current/freeze_cases_20260820.md`：25-case frozen set（`include_in_current_runs=True`）、
+  排除 setpassword（作废）与 exiv2（仍 candidate）、近亲对统计口径、复现命令、论文锚定规则。
+- 方案 A 84-run 中 `f9k1122-setpassword-overflow` 行因数据缺陷作废（0 命中不构成 skill 盲区证据）。
+
+---
+
 ## 九、遗留数据缺陷与风险（常驻）
 1. setpassword case 是 setsystemsettings 的复制件（数据集 bug，非 skill 盲区）→ **已于 2026-08-20 作废（path A）**，见 5.8；
 2. setpassword/setsystemsettings 二进制不可分（相邻符号 token 相同）→ **已定为「不可区分类别」口径（2026-08-20）**：不计入 per-function 命中分母，单独列类别汇报；setpassword 复制件另作废（见 §5.8）；
