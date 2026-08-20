@@ -378,7 +378,7 @@ Q2. 在这些样本上，模型+现有 skill 的盲测命中/评分处于什么�
 
 ## 九、遗留数据缺陷与风险（常驻）
 1. setpassword case 是 setsystemsettings 的复制件（数据集 bug，非 skill 盲区）→ **已于 2026-08-20 作废（path A）**，见 5.8；
-2. setpassword/setsystemsettings 二进制不可分（相邻符号 token 相同）→ 数据层处理或 oracle-only 判据；
+2. setpassword/setsystemsettings 二进制不可分（相邻符号 token 相同）→ **已定为「不可区分类别」口径（2026-08-20）**：不计入 per-function 命中分母，单独列类别汇报；setpassword 复制件另作废（见 §5.8）；
 3. 评分/确认的语义盲区（规则级匹配、artifact 级确认为主，无行为级模拟器）；
 4. gate 的 tool-free replay 与“description→检索”未覆盖，使 gate 通过 ≠ 真实有效；
 5. 无发布后效果追踪/回退，唯一发布（v8）反向检索更差；
