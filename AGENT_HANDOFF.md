@@ -260,3 +260,20 @@ next steps（建议）：
   产物：briefing_20260816/fh451_old_60run_disposition_20260820.md；archive §7.1 已标注已作废。
 - 计划状态：work_plan/roadmap 0.4 ✅、1.3 ✅。
 - 未提交 item 用 git status 查看；本次若提交记 `plan13_attribution_0404`。
+
+## 2026-08-20（续3）· 本会话收尾 + 交棒给下一模型（全部已提交）
+
+- **状态**：分支 `dev`，领先 codeup/dev 41 个提交（未 push）。工作区已清干净，无未提交的相关改动；
+  仅剩无关注的历史未跟踪文件（paper/*、reports/current/_tmp_*、旧 briefing、scripts/ops/_*.py），**不要纳入提交**。
+- **本会话成果（均已提交）**：
+  - `18d6f02` Plan 1.3 逐 case 归因（28 oracle-NO round→5 类，区分度不够 A+B+D=21/28≈75% 主导）+ Plan 0.4 FH451 旧 60-run 作废；
+  - `227324c` 8.23 周报草稿补 1.3/0.4 两行。
+- **交接给下一模型（按 work_plan/roadmap 优先级）**：
+  1) 2.3 检索回归（D4 gate 加 description→检索断言）+ catalog 对比（D3 延伸）；
+  2) 2.2 发布后效果追踪 + 回退（D5，hold-out 前后对比）；
+  3) 3.x 论文对齐（v2 tex 换旧口径，写入净化/作废/族内区分/gate 边界 D3/D5/D6 诚实标注）；
+  4) 4.1 8.23 周报定稿（草稿已补 1.3/0.4 行）。
+- **坑提醒**：archive §7.1 是 BOM+CRLF 诡异格式，改它必须用 Python 脚本（runtime/ablation/werk/_edit71.py），
+  禁止 PowerShell Set-Content（会触发全量 1300 行 diff，已踩过）。
+- **文档入口**：`docs/plans/work_plan_20260820.md`（操作级）、`docs/plans/research_roadmap_20260820.md`（战略）、
+  `reports/current/briefing_20260816/`（本轮所有实验记录产物）。
