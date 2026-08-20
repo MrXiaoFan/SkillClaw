@@ -199,3 +199,11 @@ next steps（建议）：
   - f9k_distinguishing_validation_20260820.md（阶段性工作记录）
   - f9k_distinguishing_run_table_20260820.csv（15 行规范化结果表）
 - commit: baa7ef3
+
+### 2026-08-20 归档：方案 A 清洁重跑（84 runs 三条件对照）结果整理
+- 用户本轮要的是 84 runs 的 no/weak/oracle 对照组（即提到的 97.5%->35.7% 实验），不是族内区分验证。
+- 原始数据：runtime/ablation/results/ablation_results_rerun_model.csv（84 行，.gitignore 忽略）。
+- 已归档到 reports/current/briefing_20260816/（纳入 git，commit 2ce59e5）：
+  - planA_clean_rerun_validation_20260820.md（阶段性工作记录）
+  - planA_clean_rerun_table_20260820.csv（84 行规范化结果表）
+- 结果速览：no-skill 1/28 (3.6%)、weak-skill 4/28 (14.3%)、oracle-skill 10/28 (35.7%)。
