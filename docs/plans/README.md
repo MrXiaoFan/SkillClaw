@@ -4,6 +4,7 @@
 
 当前主入口：
 
-- `benchmark_candidate_backlog.md`
+- `research_roadmap_20260820.md`（研究路线图：工程/学术/论文目标 + 阶段 0-3 规划 + 风险边界，建议长期追踪此文档）
+- `benchmark_candidate_backlog.md`（待扩充的 benchmark 案例候选）
 
 这里放“下一步做什么”，不放已经完成的运行结果。
