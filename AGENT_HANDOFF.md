@@ -191,3 +191,11 @@ next steps（建议）：
   没有任何二进制级 token 能区分二者；真正能区分的是 poc 打哪个 /goform/* 端点（但那是 oracle-only，不给模型）。
 => 判定：setpassword case 应在 dataset/benchmark 层面作废或订正（要么改用 vul4 真样本重派生，
    要么标为重复 case 从 14 案例集排除）。tuning oracle skill 无法修复它。
+
+### 2026-08-20 记录归档：F9K 族内区分验证已整理为阶段性工作记录
+- 结果原始数据在 runtime/ablation/results/（.gitignore 忽略）：
+  ablation_results_f9k_distinguish_oracle.csv、f9k_distinguish_run.log。
+- 已在 reports/current/briefing_20260816/（纳入 git）生成归档：
+  - f9k_distinguishing_validation_20260820.md（阶段性工作记录）
+  - f9k_distinguishing_run_table_20260820.csv（15 行规范化结果表）
+- commit: baa7ef3
