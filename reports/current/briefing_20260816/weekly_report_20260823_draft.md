@@ -94,3 +94,15 @@
 结果**新 distinguishing 4/15，反而低于同批 generic-oracle 6/15**——族内区分收益 family-dependent，
 非通用；对 FH451 这类 handler 高密集、邻接/参数 token 重叠度高的簇无效。详见
 `briefing_20260816/fh451_distinguishing_validation_20260820.md`。
+---
+
+## 8.y 更新：方案 1.3 逐 case 归因 + 0.4 FH451 无效数据处理（2026-08-20 补充）
+
+- **1.3 逐 case 归因（已完成）**：对冻结 153-run 中 28 个 oracle-NO round 归因成 5 类——
+  A oracle 区分度不够（F9K 已验证可修）9；B FH451 高密度簇 6；C 数据集缺陷（fromSetCfm 实为 formSetCfm）3；
+  D 同固件漂移（未验证可修）6；E 模型能力/诱饵 4。**区分度不够 A+B+D=21/28≈75% 主导**；
+  C 为数据层缺陷、任何 skill 无法修；E 为模型硬样本。详见 `briefing_20260816/plan1_necessity_attribution_20260820.md` + `.csv`。
+- **0.4 FH451 无效数据处理（已完成）**：旧 60-run（`ablation_results_fh451.csv`）复核 error 51/60、correct 空白 51、
+  oracle 15 行全空 → **作废（superseded）**；同样 5 个 FH451 case 已由冻结 153-run（45 completed）+ 族内区分 15-run 取代。
+  详见 `briefing_20260816/fh451_old_60run_disposition_20260820.md`；archive §7.1 已标注已作废。
+- 计划状态：work_plan / roadmap 0.4 ✅、1.3 ✅。
