@@ -275,7 +275,7 @@ Q2. 在这些样本上，模型+现有 skill 的盲测命中/评分处于什么�
 - `f9k1122-webs-overflow-formSetPassword.json` 实为 `formSetSystemSettings.json` 复制件（仅 case_id/notes 不同；
   ground_truth/blind_workspace/validator 全指向后者；源侧 webs 二进制 MD5 相同 205E6972...）。
 - 因此 ablation 在“vul5 二进制上找 formSetPassword 这个不存在的目标”，其 0 命中是**数据集重复缺陷**，非 skill 盲区。
-- 处理建议：作废或用 vul4 真样本重派生（需修正 run_ablation 的 target 与 case_file 一致性）。
+- 处理建议：作废或用 vul4 真样本重派生（需修正 run_ablation 的 target 与 case_file 一致性）。\n- **已处理（2026-08-20，path A）：case 已作废**（include_in_current_runs=false, publication_ready=false，promotion_blockers 与 notes 已写入作废说明）。ground_truth/validators/blind_workspace 保留原样以便审计。整改脚本：scripts/ops/fix_setpassword_case.py。
 
 ### 5.9 产物文件
 - `runtime/ablation/results/ablation_results_rerun_model.csv`（84 行）、`ablation_log_rerun_model.txt`、`ablation_state_rerun_model.json`；
@@ -377,7 +377,7 @@ Q2. 在这些样本上，模型+现有 skill 的盲测命中/评分处于什么�
 - 诚实边界：skill 必要性（“必须用它才能找到漏洞”）仍未在 clean 数据上证明，论文严禁套旧 54/54 类强结论。
 
 ## 九、遗留数据缺陷与风险（常驻）
-1. setpassword case 是 setsystemsettings 的复制件（数据集 bug，非 skill 盲区）→ 出新数据前必须订正；
+1. setpassword case 是 setsystemsettings 的复制件（数据集 bug，非 skill 盲区）→ **已于 2026-08-20 作废（path A）**，见 5.8；
 2. setpassword/setsystemsettings 二进制不可分（相邻符号 token 相同）→ 数据层处理或 oracle-only 判据；
 3. 评分/确认的语义盲区（规则级匹配、artifact 级确认为主，无行为级模拟器）；
 4. gate 的 tool-free replay 与“description→检索”未覆盖，使 gate 通过 ≠ 真实有效；

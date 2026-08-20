@@ -160,7 +160,7 @@ benchmark case → blind run → 评分/确认 → feedback → evolve → candi
 
 | # | 任务 | 做法 | 前置 | 验收 |
 | --- | --- | --- | --- | --- |
-| 0.1 | 订正 setpassword case | 作废；或从真实 vul4 样本重派生真正 formSetPassword case（修正 run_ablation 的 target 与 case_file 一致性） | — | case 集无重复/无效项 |
+| 0.1 | 订正 setpassword case | ~~作废；或从真实 vul4 样本重派生~~ **已作废（2026-08-20，path A）**：确认该 case 为 formSetSystemSettings 的字节级复制件，非真实 vul4；已设 include_in_current_runs=false。前路：如需真实 formSetPassword 用例须从 vul4 样本重派生 | — | **已达成**：case 集已剔除重复/无效项 |
 | 0.2 | 处理不可分近亲对 | setpassword/setsystemsettings 在字符串表无区分 token，加 oracle-only 判据，或明确标"不可区分类别"从命中口径剔除 | 0.1 | 命中口径明确 |
 | 0.3 | 冻结 case 集 + 净化技能版本 | 记录一个固定 commit/tag 与 benchmark protocol，后续论文全部用它 | 0.1,0.2 | 可复现的固定口径 |
 
