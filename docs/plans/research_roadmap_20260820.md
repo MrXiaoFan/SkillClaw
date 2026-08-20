@@ -162,7 +162,7 @@ benchmark case → blind run → 评分/确认 → feedback → evolve → candi
 | --- | --- | --- | --- | --- |
 | 0.1 | 订正 setpassword case | ~~作废；或从真实 vul4 样本重派生~~ **已作废（2026-08-20，path A）**：确认该 case 为 formSetSystemSettings 的字节级复制件，非真实 vul4；已设 include_in_current_runs=false。前路：如需真实 formSetPassword 用例须从 vul4 样本重派生 | — | **已达成**：case 集已剔除重复/无效项 |
 | 0.2 | 处理不可分近亲对 | **口径已定（2026-08-20，选「标不可区分类别」）**：凡相邻符号且二进制字符串表 token 完全相同、无法用不泄答案的 skill 区分的近亲对，统一标为「不可区分对」，**不计入 per-function 命中分母**，单独列类别汇报；setpassword 复制件已作废（0.1）。如需真 class 分离须 oracle-only/端点级（不属 clean 实验） | 0.1 | **已达成**：命中口径明确 |
-| 0.3 | 冻结 case 集 + 净化技能版本 | 记录一个固定 commit/tag 与 benchmark protocol，后续论文全部用它 | 0.1,0.2 | 可复现的固定口径 |
+| 0.3 ✅ | 冻结 case 集 + 净化技能版本 | 已登记 `reports/current/freeze_cases_20260820.md`：固定 commit `01f5830` + 25-case frozen set + benchmark protocol；setpassword 作废、exiv2 保持 candidate、近亲对口径(0.2) 纳入统计 | 0.1,0.2 | 已达成：可复现固定口径 |
 
 ### 阶段 1 · 核心主张（skill 必要性，重做被推翻的结论）
 **目标**：用 clean 数据回答"skill 是否必要/是否能把模型带向真实目标"。
