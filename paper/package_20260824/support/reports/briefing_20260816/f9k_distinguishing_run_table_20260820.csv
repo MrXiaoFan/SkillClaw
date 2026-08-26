@@ -1,0 +1,16 @@
+﻿case_key,round,score,max_score,predicted_functions,predicted_cves,correct,elapsed_seconds,started_at
+f9k1122-crossband-overflow,1,8.0,10.0,formCrossBandSwitch,CVE-2016-1555,YES,25.1,2026-08-20T11:07:19.993970+00:00
+f9k1122-crossband-overflow,2,8.0,10.0,formCrossBandSwitch,CVE-2014-9222,YES,23.6,2026-08-20T11:07:45.052794+00:00
+f9k1122-crossband-overflow,3,8.0,10.0,formCrossBandSwitch,CVE-2014-9222,YES,29.2,2026-08-20T11:08:08.655323+00:00
+f9k1122-overflow,1,6.0,10.0,formWISP5G,CVE-2012-4713,YES,25.2,2026-08-20T11:06:19.030563+00:00
+f9k1122-overflow,2,8.0,10.0,formWISP5G,CVE-2013-3562,YES,18.1,2026-08-20T11:06:44.283143+00:00
+f9k1122-overflow,3,8.0,10.0,formWISP5G;strcpy,,YES,17.6,2026-08-20T11:07:02.397678+00:00
+f9k1122-setpassword-overflow,1,6.5,10.0,formSelfHealing,CVE-2017-17725,NO,22.0,2026-08-20T11:09:45.841389+00:00
+f9k1122-setpassword-overflow,2,6.5,10.0,formWISP5G,,NO,15.2,2026-08-20T11:10:07.881943+00:00
+f9k1122-setpassword-overflow,3,6.5,10.0,formSelfHealing,,NO,15.9,2026-08-20T11:10:23.094305+00:00
+f9k1122-setsystemsettings-overflow,1,6.0,10.0,formSetSystemSettings,,YES,21.7,2026-08-20T11:10:38.946596+00:00
+f9k1122-setsystemsettings-overflow,2,6.5,10.0,formWISP5G,,NO,21.1,2026-08-20T11:11:00.666048+00:00
+f9k1122-setsystemsettings-overflow,3,6.5,10.0,formWISP5G,,NO,20.2,2026-08-20T11:11:21.779112+00:00
+f9k1122-wlansetup-overflow,1,6.0,10.0,formWlanSetup,CVE-2014-100005,YES,20.3,2026-08-20T11:08:37.870115+00:00
+f9k1122-wlansetup-overflow,2,6.0,10.0,formWlanSetup,CVE-2016-1555,YES,27.5,2026-08-20T11:08:58.160790+00:00
+f9k1122-wlansetup-overflow,3,6.0,10.0,formWlanSetup,CVE-2019-20758;CVE-2018-14712,YES,20.1,2026-08-20T11:09:25.709925+00:00

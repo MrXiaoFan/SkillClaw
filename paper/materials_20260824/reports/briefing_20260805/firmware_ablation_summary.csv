@@ -1,0 +1,9 @@
+case_id,profile,runs,mean_score,best_score,file_hit_runs,function_hit_runs,selected_skill_set,feedback_decisions,handoff_runs,consumed_runs
+firmware2-login-cgi-cve-2026-2527,none,3,4.333,5.0,2,0,,neutral,0,0
+firmware2-login-cgi-cve-2026-2527,relevant,2,5.0,5.0,2,0,embedded-cgi-command-injection-triage,neutral,0,0
+firmware2-login-cgi-cve-2026-2527,wrong,2,4.5,5.0,2,0,firmware-embedded-lua-shell-extraction,neutral,0,0
+firmware2-login-cgi-cve-2026-2527,seed,1,5.0,5.0,1,0,embedded-cgi-command-injection-triage,neutral,1,1
+firmware2-wireless-cgi-cve-2026-2529,none,3,2.667,3.0,0,0,,neutral,1,1
+firmware2-wireless-cgi-cve-2026-2529,relevant,2,3.0,3.0,0,0,embedded-cgi-command-injection-triage,negative,1,1
+firmware2-wireless-cgi-cve-2026-2529,wrong,1,3.0,3.0,0,0,firmware-embedded-lua-shell-extraction,negative,1,1
+firmware2-wireless-cgi-cve-2026-2529,seed,2,4.0,5.0,1,0,embedded-cgi-command-injection-triage,negative; neutral,2,2

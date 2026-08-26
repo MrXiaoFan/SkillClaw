@@ -1,0 +1,16 @@
+﻿case_key,round,score,max_score,predicted_functions,predicted_cves,correct,elapsed_seconds,started_at
+fh451-WrlclientSet-overflow,1,6.0,10.0,formWrlclientSet,CVE-2015-7248,YES,23.4,2026-08-20T15:22:17.890829+00:00
+fh451-WrlclientSet-overflow,2,4.5,10.0,formWrlLoginfo,CVE-2013-6028,NO,13.3,2026-08-20T15:22:41.256886+00:00
+fh451-WrlclientSet-overflow,3,4.5,10.0,formWrlwpsset,CVE-2013-6794,NO,20.5,2026-08-20T15:22:54.529380+00:00
+fh451-formQuickIndex-overflow,1,8.0,10.0,formQuickIndex,Tenda formQuickIndex PPPoE password stack buffer overflow,YES,17.4,2026-08-20T15:24:58.674505+00:00
+fh451-formQuickIndex-overflow,2,4.5,10.0,fromWanSetWan;WanSetWan,CVE-2018-17061,NO,20.6,2026-08-20T15:25:16.058005+00:00
+fh451-formQuickIndex-overflow,3,8.0,10.0,formQuickIndex,CVE-2018-\\d+ formQuickIndex;formQuickIndex_stack_overflow,YES,17.2,2026-08-20T15:25:36.651821+00:00
+fh451-formWrlExtraSet-overflow,1,4.5,10.0,formWrlsafeset,CVE-2014-2321,NO,21.0,2026-08-20T15:21:18.973033+00:00
+fh451-formWrlExtraSet-overflow,2,4.5,10.0,formSafeWebtypeFilter,CVE-2014-8397,NO,17.1,2026-08-20T15:21:39.942363+00:00
+fh451-formWrlExtraSet-overflow,3,6.0,10.0,formWrlExtraSet,,YES,20.9,2026-08-20T15:21:57.010374+00:00
+fh451-fromAdvSetWan-overflow,1,4.5,10.0,fromWanPortParam,CVE-N/A-formWanPortParam-overflow,NO,19.9,2026-08-20T15:24:08.088749+00:00
+fh451-fromAdvSetWan-overflow,2,4.5,10.0,formWrlAdvset,CVE-2018-???-captive-formWrlAdvset-multiwan,NO,15.6,2026-08-20T15:24:27.948276+00:00
+fh451-fromAdvSetWan-overflow,3,4.5,10.0,fromWanPortParam,CVE-2020-10987,NO,15.2,2026-08-20T15:24:43.513702+00:00
+fh451-fromSetCfm-overflow,1,4.5,10.0,fromListDataSave (CFM list-persistence webs form handler),CVE-2019-2008x CFM list-data save stack overflow (unpatched ARRIS/D-Link httpd family),NO,22.3,2026-08-20T15:23:15.004824+00:00
+fh451-fromSetCfm-overflow,2,4.5,10.0,formSetCfm,CVE-2017-6056,NO,14.7,2026-08-20T15:23:37.269058+00:00
+fh451-fromSetCfm-overflow,3,4.5,10.0,formSetCfm,CVE-2014-XXXX formSetCfm HTTP stack buffer overflow (router httpd),NO,16.1,2026-08-20T15:23:52.020577+00:00

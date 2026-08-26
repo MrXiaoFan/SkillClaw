@@ -1,53 +1,41 @@
 # Docs
 
-??????????????????? VM ?????????????
+这个目录只放长期有用的说明文档。当前建议的阅读顺序如下：
 
-1. [handoff/20260811/01_research_and_development_state.md](handoff/20260811/01_research_and_development_state.md)
-2. [handoff/20260811/03_engineering_status_tests_and_next_plan.md](handoff/20260811/03_engineering_status_tests_and_next_plan.md)
-3. [handoff/20260812/01_runtime_handoff_and_service_bootstrap.md](handoff/20260812/01_runtime_handoff_and_service_bootstrap.md)
-4. **[handoff/20260815/01_gate_fix_and_paper_draft_handoff.md](handoff/20260815/01_gate_fix_and_paper_draft_handoff.md)** ? ??
+1. [handoff/20260820/01_necessity_plan_done_and_next.md](handoff/20260820/01_necessity_plan_done_and_next.md)
+2. [plans/work_plan_20260820.md](plans/work_plan_20260820.md)
+3. [plans/research_roadmap_20260820.md](plans/research_roadmap_20260820.md)
+4. [../AGENT_HANDOFF.md](../AGENT_HANDOFF.md)
 
-## ???????2026-08-15?
+## 目录说明
 
-### Gate ?????
-- `non_inferiority` gate ???? epsilon margin?????????
-- 2 ? candidate skill ?????? `skillspace/live/`
-- ?????? codeup ? fan ???dev ???
-
-### ???????
-- `paper/skillclaw_confirmation_feedback_elsarticle.tex`?897??10???
-- `paper/references.bib`?22????
-- ?????????????? tex?????
-
-### ??????????
-?? firmware ?? blind ?????
-
-- ?? JSON?
-  - [reports/current/briefing_20260811/firmware_wireless_real_runs_20260811.json](../reports/current/briefing_20260811/firmware_wireless_real_runs_20260811.json)
-- ?? Markdown?
-  - [reports/current/briefing_20260811/firmware_wireless_real_runs_20260811.md](../reports/current/briefing_20260811/firmware_wireless_real_runs_20260811.md)
-- ???? run?
-  - `runtime/imports/remote_vm/firmware2-wireless-none-20260812c/`
-  - `runtime/imports/remote_vm/firmware2-wireless-seed-20260812a/`
-  - `runtime/imports/remote_vm/firmware2-wireless-wrong-20260812h/`
-  - `runtime/imports/remote_vm/firmware2-wireless-live-20260812i/`
-
-??????????????
-
-- ?? `Claude -> SkillClaw -> Evolve -> replay gate` ??????
-- `wrong skill` ? `seed skill` ????? candidate ??
-- gate ????? candidate ?????non_inferiority ???
-- ? skill ?????????????????????
-
-## ??
-
-- `cases/`
-  - ?????????????
 - `handoff/`
-  - ??????????? agent ?????
-- `ops/`
-  - ?? VM??????????
+  - 给后续模型或开发者接手用的阶段交接材料
 - `plans/`
-  - ??????????
+  - 当前工程计划、研究路线、阶段任务拆分
+- `ops/`
+  - 运行环境、远端 VM、服务拉起等操作记录
 - `reference/`
-  - ??????????????
+  - 架构、设计、原理类参考文档
+- `archive/`
+  - 历史交接材料，不作为当前主入口
+
+## 当前主入口
+
+- 工程与研究现状：  
+  [handoff/20260820/01_necessity_plan_done_and_next.md](handoff/20260820/01_necessity_plan_done_and_next.md)
+- 执行级工作计划：  
+  [plans/work_plan_20260820.md](plans/work_plan_20260820.md)
+- 研究路线与论文对齐：  
+  [plans/research_roadmap_20260820.md](plans/research_roadmap_20260820.md)
+
+## 不再推荐直接使用的旧入口
+
+以下材料仍保留，但主要用于追溯，不建议作为新的起点：
+
+- `handoff/20260811/*`
+- `handoff/20260812/*`
+- `handoff/20260815/*`
+- `reports/current/briefing_20260811/*`
+- `reports/current/briefing_20260815/*`
+- `reports/current/briefing_20260816/*` 中早于 2026-08-20 的阶段性交接文件

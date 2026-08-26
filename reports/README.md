@@ -1,87 +1,72 @@
 # Reports
 
-`reports/` 用来保存当前有效结果、关键案例证据和历史归档。
+`reports/` 用来保存实验结果、案例证据、发布整理物和历史归档。
 
 一句话区分：
 
-- `docs/`：给人读的说明、计划、周报、操作记录
-- `reports/`：给结果复核、数据汇总、论文取数用的产物
+- `docs/`：给人读的计划、交接、操作说明、研究讨论
+- `reports/`：给结果复核、实验汇总、论文取数、历史追溯用的数据与材料
 
 ## 目录说明
 
 - `current/`
-  - 当前主结果集
-  - 包含 runset、结果矩阵、成熟度、技能反馈、技能门控
+  - 当前仍在使用的结果汇总与阶段材料
+  - 既包含“活的工具输出”，也包含阶段 briefing
 - `runs/`
-  - 当前仍在引用的运行结果目录
-  - 目前主要看 `runs/confirmations/`
+  - 结构化保存的运行结果
 - `evidence/`
-  - 需要长期保留的关键案例证据
+  - 需要长期保留的案例级证据
 - `publication/`
-  - 面向论文整理的清单、对比输入和导出结果
+  - 面向论文和公开整理的导出物
 - `archive/`
-  - 历史运行归档
-  - 只用于追溯，不再作为当前工程状态的默认依据
+  - 历史归档，不再作为当前状态默认入口
 
-## `runs/confirmations/` 中常见文件
+## 当前建议入口
 
-- `manifest.json`
-  - 这次运行的总体元信息
-- `run_index.json`
-  - 该目录下有哪些过程文件和结果文件
-- `agent.json`
-  - 原始模型输出抽取后的结构化结果
-- `validation.json`
-  - validator 执行结果
-- `compare.json` / `compare.md`
-  - 两种运行方式之间的对比结果
-- `final.json`
-  - 标准最终记录
-- `final-enriched.json`
-  - 在 `final.json` 基础上补充注入、反馈或额外字段后的结果
+如果想快速判断“现在工程和实验做到哪一步了”，建议按这个顺序看：
 
-## 推荐阅读顺序
+1. [current/README.md](current/README.md)
+2. [../AGENT_HANDOFF.md](../AGENT_HANDOFF.md)
+3. [../docs/handoff/20260820/01_necessity_plan_done_and_next.md](../docs/handoff/20260820/01_necessity_plan_done_and_next.md)
+4. [../docs/plans/work_plan_20260820.md](../docs/plans/work_plan_20260820.md)
 
-如果只想看“现在做到哪一步了”，按这个顺序看：
+## 关于 `current/` 顶层那些旧名字文件
 
-1. `current/runset.md`
-2. `current/result_matrix.md`
-3. `current/benchmark_status.md`
-4. `current/skill_feedback.md`
-5. `current/skill_gate.md`
+`current/` 顶层仍然保留：
 
-如果要看某个案例的长期证据，再看：
+- `runset.md`
+- `result_matrix.md`
+- `benchmark_status.md`
+- `skill_feedback.md`
+- `skill_gate.md`
+- `skill_gate.json`
+- `skill_feedback_bundle.md`
+- `skill_feedback_bundle.json`
+- `runset_manifest.json`
 
-- `evidence/cases/`
+这些不是单纯历史垃圾。它们仍然被：
 
-如果要追溯旧实验，再看：
+- 部分汇总脚本
+- publication 导出流程
+- 测试
+- 旧 handoff / 旧周报材料
 
-- `archive/legacy_runs/`
+所引用。所以当前策略不是直接删除，而是：
 
-## 关于历史路径和旧命名
+1. 保留它们作为“工具链兼容输出”
+2. 把真正的阶段性实验说明放进 `briefing_*` 或专门的验证记录中
+3. 逐步减少新材料继续堆在顶层
 
-部分 `final*.json`、`manifest.json`、`run_index.json` 里，
-可能仍保留历史执行路径或旧脚本名，例如：
+## 原则
 
-- `/home/li/skillclaw-eval/...`
-- 旧时代的 `experiment_*`
-- 早期确认脚本名
+后续往 `reports/` 里新增内容时，优先满足这三类：
 
-这些内容属于**历史运行证据**的一部分，不代表当前活跃工程结构仍依赖旧目录。
-凡是以当前仓库结构为准时，应优先看：
+1. 当前主实验的规范化结果
+2. 可复核的案例证据
+3. 已明确归档用途的历史记录
 
-- `benchmarks/`
-- `evaluation/`
-- `reports/current/`
-- `reports/runs/confirmations/`
+不要再往这里堆：
 
-## 当前原则
-
-`reports/` 里只允许三类内容继续增长：
-
-1. 当前主结果集
-2. 必要的案例证据
-3. 已封存的历史归档
-
-不再往这里堆零散临时笔记、临时脚本输出或未归类中间文件。
-
+- 一次性分析脚本输出
+- 临时排查笔记
+- 未说明用途的中间文本
