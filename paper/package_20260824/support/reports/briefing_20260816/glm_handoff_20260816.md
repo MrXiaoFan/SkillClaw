@@ -1,7 +1,7 @@
 # GLM Handoff (2026-08-16)
 
 > 本文件为接手模型（GLM 或其他）的直接交接。上一个阶段交接见 `briefing_20260815/glm_handoff_20260815.md`。
-> 本次会话完整记录已归档：`briefing_20260816/session_rollout_20260816.jsonl`（5.4MB）。
+> 本次会话完整记录已归档：`reports/current/briefing_20260816/session_rollout_20260816.jsonl`（5.4MB，使用根目录主副本）。
 
 ## 零、最紧要的事：本周周报被判不合格，需重写
 
@@ -54,7 +54,7 @@
 3. **论文 v2 更新**：在 v1 副本上做 6 处定向更新（function_identity_miss、real_rerun、gate 统计、counterfactual gate 改为 partially realized 等），并修复 3 处 LaTeX 转义错误（`\texttt`→TAB、`\ref`→换行）。v1 未改动。
 4. **《工程状态（新版）》.docx**：按双维度（漏洞生命周期 + skill 生命周期）重写状态分析，用户未否定。
 5. **real_rerun 验证**（沿用崩溃会话前已完成的结果）：3 个 skill 经 gate 接受并自动发布（tenda v2 / cisco v2 / peplink v3），零人工修改。
-6. **交接材料整理**：本文件 + session_archive + 会话 jsonl 副本。
+6. **交接材料整理**：本文件 + session_archive + 会话 jsonl 主副本引用。
 
 ### 未通过（需接手）
 
@@ -91,7 +91,7 @@
 
 | 文件 | 位置 | 说明 |
 | --- | --- | --- |
-| 会话记录 | `briefing_20260816/session_rollout_20260816.jsonl` | 本次会话完整 jsonl 副本 |
+| 会话记录 | `reports/current/briefing_20260816/session_rollout_20260816.jsonl` | 本次会话完整 jsonl 主副本 |
 | 会话归档 | `briefing_20260816/session_archive_20260816.md` | 本次会话做了什么 + 周报不合格分析 |
 | 论文 v1 | `paper/skillclaw_confirmation_feedback_elsarticle.tex` | 原版，未改动 |
 | 论文 v2 | `paper/skillclaw_confirmation_feedback_elsarticle_v2.tex` | 本次 6 处更新 + 3 处修复（untracked） |

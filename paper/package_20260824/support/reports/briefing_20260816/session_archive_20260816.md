@@ -6,7 +6,7 @@
 - 时间：2026-08-16 12:47 起
 - 模型：GLM 5.2（经 CC Switch）
 - 工作区：`D:\Code\SkillClaw\SkillClaw`
-- 完整记录：`session_rollout_20260816.jsonl`（5.4MB，本目录副本）
+- 完整记录：`reports/current/briefing_20260816/session_rollout_20260816.jsonl`（5.4MB，使用根目录主副本）
 - 原始位置：`C:\Users\Fan\.codex\sessions\2026\08\16\rollout-2026-08-16T12-47-38-01a008e5-92d6-7c90-8acd-bbf6493a1ff7.jsonl`
 
 ## 背景

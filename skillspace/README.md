@@ -6,6 +6,7 @@ This directory is the unified parent path for SkillClaw's skill lifecycle.
 - `live/`: runtime skill library loaded and auto-refreshed by SkillClaw.
 - `state/`: runtime skill metadata such as `skill_stats.json`.
 - `share/`: local shared storage for published skills, sessions, validation, and evolve artifacts.
+- hidden `.skillclaw_backups/`: runtime-generated temporary snapshots during live skill reloads; treat as disposable local cache, not as canonical skill content.
 
 The intended flow is:
 
