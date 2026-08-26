@@ -38,6 +38,7 @@ uv.lock
 skillspace/live/
 skillspace/share/
 skillspace/state/
+skillspace/archive/
 
 # Generated paper artifacts
 paper/*.pdf
@@ -48,6 +49,7 @@ paper/*.log
 paper/*.out
 paper/*.spl
 paper/archive/root_build_*/
+paper/archive/build_*/
 
 # Historical handoff artifacts kept locally for traceability
 reports/current/briefing_20260816/session_rollout_*.jsonl
