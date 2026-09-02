@@ -668,6 +668,28 @@ def _write_rows_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def _require_successful_remote_run(result: dict[str, Any], *, run_id: str, output_dir: Path) -> None:
+    run_result = result.get("run_result")
+    exit_status = run_result.get("exit_status") if isinstance(run_result, dict) else None
+    final_path = Path(str(result.get("local_final_enriched") or ""))
+    if exit_status == 0 and final_path.is_file():
+        return
+
+    failure = {
+        "run_id": run_id,
+        "exit_status": exit_status,
+        "remote_command": result.get("remote_command"),
+        "run_result": run_result,
+        "downloaded_artifacts": result.get("downloaded_artifacts"),
+        "local_final_enriched": str(final_path),
+    }
+    _write_json(output_dir / f"failed_{_slug(run_id)}.json", failure)
+    raise RuntimeError(
+        f"held-out remote run failed: {run_id} (exit_status={exit_status}); "
+        f"failure record: {output_dir / f'failed_{_slug(run_id)}.json'}"
+    )
+
+
 def _build_remote_run_namespace(
     *,
     args: argparse.Namespace,
@@ -768,6 +790,7 @@ def run_heldout(args: argparse.Namespace) -> dict[str, Any]:
                     sync_repo=bool(args.sync_repo and run_counter == 1),
                 )
                 result = run_remote_case_auto(run_args)
+                _require_successful_remote_run(result, run_id=run_id, output_dir=output_dir)
                 rows.append(
                     _heldout_row(
                         condition=condition,

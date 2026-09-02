@@ -10,6 +10,7 @@ from evaluation.runs.run_heldout_evolved_skill import (
     _heldout_experiment_slug,
     _load_segment_sessions,
     _make_heldout_run_id,
+    _require_successful_remote_run,
 )
 from evaluation.runs.run_remote_case import _build_parser as _build_remote_case_parser
 
@@ -226,3 +227,29 @@ def test_audit_source_quality_blocks_without_any_root_cause_hit() -> None:
     assert audit["blocked"] is True
     assert "no_source_run_has_root_cause_hit" in audit["issues"]
     assert audit["summary"]["root_cause_hit_count"] == 0
+
+
+def test_require_successful_remote_run_accepts_downloaded_final(tmp_path: Path) -> None:
+    final_path = tmp_path / "final.json"
+    final_path.write_text("{}", encoding="utf-8")
+
+    _require_successful_remote_run(
+        {"run_result": {"exit_status": 0}, "local_final_enriched": str(final_path)},
+        run_id="run-ok",
+        output_dir=tmp_path,
+    )
+
+
+def test_require_successful_remote_run_records_failed_preflight(tmp_path: Path) -> None:
+    result = {"run_result": {"exit_status": 1, "stderr": "preflight failed"}}
+
+    try:
+        _require_successful_remote_run(result, run_id="run-failed", output_dir=tmp_path)
+    except RuntimeError as exc:
+        assert "run-failed" in str(exc)
+    else:
+        raise AssertionError("failed remote run must raise")
+
+    failure_path = tmp_path / "failed_run-failed.json"
+    assert failure_path.is_file()
+    assert "preflight failed" in failure_path.read_text(encoding="utf-8")
