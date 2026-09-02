@@ -34,7 +34,11 @@ This is the single consolidated package for the current paper work.
 Then continue writing from one of these:
 
 - Main active draft: [manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv.tex](manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv.tex)
+- Draft analysis and review notes: [manuscript/arxiv/draft_analysis_20260902.md](manuscript/arxiv/draft_analysis_20260902.md)
 - Older systems-style draft: [manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex](manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex)
+
+The active arXiv draft was refreshed from the user-provided 2026-09-02 version.
+The superseded arXiv draft is retained under `paper/archive/manuscript_snapshot_20260824/`.
 
 ## Scope
 

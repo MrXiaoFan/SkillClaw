@@ -1,0 +1,7 @@
+case,condition,runs,avg_score,function_hit,evidence_hit,root_cause_hit,function_identity_miss,cve_identity_miss
+f9k1122-webs-overflow-formWlanSetup,no-skill,3,3.667,2,2,0,3,3
+f9k1122-webs-overflow-formWlanSetup,seed-skill,3,3.667,2,2,0,3,3
+f9k1122-webs-overflow-formWlanSetup,candidate-skill,3,2.000,0,0,0,3,3
+f9k1122-webs-overflow-formWISP5G,no-skill,3,2.833,1,1,0,3,3
+f9k1122-webs-overflow-formWISP5G,seed-skill,3,2.833,1,1,0,3,3
+f9k1122-webs-overflow-formWISP5G,candidate-skill,3,2.833,1,1,0,3,3

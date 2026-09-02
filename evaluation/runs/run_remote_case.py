@@ -839,8 +839,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sync-repo", action="store_true", help="Sync evaluation/ and benchmarks/ to the remote repo first.")
     parser.add_argument(
         "--remote-path-profile",
-        default="",
-        help="Optional SKILLCLAW_PATH_PROFILE value used only on the remote VM.",
+        default="vm-li",
+        help="SKILLCLAW_PATH_PROFILE value used on the remote VM. Defaults to 'vm-li'.",
     )
 
     subparsers = parser.add_subparsers(dest="action", required=True)

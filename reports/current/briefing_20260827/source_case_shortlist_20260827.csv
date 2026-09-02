@@ -1,0 +1,15 @@
+case_id,runs,skillful_runs,function_hit_runs,evidence_hit_runs,root_cause_hit_runs,avg_norm
+f453-httpd-cmdinject-formWriteFacMac,64,42,61,63,52,0.704
+f9k1122-webs-overflow-formWISP5G,44,33,35,36,13,0.551
+f456-httpd-cmdinject-formWriteFacMac,27,18,27,27,24,0.761
+f9k1122-webs-overflow-formCrossBandSwitch,35,27,26,26,10,0.480
+giflib-5.1.2-cve-2016-3977,28,25,25,25,27,0.836
+f1202-httpd-cmdinject-formWriteFacMac,27,19,25,25,23,0.730
+f453-httpd-overflow-formWrlsafeset,39,23,25,25,11,0.463
+f9k1122-webs-overflow-formSetSystemSettings,30,22,25,25,9,0.523
+f9k1122-webs-overflow-formWlanSetup,31,22,24,24,5,0.458
+f9k1122-webs-overflow-formSetPassword,21,16,19,19,8,0.524
+f453-httpd-overflow-fromRouteStatic,25,16,18,18,3,0.440
+fh451-httpd-overflow-formWrlExtraSet,27,18,13,23,0,0.357
+f453-httpd-overflow-fromqossetting,24,16,11,11,3,0.358
+fh451-httpd-overflow-formQuickIndex,12,9,8,12,2,0.496

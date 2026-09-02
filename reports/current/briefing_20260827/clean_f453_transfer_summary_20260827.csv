@@ -1,0 +1,7 @@
+case_id,condition,runs,avg_score,function_hit_count,evidence_hit_count,root_cause_hit_count,function_identity_miss_count,cve_identity_miss_count,results_path
+f453-httpd-overflow-fromRouteStatic,no-skill,3,3.667,2,2,0,3,3,runtime/heldout_experiments/clean_f453_wrlsafeset_to_routestatic_20260827/heldout_results.csv
+f453-httpd-overflow-fromRouteStatic,seed-skill,3,3.667,2,2,0,3,3,runtime/heldout_experiments/clean_f453_wrlsafeset_to_routestatic_20260827/heldout_results.csv
+f453-httpd-overflow-fromRouteStatic,candidate-skill,3,2.000,0,0,0,3,3,runtime/heldout_experiments/clean_f453_wrlsafeset_to_routestatic_20260827/heldout_results.csv
+f453-httpd-overflow-fromqossetting,no-skill,3,2.833,1,1,0,3,3,runtime/heldout_experiments/clean_f453_wrlsafeset_to_qossetting_20260827/heldout_results.csv
+f453-httpd-overflow-fromqossetting,seed-skill,3,2.000,0,0,0,3,3,runtime/heldout_experiments/clean_f453_wrlsafeset_to_qossetting_20260827/heldout_results.csv
+f453-httpd-overflow-fromqossetting,candidate-skill,3,2.000,0,0,0,3,3,runtime/heldout_experiments/clean_f453_wrlsafeset_to_qossetting_20260827/heldout_results.csv
