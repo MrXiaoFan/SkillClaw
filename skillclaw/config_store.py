@@ -379,8 +379,8 @@ class ConfigStore:
             use_skills=bool(skills.get("enabled", True)),
             skills_dir=skills_dir,
             skills_public_root=str(skills.get("public_root", "") or ""),
-            # Local enhancement: allow proxy-side inline skill injection for
-            # remote Claude Code clients that only access SkillClaw by API key.
+            # Selection/injection mode. `catalog` is model-side lazy loading;
+            # `server-catalog` is the server-side selector condition.
             skill_injection_mode=str(skills.get("injection_mode", "catalog") or "catalog").strip().lower(),
             retrieval_mode=skills.get("retrieval_mode", "template"),
             skill_top_k=int(skills.get("top_k", 6)),

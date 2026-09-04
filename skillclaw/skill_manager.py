@@ -443,6 +443,18 @@ def _inline_terms(text: str) -> set[str]:
     return set(_WORD_RE.findall(str(text or "").lower())) - _INLINE_QUERY_STOPWORDS
 
 
+def _inline_negative_terms(text: str) -> set[str]:
+    """Keep domain words from explicit exclusion clauses.
+
+    The positive-query stopword list intentionally removes generic words such
+    as ``source`` and ``code``. Those words still matter in phrases such as
+    ``NOT for: source-code-only audits``, so exclusion matching uses a smaller
+    marker-only filter instead.
+    """
+    marker_words = {"not", "for", "strictly", "excluded", "use", "do"}
+    return set(_WORD_RE.findall(str(text or "").lower())) - marker_words
+
+
 def _split_trigger_description(text: str) -> tuple[str, str]:
     lowered = str(text or "").lower()
     for marker in _INLINE_DESCRIPTION_EXCLUSION_MARKERS:
@@ -909,7 +921,7 @@ class SkillManager:
         return all_skills_sorted[:top_k]
 
     # ------------------------------------------------------------------ #
-    # Skill catalog (OpenClaw-compatible injection)                        #
+    # Model-side skill catalog (OpenClaw-compatible lazy loading)           #
     # ------------------------------------------------------------------ #
 
     def get_all_skills(self) -> list[dict]:
@@ -1189,13 +1201,12 @@ class SkillManager:
             name_overlap = query_terms & name_terms
             desc_overlap = query_terms & desc_terms
             category_overlap = query_terms & category_terms
-            negative_overlap = query_terms & negative_terms
-            # Hard veto: if the query strongly matches the skill's exclusion
-            # criteria (3+ negative-term overlaps), skip the skill entirely.
-            # This prevents mismatched skills from being selected even when
-            # positive keyword overlap is high (e.g., a Lua-extraction skill
-            # matched against a Tenda httpd command-injection task).
-            if len(negative_overlap) >= 3:
+            negative_overlap = task_terms_all & _inline_negative_terms(negative_desc)
+            # An explicit exclusion marker is a hard veto when at least one
+            # meaningful query term matches it. Requiring several overlaps
+            # lets clearly excluded tasks through when descriptions use short
+            # domain phrases such as "NOT for: GIF image decoders".
+            if negative_overlap:
                 continue
             content_overlap = query_terms & content_terms
             score = (
@@ -1235,10 +1246,10 @@ class SkillManager:
                 name = str(skill.get("name") or "")
                 if name.startswith("skillclaw-") and (is_vulnerability_task or not is_skillclaw_meta_task):
                     continue
-                # Respect negative exclusion clauses in fallback too
+                # Respect explicit negative exclusion clauses in fallback too
                 fb_desc = str(skill.get("description") or "")
                 _, fb_neg = _split_trigger_description(fb_desc)
-                if len(query_terms & _inline_terms(fb_neg)) >= 3:
+                if task_terms_all & _inline_negative_terms(fb_neg):
                     continue
                 fallback_pool.append(skill)
             if not fallback_pool:

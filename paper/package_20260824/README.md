@@ -6,6 +6,10 @@ This is the single consolidated package for the current paper work.
 
 - Root package: [./](./)
 
+This package is the canonical paper workspace. The arXiv and `elsarticle` manuscripts are
+separate deliverables with different roles; update the appropriate manuscript in this package
+before synchronizing any compatibility copy under `paper/`.
+
 ## Directory layout
 
 - `manuscript/arxiv/`
@@ -21,7 +25,7 @@ This is the single consolidated package for the current paper work.
   - curated engineering/project summary
   - experiment index and key results
   - copied benchmark case files
-  - copied reports, handoff notes, and plans
+  - selected historical reports; active reports and plans remain under `reports/` and `docs/`
 
 ## Read order
 

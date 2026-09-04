@@ -59,8 +59,10 @@ benchmark case → blind run → 评分/确认 → feedback → evolve → candi
 
 ### 2.2 主链路与关键模块映射
 
-- 技能选取/注入：`skillclaw/skill_manager.py` 的 `_keyword_retrieve_for_inline`（`inline` 模式、规则式、
-  关键字重叠 + 负向词否决 + fallback）；`catalog` 模式已实现但从未启用测试。
+- 技能选取/注入：`inline` 模式由 `skillclaw/skill_manager.py` 的 `_keyword_retrieve_for_inline`
+  完成规则式检索（关键字重叠 + 负向词否决 + fallback）；`server-catalog` 由
+  `skillclaw/api_server.py` 在服务端调用 selector LLM，并以 family guard/focused fallback
+  做可审计约束；`catalog` 模式保留为下游模型 lazy-loading 的兼容/消融条件。
 - run 执行：`evaluation/runs/run_remote_case.py`（远端 VM blind）。
 - 评分：`score_case_output.py`；确认：`evaluation/confirmation/core.py`。
 - 反馈：`build_feedback_bundle.py` + `evaluation/evolution.py:345`（validated handoff）。
@@ -180,7 +182,7 @@ benchmark case → blind run → 评分/确认 → feedback → evolve → candi
 | --- | --- | --- | --- | --- |
 | 2.1 | 修 gate reject_ready | workflow.py 让每候选完成既定次数验证再下结论，清理 34 pending | 0.x | pending 不再堆积 |
 | 2.2 | 发布后效果追踪+回退 | freeze live 快照 → hold-out 集对比 no/baseline/evolved live；加回退 | 0.x | 拿到前/后对比 + "发布→效果"证据 |
-| 2.3 | 启用 catalog 检索对比 | skill_manager.py 的 catalog 模式 vs inline | 0.x | 有对比数据 |
+| 2.3 | 完成 catalog 检索对比 | server-inline-lexical (`inline`) vs server-catalog；model-side catalog 作为兼容/消融条件；当前已完成 F9K 两 case 的初步诊断，仍需冻结口径 | 0.x | 有选择有效性和下游结果对比数据，并明确失败边界 |
 
 ### 阶段 3 · 论文对齐（成稿前必做）
 **目标**：论文每个数字都能在 clean csv 里找到，结论与干净数据一致。

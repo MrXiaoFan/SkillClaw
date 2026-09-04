@@ -105,4 +105,4 @@ Gate 当前采用 rerun 方式：candidate skill 生成后，重新注入同一�
 当前主稿已经能按 blind 漏洞分析、skill 注入、外部确认、feedback、candidate、gate、live skill 发布 这条主线组织内容，但还有几块内容没有补齐：benchmark 口径说明还需要继续整理，要把“仓库全部 case”“17 个冻结主实验 case”“辅助实验”三层关系分开；实验分层说明还需要补充，哪些结果作为主结果，哪些结果仅作为辅助诊断证据，需要写清楚；失败案例分析还需要继续补，尤其是为何一些 case 会被诱饵函数吸走、为何 FH451 家族上更细的 skill 反而变差；有效性威胁、作者单位、图表和最终结论措辞也还没有定稿。
 
 论文主文件：
-- [paper/skillclaw_confirmation_feedback_elsarticle.tex](/D:/Code/SkillClaw/SkillClaw/paper/skillclaw_confirmation_feedback_elsarticle.tex)
+- [paper/package_20260824/manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex](/D:/Code/SkillClaw/SkillClaw/paper/package_20260824/manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex)

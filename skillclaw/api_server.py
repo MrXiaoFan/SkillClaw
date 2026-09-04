@@ -2993,7 +2993,20 @@ class SkillClawAPIServer:
         injected_skills: list[str] = []
         skill_injection_meta: dict[str, Any] = {}
         if self.skill_manager and turn_type == "main":
-            messages, injected_skills, skill_injection_meta = self._inject_skills(messages, session_id=session_id)
+            server_catalog_names: list[str] | None = None
+            server_catalog_trace: dict[str, Any] | None = None
+            if str(getattr(self.config, "skill_injection_mode", "") or "").lower() == "server-catalog":
+                task = _extract_session_task_instruction(messages, self._session_turns.get(session_id, []))
+                server_catalog_names, server_catalog_trace = await self._select_server_catalog(
+                    task,
+                    return_trace=True,
+                )
+            messages, injected_skills, skill_injection_meta = self._inject_skills(
+                messages,
+                session_id=session_id,
+                selected_skill_names=server_catalog_names,
+                server_catalog_trace=server_catalog_trace,
+            )
         if self._compress_system_prompt and cached_system:
             logger.info(
                 "[OpenClaw] system prompt cached len=%d",
@@ -3877,18 +3890,152 @@ class SkillClawAPIServer:
             )
         return result
 
+    async def _select_server_catalog(
+        self,
+        task_description: str,
+        *,
+        return_trace: bool = False,
+    ) -> list[str] | tuple[list[str], dict[str, Any]]:
+        """Select skill names server-side; the remote client never reads skill files.
+
+        This is distinct from ``catalog`` mode, where the downstream model receives
+        the catalog and performs lazy loading itself.
+        """
+        skills = self.skill_manager.get_all_skills() if self.skill_manager else []
+        trace: dict[str, Any] = {
+            "task_chars": len(str(task_description or "")),
+            "catalog_count": len(skills),
+            "selector_prompt_version": "server-catalog-v4-focused-family-guard",
+            "raw_selected_skill_names": [],
+            "unknown_selected_skill_names": [],
+            "excluded_selected_skill_names": [],
+            "fallback_applied": False,
+            "truncated": False,
+            "status": "started",
+        }
+        catalog = "\n".join(
+            f"- name: {skill.get('name', '')}\n  category: {skill.get('category', '')}\n  description: {skill.get('description', '')}"
+            for skill in skills
+            if isinstance(skill, dict)
+        )
+        prompt = (
+            "You are the server-side SkillClaw skill selector. First classify the task's primary "
+            "technical problem (for example buffer overflow/CWE-120, command injection, source-code "
+            "audit, or firmware enumeration), then select the smallest set of skills that directly "
+            "matches that problem. Prefer exact mechanism, vulnerability-family, function, and artifact "
+            "matches over broad domain words such as CGI, web, embedded, or firmware. Treat every "
+            "'NOT for:' clause in a skill description as a hard exclusion: never select a skill when "
+            "the task falls under one of its exclusions, even if other keywords overlap. In particular, "
+            "do not use a command-injection skill for a buffer-overflow task merely because both mention "
+            "CGI. Use only names from the catalog. Select at most 3 skills. If none apply, return an "
+            "empty list. Return JSON only in the form {\"selected_skill_names\":[\"name\"]}.\n\n"
+            f"TASK:\n{task_description[:12000]}\n\nCATALOG:\n{catalog[:24000]}"
+        )
+        try:
+            raw = await asyncio.to_thread(
+                run_llm,
+                [{"role": "user", "content": prompt}],
+                self.config,
+                compress=False,
+            )
+            match = re.search(r"\{.*\}", str(raw or ""), re.DOTALL)
+            data = json.loads(match.group(0)) if match else {}
+            allowed = {str(skill.get("name") or "") for skill in skills if isinstance(skill, dict)}
+            raw_selected = data.get("selected_skill_names", [])
+            if not isinstance(raw_selected, list):
+                trace["status"] = "invalid_selection_type"
+                selected: list[str] = []
+                return (selected, trace) if return_trace else selected
+            trace["raw_selected_skill_names"] = [str(name) for name in raw_selected]
+            trace["unknown_selected_skill_names"] = [
+                str(name) for name in raw_selected if str(name) not in allowed
+            ]
+            selected = [str(name) for name in raw_selected if str(name) in allowed]
+            trace["truncated"] = len(selected) > 3
+            selected = selected[:3]
+
+            # Keep the catalog decision server-side, but enforce explicit
+            # vulnerability-family exclusions after the LLM response.  This
+            # prevents broad CGI/web overlap from overriding an unambiguous
+            # buffer-overflow task.  The decision is recorded for auditability.
+            task_norm = re.sub(r"[-_/]+", " ", str(task_description or "").lower())
+            buffer_overflow_task = bool(
+                re.search(
+                    r"\b(?:buffer\s+overflow|stack\s+overflow|cwe\s*[- ]?120|strcpy|stack-based)\b",
+                    task_norm,
+                )
+            )
+            by_name = {
+                str(skill.get("name") or ""): skill
+                for skill in skills
+                if isinstance(skill, dict)
+            }
+            if buffer_overflow_task:
+                excluded: list[str] = []
+                for name in selected:
+                    description = str(by_name.get(name, {}).get("description") or "").lower()
+                    negative = description.split("not for:", 1)[1] if "not for:" in description else ""
+                    if "buffer overflow" in re.sub(r"[-_/]+", " ", negative) or "stack overflow" in negative:
+                        excluded.append(name)
+                if excluded:
+                    trace["excluded_selected_skill_names"] = excluded
+                    selected = [name for name in selected if name not in excluded]
+                if not any("cwe120" in name.lower() or "cwe-120" in name.lower() for name in selected):
+                    candidates = []
+                    for skill in skills:
+                        name = str(skill.get("name") or "")
+                        description = str(skill.get("description") or "").lower()
+                        negative = description.split("not for:", 1)[1] if "not for:" in description else ""
+                        negative_norm = re.sub(r"[-_/]+", " ", negative)
+                        if "buffer overflow" in negative_norm or "stack overflow" in negative_norm:
+                            continue
+                        if "cwe120" not in name.lower() and "cwe-120" not in name.lower() and "buffer-overflow" not in description and "buffer overflow" not in description:
+                            continue
+                        score = 0
+                        if "firmware" in task_norm and "firmware" in description:
+                            score += 5
+                        if "strcpy" in task_norm and "strcpy" in description:
+                            score += 2
+                        if "credential" in task_norm and "credential" in description:
+                            score += 3
+                        if any(term in task_norm for term in ("verify", "call site", "exploitability", "mitigation")) and any(
+                            term in description for term in ("verifying", "call sites", "exploitability", "mitigation")
+                        ):
+                            score += 4
+                        candidates.append((score, name))
+                    candidates.sort(key=lambda item: (-item[0], item[1]))
+                    # A family fallback is intentionally conservative: one
+                    # focused skill is more auditable than filling the top-k
+                    # budget with several overlapping scanners.
+                    fallback_names = [name for _, name in candidates[:1]]
+                    if fallback_names:
+                        selected = fallback_names
+                        trace["fallback_applied"] = True
+                        trace["fallback_reason"] = "explicit_buffer_overflow_family_signal"
+            trace["status"] = "ok"
+            return (selected, trace) if return_trace else selected
+        except Exception as exc:
+            logger.warning("[SkillManager] server catalog selection failed: %s", exc)
+            trace["status"] = "error"
+            trace["error_type"] = type(exc).__name__
+            selected = []
+            return (selected, trace) if return_trace else selected
+
     def _inject_skills(
         self,
         messages: list[dict],
         *,
         session_id: str = "",
+        selected_skill_names: list[str] | None = None,
+        server_catalog_trace: dict[str, Any] | None = None,
     ) -> tuple[list[dict], list[str], dict[str, Any]]:
-        """Inject an OpenClaw-compatible skill catalog into the system message.
+        """Apply the configured skill condition to the system message.
 
-        Lists ALL eligible skills as an XML ``<available_skills>`` catalog
-        with ``<name>``, ``<description>``, and ``<location>`` per entry.
-        The model is instructed to ``read`` at most one SKILL.md when
-        relevant (lazy loading), matching OpenClaw's injection behaviour.
+        In ``catalog`` mode this lists all eligible skills as an XML
+        ``<available_skills>`` catalog and leaves lazy loading to the downstream
+        model. In ``server-catalog`` mode the server has already selected names
+        and this function injects only their bodies. Inline modes use server-side
+        lexical retrieval and body injection.
 
         Returns (modified_messages, listed_skill_names, injection_metadata).
         """
@@ -3948,12 +4095,16 @@ class SkillClawAPIServer:
             )
             return messages, skill_names, skill_injection_meta
 
-        if injection_mode in {"inline", "server", "server-inline"}:
+        if injection_mode in {"inline", "server", "server-inline", "server-catalog"}:
             # Local enhancement: inline selected SKILL.md content for remote
             # clients whose filesystem cannot read the server's skill paths.
+            # Server-catalog already performs a fresh server-side selection for
+            # each main turn; reusing the lexical cache here would make the
+            # recorded selector trace diverge from the injected skill body.
+            cache_enabled = injection_mode != "server-catalog"
             if session_id and not allow_session_stability:
                 self._session_inline_skill_cache.pop(session_id, None)
-            cached = self._session_inline_skill_cache.get(session_id) if allow_session_stability else None
+            cached = self._session_inline_skill_cache.get(session_id) if allow_session_stability and cache_enabled else None
             skill_text = ""
             skill_names: list[str] = []
             if (
@@ -3986,13 +4137,21 @@ class SkillClawAPIServer:
                     messages,
                     self._session_turns.get(session_id, []),
                 )
-                skill_text, skill_names = self.skill_manager.build_inline_injection_prompt(
-                    task_description,
-                    max_chars=max_skill_chars,
-                    top_k=top_k,
-                )
+                if selected_skill_names is not None:
+                    by_name = {str(s.get("name") or ""): s for s in self.skill_manager.get_all_skills()}
+                    selected = [by_name[name] for name in selected_skill_names if name in by_name]
+                    skill_text = self.skill_manager.format_inline_skills_for_prompt(selected, max_chars=max_skill_chars, include_catalog=False)
+                    skill_names = [str(s.get("name") or "") for s in selected]
+                    if injection_mode == "server-catalog":
+                        stable_action = "server-select"
+                else:
+                    skill_text, skill_names = self.skill_manager.build_inline_injection_prompt(
+                        task_description,
+                        max_chars=max_skill_chars,
+                        top_k=top_k,
+                    )
                 has_task_skill = any(not str(name).startswith("skillclaw-") for name in skill_names)
-                if allow_session_stability and has_task_skill:
+                if allow_session_stability and has_task_skill and cache_enabled:
                     self._session_inline_skill_cache[session_id] = {
                         "generation": stable_generation,
                         "selected_skill_names": list(skill_names),
@@ -4027,6 +4186,7 @@ class SkillClawAPIServer:
             "enabled": True,
             "injection_mode": injection_mode,
             "top_k": top_k if injection_mode in {"inline", "server", "server-inline"} else None,
+            "selection_source": "server-llm" if injection_mode == "server-catalog" else "rule-retrieval",
             "selected_skill_names": selected_skill_names_for_meta,
             "available_skill_count": all_skill_count,
             "skill_prompt_chars": len(skill_text),
@@ -4038,6 +4198,22 @@ class SkillClawAPIServer:
             "stable_generation": stable_generation,
             "attribution_eligible": not reminder_only_turn,
         }
+        if injection_mode == "server-catalog":
+            # Never emit an unauditable server-catalog record.  The normal
+            # request path supplies a trace from `_select_server_catalog`; a
+            # missing trace indicates a call-path regression and must remain
+            # visible in the artifact rather than being silently omitted.
+            skill_injection_meta["server_catalog_trace"] = dict(
+                server_catalog_trace
+                or {
+                    "status": "missing",
+                    "task_chars": 0,
+                    "catalog_count": all_skill_count,
+                    "raw_selected_skill_names": [],
+                    "unknown_selected_skill_names": [],
+                    "truncated": False,
+                }
+            )
 
         if reminder_only_turn and skill_names:
             logger.info(

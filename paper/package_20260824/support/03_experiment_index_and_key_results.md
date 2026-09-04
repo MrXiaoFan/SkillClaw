@@ -17,8 +17,8 @@ Purpose:
 
 Key files:
 
-- [reports/briefing_20260805/closed_loop_proof.csv](reports/briefing_20260805/closed_loop_proof.csv)
-- [reports/briefing_20260805/core_benchmarks.csv](reports/briefing_20260805/core_benchmarks.csv)
+- [reports/current/briefing_20260805/closed_loop_proof.csv](../../../reports/current/briefing_20260805/closed_loop_proof.csv)
+- [reports/current/briefing_20260805/core_benchmarks.csv](../../../reports/current/briefing_20260805/core_benchmarks.csv)
 
 What they support:
 
@@ -34,9 +34,9 @@ Purpose:
 
 Key files:
 
-- [reports/briefing_20260805/firmware_skill_ablation_summary.md](reports/briefing_20260805/firmware_skill_ablation_summary.md)
-- [reports/briefing_20260805/firmware_ablation_summary.csv](reports/briefing_20260805/firmware_ablation_summary.csv)
-- [reports/briefing_20260805/firmware_ablation_runs.csv](reports/briefing_20260805/firmware_ablation_runs.csv)
+- [reports/current/briefing_20260805/firmware_skill_ablation_summary.md](../../../reports/current/briefing_20260805/firmware_skill_ablation_summary.md)
+- [reports/current/briefing_20260805/firmware_ablation_summary.csv](../../../reports/current/briefing_20260805/firmware_ablation_summary.csv)
+- [reports/current/briefing_20260805/firmware_ablation_runs.csv](../../../reports/current/briefing_20260805/firmware_ablation_runs.csv)
 
 Representative result:
 
@@ -59,8 +59,8 @@ Purpose:
 
 Key files:
 
-- [reports/briefing_20260815/f453_skill_ablation_20260815.md](reports/briefing_20260815/f453_skill_ablation_20260815.md)
-- [reports/briefing_20260815/f453_run_table_20260815.csv](reports/briefing_20260815/f453_run_table_20260815.csv)
+- [reports/current/briefing_20260815/f453_skill_ablation_20260815.md](../../../reports/current/briefing_20260815/f453_skill_ablation_20260815.md)
+- [reports/current/briefing_20260815/f453_run_table_20260815.csv](../../../reports/current/briefing_20260815/f453_run_table_20260815.csv)
 
 What they support:
 
@@ -77,8 +77,8 @@ Purpose:
 
 Key files:
 
-- [reports/briefing_20260816/planA_clean_rerun_validation_20260820.md](reports/briefing_20260816/planA_clean_rerun_validation_20260820.md)
-- [reports/briefing_20260816/planA_clean_rerun_table_20260820.csv](reports/briefing_20260816/planA_clean_rerun_table_20260820.csv)
+- [reports/current/briefing_20260816/planA_clean_rerun_validation_20260820.md](../../../reports/current/briefing_20260816/planA_clean_rerun_validation_20260820.md)
+- [reports/current/briefing_20260816/planA_clean_rerun_table_20260820.csv](../../../reports/current/briefing_20260816/planA_clean_rerun_table_20260820.csv)
 
 Representative aggregate:
 
@@ -101,10 +101,10 @@ Purpose:
 
 Key files:
 
-- [reports/briefing_20260816/plan1_necessity_frozen_validation_20260820.md](reports/briefing_20260816/plan1_necessity_frozen_validation_20260820.md)
-- [reports/briefing_20260816/plan1_necessity_frozen_table_20260820.csv](reports/briefing_20260816/plan1_necessity_frozen_table_20260820.csv)
-- [reports/briefing_20260816/plan1_necessity_attribution_20260820.md](reports/briefing_20260816/plan1_necessity_attribution_20260820.md)
-- [reports/briefing_20260816/plan1_necessity_attribution_20260820.csv](reports/briefing_20260816/plan1_necessity_attribution_20260820.csv)
+- [reports/current/briefing_20260816/plan1_necessity_frozen_validation_20260820.md](../../../reports/current/briefing_20260816/plan1_necessity_frozen_validation_20260820.md)
+- [reports/current/briefing_20260816/plan1_necessity_frozen_table_20260820.csv](../../../reports/current/briefing_20260816/plan1_necessity_frozen_table_20260820.csv)
+- [reports/current/briefing_20260816/plan1_necessity_attribution_20260820.md](../../../reports/current/briefing_20260816/plan1_necessity_attribution_20260820.md)
+- [reports/current/briefing_20260816/plan1_necessity_attribution_20260820.csv](../../../reports/current/briefing_20260816/plan1_necessity_attribution_20260820.csv)
 
 Representative aggregate:
 
@@ -131,11 +131,11 @@ Purpose:
 Key files:
 
 - F9K positive result:
-  - [reports/briefing_20260816/f9k_distinguishing_validation_20260820.md](reports/briefing_20260816/f9k_distinguishing_validation_20260820.md)
-  - [reports/briefing_20260816/f9k_distinguishing_run_table_20260820.csv](reports/briefing_20260816/f9k_distinguishing_run_table_20260820.csv)
+  - [reports/current/briefing_20260816/f9k_distinguishing_validation_20260820.md](../../../reports/current/briefing_20260816/f9k_distinguishing_validation_20260820.md)
+  - [reports/current/briefing_20260816/f9k_distinguishing_run_table_20260820.csv](../../../reports/current/briefing_20260816/f9k_distinguishing_run_table_20260820.csv)
 - FH451 negative result:
-  - [reports/briefing_20260816/fh451_distinguishing_validation_20260820.md](reports/briefing_20260816/fh451_distinguishing_validation_20260820.md)
-  - [reports/briefing_20260816/fh451_distinguishing_run_table_20260820.csv](reports/briefing_20260816/fh451_distinguishing_run_table_20260820.csv)
+  - [reports/current/briefing_20260816/fh451_distinguishing_validation_20260820.md](../../../reports/current/briefing_20260816/fh451_distinguishing_validation_20260820.md)
+  - [reports/current/briefing_20260816/fh451_distinguishing_run_table_20260820.csv](../../../reports/current/briefing_20260816/fh451_distinguishing_run_table_20260820.csv)
 
 Representative aggregate:
 
@@ -159,11 +159,11 @@ Purpose:
 
 Key files:
 
-- [reports/briefing_20260816/gate_settle_20260820.md](reports/briefing_20260816/gate_settle_20260820.md)
-- [reports/skill_gate.md](reports/skill_gate.md)
-- [reports/skill_gate.json](reports/skill_gate.json)
-- [reports/skill_feedback_bundle.md](reports/skill_feedback_bundle.md)
-- [reports/skill_feedback_bundle.json](reports/skill_feedback_bundle.json)
+- [reports/current/briefing_20260816/gate_settle_20260820.md](../../../reports/current/briefing_20260816/gate_settle_20260820.md)
+- [reports/current/skill_gate.md](../../../reports/current/skill_gate.md)
+- [reports/current/skill_gate.json](../../../reports/current/skill_gate.json)
+- [reports/current/skill_feedback_bundle.md](../../../reports/current/skill_feedback_bundle.md)
+- [reports/current/skill_feedback_bundle.json](../../../reports/current/skill_feedback_bundle.json)
 
 What they support:
 
@@ -185,3 +185,18 @@ Use as supporting context:
 1. source-code closed-loop proof;
 2. wireless/login early firmware ablation;
 3. F453 drift study.
+
+## I. Server-catalog selection diagnostic (2026-09-03)
+
+The server-side catalog path is operational and now records selector traces through the final
+artifact. A controlled F9K WlanSetup diagnostic compared selector guard iterations:
+
+- prompt-only v2: first-turn selection remained the nearby command-injection skill;
+- v3 family guard: excluded that skill but over-selected three overlapping CWE-120 tools;
+- focused v4 guard: selected only `elf-cwe120-firmware-triage`, with scores `4.5/2.0/4.5`
+  (mean `3.67/10`), function/evidence hits in 2/3 runs, and CVE hits in 0/3 runs.
+
+This is evidence of an auditable server-side selection improvement, not evidence of stable
+end-to-end effectiveness. It should be used as a limitation/diagnostic result until the same
+protocol is evaluated on a frozen multi-case set. The full records are indexed in
+[the catalog diagnostics](../../../reports/current/briefing_20260902/README.md).

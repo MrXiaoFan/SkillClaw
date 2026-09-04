@@ -128,8 +128,8 @@
 - `evolve_server/engines/workflow.py`
 - `skillclaw/api_server.py`
 - `skillclaw/replay_gate_worker.py`
-- `paper/references.bib`
-- `paper/skillclaw_confirmation_feedback_elsarticle.tex`
+- `paper/package_20260824/manuscript/elsarticle/references.bib`
+- `paper/package_20260824/manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex`
 - `README.md`
 
 ### 本阶段新整理的材料

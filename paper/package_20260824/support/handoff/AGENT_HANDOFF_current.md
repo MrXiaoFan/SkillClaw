@@ -1,69 +1,61 @@
-# Agent Handoff
+# Current handoff — 2026-09-03
 
-建议新的 agent 先按下面顺序进入，而不是再从更早的单篇阶段文档直接起步：
+## Start here
 
-1. [docs/handoff/20260820/01_necessity_plan_done_and_next.md](/D:/Code/SkillClaw/SkillClaw/docs/handoff/20260820/01_necessity_plan_done_and_next.md)
-2. [docs/plans/work_plan_20260820.md](/D:/Code/SkillClaw/SkillClaw/docs/plans/work_plan_20260820.md)
-3. [docs/plans/research_roadmap_20260820.md](/D:/Code/SkillClaw/SkillClaw/docs/plans/research_roadmap_20260820.md)
-4. [reports/current/experiment_archive_all_20260820.md](/D:/Code/SkillClaw/SkillClaw/reports/current/experiment_archive_all_20260820.md)
-5. [reports/current/briefing_20260816/weekly_report_20260823_draft.md](/D:/Code/SkillClaw/SkillClaw/reports/current/briefing_20260816/weekly_report_20260823_draft.md)
-6. [paper/skillclaw_confirmation_feedback_elsarticle.tex](/D:/Code/SkillClaw/SkillClaw/paper/skillclaw_confirmation_feedback_elsarticle.tex)
+- [Research roadmap](../../../docs/plans/research_roadmap_20260820.md)
+- [Current reports](../../../reports/current/README.md)
+- [Catalog diagnostics](../../../reports/current/briefing_20260902/README.md)
+- [Paper package README](../../README.md)
 
-## 当前真实状态
+## Engineering status
 
-- 主链路已经能跑通：
-  `run -> score / confirmation -> feedback -> evolve -> gate -> publish`
-- 当前更可信的实验主证据，已经切到 `runtime/ablation/` 和 `reports/current/briefing_20260816/` 这批净化后的记录，不再以前期混杂 run 为主证据。
-- 论文当前主稿仍然是：
-  [paper/skillclaw_confirmation_feedback_elsarticle.tex](/D:/Code/SkillClaw/SkillClaw/paper/skillclaw_confirmation_feedback_elsarticle.tex)
-- 2026-08-26 又做了一轮目录收紧：
-  - `paper/materials_20260824/` 和 `paper/package_20260824/` 中重复保存的 `session_rollout_20260816.jsonl` 已删除
-  - 原始会话主副本统一只保留在：
-    [reports/current/briefing_20260816/session_rollout_20260816.jsonl](/D:/Code/SkillClaw/SkillClaw/reports/current/briefing_20260816/session_rollout_20260816.jsonl)
-  - `skillspace/.skillclaw_backups/` 已明确视为运行时缓存，不是 canonical skill 内容
-- 上一轮目录整理已同步到：
-  - `28bf4c5 cleanup: dedupe paper session archives`
-- GitHub 镜像 `fan/dev` 在这轮同步时因为网络连接失败没有推上去，所以可能比 `codeup/dev` 落后一个 commit。
+The main loop is operational:
 
-## 当前最该看的证据文件
+`run → score/confirmation → feedback → evolve → gate → publish`
 
-- 84-run 清洁重跑：
-  [reports/current/briefing_20260816/planA_clean_rerun_validation_20260820.md](/D:/Code/SkillClaw/SkillClaw/reports/current/briefing_20260816/planA_clean_rerun_validation_20260820.md)
-- 153-run 必要性实验：
-  [reports/current/briefing_20260816/plan1_necessity_frozen_validation_20260820.md](/D:/Code/SkillClaw/SkillClaw/reports/current/briefing_20260816/plan1_necessity_frozen_validation_20260820.md)
-- F9K1122 家族内区分实验：
-  [reports/current/briefing_20260816/f9k_distinguishing_validation_20260820.md](/D:/Code/SkillClaw/SkillClaw/reports/current/briefing_20260816/f9k_distinguishing_validation_20260820.md)
-- FH451 负结果与旧数据对照：
-  [reports/current/briefing_20260816/fh451_distinguishing_validation_20260820.md](/D:/Code/SkillClaw/SkillClaw/reports/current/briefing_20260816/fh451_distinguishing_validation_20260820.md)
-  [reports/current/briefing_20260816/fh451_old_60run_disposition_20260820.md](/D:/Code/SkillClaw/SkillClaw/reports/current/briefing_20260816/fh451_old_60run_disposition_20260820.md)
-- gate settle 记录：
-  [reports/current/briefing_20260816/gate_settle_20260820.md](/D:/Code/SkillClaw/SkillClaw/reports/current/briefing_20260816/gate_settle_20260820.md)
-- 2026-08-26 清理说明：
-  [reports/current/cleanup_20260826.md](/D:/Code/SkillClaw/SkillClaw/reports/current/cleanup_20260826.md)
+The four skill modes are explicitly separated:
 
-## 本轮整理后的冒烟核对结果
+- `catalog`: downstream model receives the OpenClaw-compatible catalog and lazy-loads skills.
+- `inline` / `server-inline-lexical`: SkillClaw server performs lexical retrieval and injects bodies.
+- `server-catalog`: SkillClaw server asks a selector model to choose names, then injects bodies.
+- session disable override: no-skill control condition.
 
-- 主副本存在：
-  - `reports/current/briefing_20260816/session_rollout_20260816.jsonl` 存在
-- `paper/` 中重复的大 jsonl 副本已去掉：
-  - `paper/materials_20260824/reports/briefing_20260816/session_rollout_20260816.jsonl` 不存在
-  - `paper/package_20260824/support/reports/briefing_20260816/session_rollout_20260816.jsonl` 不存在
-- `skillspace/` 主路径仍在：
-  - `skillspace/live/`
-  - `skillspace/source/`
-  - `skillspace/share/`
+The research main line is server-side catalog selection. No independent client catalog is planned.
 
-## 当前建议的下一步
+## Latest server-catalog finding
 
-1. 不要继续清理目录，先回主线实验。
-2. 下一步最值得做的是严格隔离的 held-out evolved-skill 实验准备，补“自动生成的 candidate skill 是否真的改善未来 blind 任务”这条证据。
-3. 在那之前，如果需要继续读代码或材料，优先以 `codeup/dev` 为准，不要默认 GitHub 镜像就是最新。
+The selector trace is preserved through final artifacts. On F9K WlanSetup, the focused v4
+server-side family guard selected only `elf-cwe120-firmware-triage` in three runs:
 
-## 源码仓链接
+- scores: `4.5`, `2.0`, `4.5`; mean `3.67/10`;
+- function and evidence hit in 2/3 runs;
+- CVE identity hit in 0/3 runs;
+- the command-injection skill was excluded by the explicit buffer-overflow guard.
 
-- Codeup：
-  `https://codeup.aliyun.com/5ffbfe6c168c689c9272cf25/skillclaw_extention/tree/dev`
-- GitHub 镜像：
-  `https://github.com/MrXiaoFan/SkillClaw/tree/dev`
-- 原始上游：
-  `https://github.com/AMAP-ML/SkillClaw/tree/main`
+This is a diagnostic improvement, not evidence of stable server-catalog effectiveness. See
+[the full WlanSetup report](../../../reports/current/briefing_20260902/server_catalog_f9k_wlansetup_20260903.md)
+and [the inline comparison](../../../reports/current/briefing_20260902/server_catalog_vs_inline_f9k_20260903.md).
+
+The server-catalog path no longer reuses the lexical session cache. A post-fix smoke confirmed
+that all checked history turns use `stable_action=server-select`; see the
+[trace smoke report](../../../reports/current/briefing_20260902/server_catalog_trace_smoke_20260903.md).
+
+## Next work
+
+1. Improve source-run quality before generating a new held-out candidate; the current WlanSetup v4 source set is correctly blocked (`function_identity_miss` in 3/3 and root-cause hit in 0/3).
+2. Keep candidate generation isolated and do not bypass the quality gate with `allow-source-quality-risk`.
+3. Keep the arXiv concept manuscript independent; do not add unverified catalog or v4 claims.
+4. Continue final paper-package cleanup only after engineering evidence is frozen.
+
+## Verification
+
+Latest targeted tests: `15 passed` (`tests/test_session_skill_overrides.py` and
+`tests/test_record_finalizer.py`). The full suite still has the previously documented unrelated
+baseline failures and has not been used as a release gate for this change.
+
+Held-out runner tests: `10 passed`. The current v4 WlanSetup source audit is blocked as
+expected and no candidate was generated or published from it.
+
+The forced source-quality v2 check also remains blocked: three runs scored `4.5/2.0/2.0`,
+with exact predicted-function hits `0/3` and root-cause hits `0/3`. See
+[the source-quality report](../../../reports/current/briefing_20260902/source_quality_v2_f9k_wlansetup_20260903.md).

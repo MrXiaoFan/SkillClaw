@@ -251,6 +251,7 @@ def _session_snapshot_to_injection_rows(snapshot: dict[str, Any]) -> list[dict[s
                 or injection.get("available_skill_count")
                 or 0
             ),
+            "server_catalog_trace": injection.get("server_catalog_trace"),
             "prm_score": turn.get("prm_score"),
             "source": "session_snapshot",
         }
@@ -314,6 +315,10 @@ def _condense_injection_row(row: dict[str, Any]) -> dict[str, Any]:
     def _list_value(*keys: str) -> list[str]:
         return _first_non_empty_list(*[_value(key) for key in keys])
 
+    trace = row.get("server_catalog_trace")
+    if not isinstance(trace, dict):
+        trace = nested_meta.get("server_catalog_trace")
+
     turn_value = _value("turn")
     if turn_value in (None, "", 0, "0"):
         turn_value = None
@@ -344,6 +349,7 @@ def _condense_injection_row(row: dict[str, Any]) -> dict[str, Any]:
         "stable_action": str(_value("stable_action") or ""),
         "stable_generation": _value("stable_generation"),
         "attribution_eligible": _value("attribution_eligible"),
+        "server_catalog_trace": trace if isinstance(trace, dict) else {},
         "prm_score": _value("prm_score"),
         "source": str(_value("source") or ""),
     }

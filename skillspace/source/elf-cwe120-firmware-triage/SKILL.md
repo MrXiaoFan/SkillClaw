@@ -32,3 +32,18 @@ When triaging extracted firmware/rootfs ELF binaries for CWE-120 (buffer overflo
    grep -E "strcpy|strcat|sprintf|gets" ./cwe120_results/phase1/*.txt | grep "CANARY=0" | grep -v "FORTIFY=YES"
    
    Only escalate binaries matching these criteria to deep disassembly and PLT/GOT analysis.
+
+5. **Map the sink to the exact network handler**
+   For an embedded web-service binary, a `strcpy`/`sprintf` hit is only a candidate, not the
+   final finding. Enumerate nearby CGI/form handler symbols and use disassembly or cross-reference
+   evidence to connect the user-controlled parameter to the specific call site and destination
+   buffer. Report the exact handler, parameter, sink, and destination together; do not substitute a
+   different handler merely because it is in the same binary or appears near the same string table.
+   Keep command-execution sinks (`system`, `popen`, `execl`) separate from CWE-120 findings unless
+   the same call path independently proves both vulnerability mechanisms.
+
+6. **Require a reproducible identity bundle**
+   Before naming a CVE or claiming a target function, record at least two independent identity
+   signals: the handler/function symbol or decompiled label, the input parameter, and the unsafe
+   call or destination buffer. If only a generic sink is visible, report the finding as a candidate
+   and continue localizing instead of promoting a nearby handler or known CVE.

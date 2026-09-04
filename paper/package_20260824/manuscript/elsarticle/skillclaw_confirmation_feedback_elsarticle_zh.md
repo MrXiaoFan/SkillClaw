@@ -2,7 +2,7 @@
 
 ## 中文讨论稿说明
 
-本文档是论文 [skillclaw_confirmation_feedback_elsarticle.tex](D:/Code/SkillClaw/SkillClaw/paper/skillclaw_confirmation_feedback_elsarticle.tex) 的中文讨论稿，用于组会、学术交流和后续联合修改。  
+本文档是论文 [skillclaw_confirmation_feedback_elsarticle.tex](D:/Code/SkillClaw/SkillClaw/paper/package_20260824/manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex) 的中文讨论稿，用于组会、学术交流和后续联合修改。
 它以英文稿当前版本为基础，尽量保持章节结构、核心论点、实验数字与结论一致，但采用更便于讨论的中文表达，不追求逐句直译。
 
 ---
@@ -559,7 +559,6 @@ PentestGPT、漏洞分析相关工作、EvoHunt、SEC-bench Pro 等说明，安�
 
 本文中文讨论稿不单独列出中文参考文献列表，所有参考文献与英文稿一致，请以：
 
-- [references.bib](D:/Code/SkillClaw/SkillClaw/paper/references.bib)
+- [references.bib](D:/Code/SkillClaw/SkillClaw/paper/package_20260824/manuscript/elsarticle/references.bib)
 
 为准。
-

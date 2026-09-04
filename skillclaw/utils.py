@@ -45,15 +45,15 @@ def _get_llm_provider(config: Optional["SkillClawConfig"] = None) -> str:
     return "openai"
 
 
-def run_llm(messages, config: Optional["SkillClawConfig"] = None):
+def run_llm(messages, config: Optional["SkillClawConfig"] = None, *, compress: bool = True):
     provider = _get_llm_provider(config)
 
     if provider == "bedrock":
-        return _run_llm_bedrock(messages, config)
-    return _run_llm_openai(messages, config)
+        return _run_llm_bedrock(messages, config, compress=compress)
+    return _run_llm_openai(messages, config, compress=compress)
 
 
-def _run_llm_bedrock(messages, config: Optional["SkillClawConfig"] = None):
+def _run_llm_bedrock(messages, config: Optional["SkillClawConfig"] = None, *, compress: bool = True):
     from .bedrock_client import BedrockChatClient
 
     model_id = (getattr(config, "llm_model_id", "") if config else "") or os.environ.get(
@@ -62,7 +62,7 @@ def _run_llm_bedrock(messages, config: Optional["SkillClawConfig"] = None):
     region = (getattr(config, "bedrock_region", "") if config else "") or os.environ.get("BEDROCK_REGION", "us-east-1")
     client = BedrockChatClient(model_id=model_id, region=region)
 
-    rewrite_messages = [{"role": "system", "content": _COMPRESSION_INSTRUCTION}, *messages]
+    rewrite_messages = ([{"role": "system", "content": _COMPRESSION_INSTRUCTION}] if compress else []) + list(messages)
     response = client.chat.completions.create(
         model=model_id,
         messages=rewrite_messages,
@@ -71,7 +71,7 @@ def _run_llm_bedrock(messages, config: Optional["SkillClawConfig"] = None):
     return response.choices[0].message.content
 
 
-def _run_llm_openai(messages, config: Optional["SkillClawConfig"] = None):
+def _run_llm_openai(messages, config: Optional["SkillClawConfig"] = None, *, compress: bool = True):
     try:
         from openai import OpenAI
     except ImportError as e:
@@ -106,7 +106,7 @@ def _run_llm_openai(messages, config: Optional["SkillClawConfig"] = None):
     model_id = model_id or os.environ.get("PRM_MODEL", "gpt-5.2")
     client = OpenAI(api_key=api_key, base_url=base_url)
 
-    rewrite_messages = [{"role": "system", "content": _COMPRESSION_INSTRUCTION}, *messages]
+    rewrite_messages = ([{"role": "system", "content": _COMPRESSION_INSTRUCTION}] if compress else []) + list(messages)
     response = client.chat.completions.create(
         model=model_id,
         messages=rewrite_messages,

@@ -1,8 +1,8 @@
 # 参考文献人工核查清单（arXiv 占坑稿）
 
 对应稿件：
-- [skill_evolution_blind_vulnerability_analysis_arxiv.tex](D:/Code/SkillClaw/SkillClaw/paper/skill_evolution_blind_vulnerability_analysis_arxiv.tex)
-- [references_arxiv_checked.bib](D:/Code/SkillClaw/SkillClaw/paper/references_arxiv_checked.bib)
+- [skill_evolution_blind_vulnerability_analysis_arxiv.tex](D:/Code/SkillClaw/SkillClaw/paper/package_20260824/manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv.tex)
+- [references_arxiv_checked.bib](D:/Code/SkillClaw/SkillClaw/paper/package_20260824/manuscript/arxiv/references_arxiv_checked.bib)
 
 说明：
 - 本清单只覆盖当前 arXiv 占坑稿实际使用到的参考文献。
@@ -167,7 +167,7 @@
 ## 本轮我做的主要修正
 
 1. 新建了独立引用库：
-   - [references_arxiv_checked.bib](D:/Code/SkillClaw/SkillClaw/paper/references_arxiv_checked.bib)
+   - [references_arxiv_checked.bib](D:/Code/SkillClaw/SkillClaw/paper/package_20260824/manuscript/arxiv/references_arxiv_checked.bib)
    当前 arXiv 占坑稿现在只用这份“已核对”的 bib。
 
 2. 修正了多条旧 bib 中不准确的信息，包括：

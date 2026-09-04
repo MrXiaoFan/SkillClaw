@@ -31,8 +31,12 @@ class SkillClawConfig:
     use_skills: bool = False
     skills_dir: str = "memory_data/skills"
     skills_public_root: str = ""
-    # Local enhancement: catalog mode lists server skills; inline mode injects
-    # selected skill bodies for remote clients that cannot read server files.
+    # Skill selection/injection conditions:
+    # - catalog: expose a server-owned catalog for downstream model-side lazy loading;
+    # - inline/server-inline: server-side lexical retrieval plus body injection;
+    # - server-catalog: server-side selector chooses names, then the server injects bodies.
+    # `catalog` remains the compatibility/baseline mode; the research mainline is
+    # `server-catalog`.
     skill_injection_mode: str = "catalog"
     retrieval_mode: str = "template"
     embedding_model_path: str = "Qwen/Qwen3-Embedding-0.6B"

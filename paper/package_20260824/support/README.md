@@ -3,13 +3,20 @@
 This folder is a curated support package for continuing the current paper work without
 re-scanning the whole repository.
 
+## How this support package differs from the source snapshot
+
+This is a curated, paper-facing copy. The provenance-bearing source snapshot lives at
+`../../materials_20260824/`. Case files may intentionally differ because the support copy
+sanitizes leakage-prone ground-truth fields. Preserve both trees unless a specific file-level
+comparison has been completed.
+
 ## Primary paper files
 
-- Main arXiv-style draft: [../skill_evolution_blind_vulnerability_analysis_arxiv.tex](../skill_evolution_blind_vulnerability_analysis_arxiv.tex)
-- Chinese draft explanation: [../skill_evolution_blind_vulnerability_analysis_arxiv_zh.md](../skill_evolution_blind_vulnerability_analysis_arxiv_zh.md)
-- Earlier full-system `elsarticle` draft: [../skillclaw_confirmation_feedback_elsarticle.tex](../skillclaw_confirmation_feedback_elsarticle.tex)
-- Checked bibliography for the arXiv draft: [../references_arxiv_checked.bib](../references_arxiv_checked.bib)
-- Reference checklist: [../reference_checklist_skill_evolution_arxiv_20260824.md](../reference_checklist_skill_evolution_arxiv_20260824.md)
+- Main arXiv-style draft: [../manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv.tex](../manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv.tex)
+- Chinese draft explanation: [../manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv_zh.md](../manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv_zh.md)
+- Earlier full-system `elsarticle` draft: [../manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex](../manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex)
+- Checked bibliography for the arXiv draft: [../manuscript/arxiv/references_arxiv_checked.bib](../manuscript/arxiv/references_arxiv_checked.bib)
+- Reference checklist: [../manuscript/arxiv/reference_checklist_skill_evolution_arxiv_20260824.md](../manuscript/arxiv/reference_checklist_skill_evolution_arxiv_20260824.md)
 
 ## Read in this order
 
@@ -18,16 +25,17 @@ re-scanning the whole repository.
 3. [03_experiment_index_and_key_results.md](03_experiment_index_and_key_results.md)
 4. [04_paper_status_completed_and_todo.md](04_paper_status_completed_and_todo.md)
 
-After that, use the copied raw evidence under:
+After that, use the selected historical evidence under:
 
 - [cases/](cases/)
 - [reports/](reports/)
 - [handoff/](handoff/)
 - [plans/](plans/)
 
-Heavy raw runtime artifacts under `runtime/imports/remote_vm/` were not duplicated into
-this folder. The copied CSV/MD/JSON reports here are the index layer that points back to
-those run artifacts when deeper inspection is needed.
+Most duplicated reports have been removed. The remaining files under `reports/` are historical
+exceptions with content differences; active reports remain under `reports/current/`.
+Heavy raw runtime artifacts under `runtime/imports/remote_vm/` were not duplicated into this
+folder. Follow report paths back to those run artifacts when deeper inspection is needed.
 
 ## Why this package exists
 

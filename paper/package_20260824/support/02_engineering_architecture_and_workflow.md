@@ -24,7 +24,8 @@ This file is the shortest accurate map from code to workflow.
   - stores conversation records in `runtime/records/conversations.jsonl`
   - records `selected_skill_names`
   - assigns `session_id` and `session_segment_id`
-  - supports multiple injection modes, including inline and catalog branches
+  - supports multiple controlled conditions: server-side lexical inline injection,
+    model-side catalog lazy loading, and server-side catalog selection
 - Role:
   - receive model traffic;
   - attach skill injection metadata;

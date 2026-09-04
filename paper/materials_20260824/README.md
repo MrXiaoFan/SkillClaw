@@ -3,13 +3,21 @@
 This folder is a curated support package for continuing the current paper work without
 re-scanning the whole repository.
 
+## Role and relationship to the paper package
+
+This directory is the provenance-bearing source-material snapshot. It is intentionally kept
+separate from `paper/package_20260824/support/`, which is the curated, paper-facing support copy.
+Some case files differ because leakage-prone ground-truth fields were removed from the support
+copy. Do not merge the two trees by filename alone; follow the path cited by each report or
+manuscript.
+
 ## Primary paper files
 
-- Main arXiv-style draft: [../skill_evolution_blind_vulnerability_analysis_arxiv.tex](../skill_evolution_blind_vulnerability_analysis_arxiv.tex)
-- Chinese draft explanation: [../skill_evolution_blind_vulnerability_analysis_arxiv_zh.md](../skill_evolution_blind_vulnerability_analysis_arxiv_zh.md)
-- Earlier full-system `elsarticle` draft: [../skillclaw_confirmation_feedback_elsarticle.tex](../skillclaw_confirmation_feedback_elsarticle.tex)
-- Checked bibliography for the arXiv draft: [../references_arxiv_checked.bib](../references_arxiv_checked.bib)
-- Reference checklist: [../reference_checklist_skill_evolution_arxiv_20260824.md](../reference_checklist_skill_evolution_arxiv_20260824.md)
+- Main arXiv-style draft: [../package_20260824/manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv.tex](../package_20260824/manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv.tex)
+- Chinese draft explanation: [../package_20260824/manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv_zh.md](../package_20260824/manuscript/arxiv/skill_evolution_blind_vulnerability_analysis_arxiv_zh.md)
+- Earlier full-system `elsarticle` draft: [../package_20260824/manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex](../package_20260824/manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex)
+- Checked bibliography for the arXiv draft: [../package_20260824/manuscript/arxiv/references_arxiv_checked.bib](../package_20260824/manuscript/arxiv/references_arxiv_checked.bib)
+- Reference checklist: [../package_20260824/manuscript/arxiv/reference_checklist_skill_evolution_arxiv_20260824.md](../package_20260824/manuscript/arxiv/reference_checklist_skill_evolution_arxiv_20260824.md)
 
 ## Read in this order
 

@@ -4,7 +4,7 @@
 
 对应英文主稿：
 
-- [skillclaw_confirmation_feedback_elsarticle.tex](D:/Code/SkillClaw/SkillClaw/paper/skillclaw_confirmation_feedback_elsarticle.tex)
+- [skillclaw_confirmation_feedback_elsarticle.tex](D:/Code/SkillClaw/SkillClaw/paper/package_20260824/manuscript/elsarticle/skillclaw_confirmation_feedback_elsarticle.tex)
 
 对应中文讨论稿：
 
@@ -486,4 +486,3 @@ r=(x,S_r,\tau,y,E)
 如果要用一句话总结当前文章，可以说：
 
 > 这篇文章当前最有价值的地方，不是证明 skill 已经能稳定自我进化，而是把“漏洞分析中的 skill 为什么难以安全、可信地进入 live 库”这个问题首次做成了一个可运行、可测量、可讨论的研究对象。
-

@@ -86,6 +86,42 @@ def test_finalize_record_accepts_session_snapshot(tmp_path):
     assert updated["skill_injection"]["available_skill_count"] == 35
 
 
+def test_finalize_record_preserves_server_catalog_trace():
+    case = {"id": "demo-case"}
+    final_record = {
+        "case_id": "demo-case",
+        "score": 8.0,
+        "max_score": 10.0,
+        "checks": {},
+        "validation": {"status": "passed", "checks": []},
+    }
+    trace = {
+        "status": "ok",
+        "catalog_count": 36,
+        "raw_selected_skill_names": ["source-parser-state-machine-oob", "unknown"],
+        "unknown_selected_skill_names": ["unknown"],
+        "truncated": False,
+    }
+    snapshot = {
+        "session_id": "trace-session",
+        "timestamp": "2026-09-03T08:00:00Z",
+        "turns": [
+            {
+                "turn_num": 1,
+                "selected_skill_names": ["source-parser-state-machine-oob"],
+                "skill_injection": {
+                    "injection_mode": "server-catalog",
+                    "server_catalog_trace": trace,
+                },
+            }
+        ],
+    }
+
+    updated = finalize_record(case=case, final_record=final_record, injection_value=snapshot)
+
+    assert updated["skill_injection"]["server_catalog_trace"] == trace
+
+
 def test_finalize_record_restores_prediction_fields_from_legacy_prediction_text(tmp_path):
     case = {"id": "demo-case"}
     final_record = {
